@@ -66,6 +66,11 @@ export default function App() {
       const data = await generateContent(params);
       setGeneratedData(data);
       
+      // Auto-set the active tab to the first selected platform
+      if (params.selectedPlatforms && params.selectedPlatforms.length > 0) {
+        setActivePlatform(params.selectedPlatforms[0]);
+      }
+      
       // Save to local history
       const newHistoryItem = {
         id: Date.now(),

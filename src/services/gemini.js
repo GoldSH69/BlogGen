@@ -33,7 +33,7 @@ export function saveApiKey(key) {
  * @param {string} params.tone - Base tone (e.g. friendly, professional, witty)
  * @param {string} [params.customPrompt] - Optional custom prompt override
  */
-export async function generateContent({ sourceText, affiliateLink, targetAudience, tone, customPrompt = '' }) {
+export async function generateContent({ sourceText, affiliateLink, targetAudience, tone, selectedPlatforms = ['naverBlog', 'shorts', 'instagram', 'tiktok', 'mdx'], customPrompt = '' }) {
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error('Gemini API Key가 설정되지 않았습니다. 설정 단추를 눌러 API 키를 입력해주세요.');
@@ -47,16 +47,19 @@ export async function generateContent({ sourceText, affiliateLink, targetAudienc
 타겟 고객층: "${targetAudience}"
 기본 원고 어조: "${tone}"
 
-다음 5가지 플랫폼에 맞춤형 원고를 각각 작성하여 반드시 유효한 JSON 형식으로 응답해 주세요.
+다음 선택된 플랫폼들[${selectedPlatforms.join(', ')}]에 대한 맞춤형 원고만 작성하고, 선택되지 않은 플랫폼은 JSON 객체 내부의 키값을 null로 설정해 주세요.
 
 ---
 ### 작성 지침:
 1. **기사 비틀기 (Stealth Copywriting)**: 기사의 핵심적 정보(Fact)는 그대로 살리되, 문장 구조와 단어를 완전히 재배열하고 흥미진진한 스토리텔링 형식으로 비틀어 작성하세요. 절대로 단순 기사 요약처럼 느껴지지 않게 하세요.
 2. **자연스러운 제휴 링크 삽입**: 글의 맥락상 가장 적절하고 궁금증이 극대화되는 시점에 제휴 링크(${affiliateLink})를 자연스러운 앵커 텍스트("제가 직접 써본 실리콘 찜기는 여기서...", "자세한 상품 스펙 확인은...")와 함께 삽입하세요.
 3. **법적 고지 필수 삽입**: 모든 텍스트 기반 플랫폼(네이버 블로그, 인스타그램, 개인 블로그 MDX)의 하단에는 공정거래위원회 지침에 의거한 투명한 대가성 표기 문구(예: "이 포스팅은 제휴 마케팅 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받을 수 있습니다.")를 고급스럽고 가시성 있게 포함해 주세요.
-4. **개인 블로그 (MDX)**:
-   - 반드시 깔끔한 YAML Frontmatter(title, date, tags, description, thumbnail)로 시작하게 해주세요.
-   - 본문은 Markdown 포맷으로 작성하고, 중요한 주의점이나 팁은 커스텀 컴포넌트 형식인 \`<HighlightBox type="warning">\` 혹은 \`<HighlightBox type="tip">\` 등으로 감싸서 멋지게 꾸며주세요.
+4. **선택된 플랫폼별 상세 작성 가이드**:
+${selectedPlatforms.includes('naverBlog') ? `   - naverBlog: 기사 비틀기 기법을 사용한 네이버 블로그 포스팅 본문, 제목 제안 3개, 해시태그 포함.` : ''}
+${selectedPlatforms.includes('shorts') ? `   - shorts: 유튜브 쇼츠 대본. 3초 시선강탈 훅, 비주얼 가이드와 대사가 포함된 타임라인 스크립트, CTA 포함.` : ''}
+${selectedPlatforms.includes('instagram') ? `   - instagram: 인스타그램 피드용 가독성 높은 캡션, 해시태그 묶음, 카드뉴스 표지/본문 문구 4페이지분량 가이드 포함.` : ''}
+${selectedPlatforms.includes('tiktok') ? `   - tiktok: 틱톡 대본. 역동적 연출가이드, 틱톡 자막 텍스트, 빠른 나레이션 대사, CTA 포함.` : ''}
+${selectedPlatforms.includes('mdx') ? `   - mdx: 개인 블로그용 MDX 포맷. YAML Frontmatter(제목, 태그, 날짜 등)로 시작하고 마크다운 본문과 <HighlightBox type="tip" | "warning">을 포함한 원고.` : ''}
 
 ---
 [기사 원문/상품 정보]
@@ -65,54 +68,54 @@ ${sourceText}
 
 ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 
-반드시 다음 JSON 구조를 완벽하게 만족하여 답변해야 하며, JSON 외의 다른 텍스트는 응답에 포함하지 마세요.
+반드시 다음 JSON 구조를 완벽하게 만족하여 답변해야 하며, 선택된 키에 해당하는 세부 객체는 완성도 있게 채우고 선택되지 않은 키(예: ${['naverBlog', 'shorts', 'instagram', 'tiktok', 'mdx'].filter(x => !selectedPlatforms.includes(x)).join(', ') || '없음'})는 반드시 null로 채워 응답하세요.
 
 \`\`\`json
 {
-  "naverBlog": {
+  "naverBlog": ${selectedPlatforms.includes('naverBlog') ? `{
     "titleProposals": ["제목 추천 1", "제목 추천 2", "제목 추천 3"],
     "content": "네이버 블로그 본문 (제목 제외, 문맥에 제휴 링크 및 하단 법적 고지 문구 포함)",
     "hashtags": ["해시태그1", "해시태그2"]
-  },
-  "shorts": {
+  }` : `null`},
+  "shorts": ${selectedPlatforms.includes('shorts') ? `{
     "title": "쇼츠 제목",
     "hook": "첫 3초 시선을 사로잡는 강력한 훅 대사",
     "script": [
       {
         "time": "0:00 - 0:05",
-        "visual": "쇼츠 화면 구도 및 비주얼 연출 묘사 (예: 찌푸린 얼굴로 냄비를 닦는 손)",
+        "visual": "쇼츠 화면 구도 및 비주얼 연출 묘사",
         "audio": "내레이션 스크립트 대사"
       }
     ],
-    "cta": "마지막 행동 유도 멘트 (예: 댓글 창의 링크를 확인해보세요!)"
-  },
-  "instagram": {
+    "cta": "마지막 행동 유도 멘트"
+  }` : `null`},
+  "instagram": ${selectedPlatforms.includes('instagram') ? `{
     "caption": "인스타그램 피드 내용 (이모지와 매끄러운 줄바꿈 적용, 링크 유도 멘트, 법적 고지 포함)",
     "hashtags": ["인스타태그1", "인스타태그2"],
     "cardNewsGuides": [
-      "1페이지 표지: 클릭할 수밖에 없는 자극적인 한 문장",
-      "2페이지 핵심 문제 제시 문구",
-      "3페이지 해결책 제시 문구",
-      "4페이지 제품 추천 및 마케팅 문구"
+      "1페이지 표지: 자극적인 카피 문구",
+      "2페이지 본문 핵심 요약",
+      "3페이지 해결책 제시",
+      "4페이지 구매 유도"
     ]
-  },
-  "tiktok": {
+  }` : `null`},
+  "tiktok": ${selectedPlatforms.includes('tiktok') ? `{
     "title": "틱톡 제목",
     "hook": "틱톡 맞춤 트렌디 훅 대사",
     "script": [
       {
         "time": "0:00 - 0:03",
-        "subtitle": "영상 아래에 뜰 센스있는 자막 문구",
-        "visual": "역동적인 연출 동작 설명",
+        "subtitle": "센스있는 자막 문구",
+        "visual": "연출 동작 설명",
         "audio": "말투가 빠른 나레이션 대사"
       }
     ],
-    "cta": "프로필 링크 클릭 유도 멘트"
-  },
-  "mdx": {
-    "frontmatter": "title: \"글 제목\"\ndate: \"현재 날짜\"\ntags: [\"태그1\", \"태그2\"]\ndescription: \"글 요약\"\nthumbnail: \"/images/placeholder.jpg\"",
-    "content": "MDX 본문 내용 (#, ##, ### 제목 태그 및 \`<HighlightBox>\` 활용, 자연스럽게 제휴 링크 및 하단 법적 고지 포함)"
-  }
+    "cta": "프로필 링크 클릭 유도"
+  }` : `null`},
+  "mdx": ${selectedPlatforms.includes('mdx') ? `{
+    "frontmatter": "title: \\"글 제목\\"\\ndate: \\"현재 날짜\\"\\ntags: [\\"태그1\\", \\"태그2\\"]\\ndescription: \\"글 요약\\"\\nthumbnail: \\"/images/placeholder.jpg\\"",
+    "content": "MDX 본문 내용 (#, ##, ### 제목 태그 및 'HighlightBox' 활용, 자연스럽게 제휴 링크 및 하단 법적 고지 포함)"
+  }` : `null`}
 }
 \`\`\`
 `;

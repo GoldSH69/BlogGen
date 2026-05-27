@@ -270,7 +270,17 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
 
 // Internal Helper to render styled contents inside codebox
 const renderTabContent = (platform, pData) => {
-  if (!pData) return <p style={{ color: 'var(--text-muted)' }}>가공된 데이터가 유실되었습니다.</p>;
+  if (!pData || Object.keys(pData).length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
+        <AlertCircle size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+        <h5 style={{ color: '#fff', marginBottom: '6px' }}>생성 대상으로 선택되지 않은 플랫폼입니다</h5>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+          왼쪽 패널의 [생성할 소셜 플랫폼 선택] 항목에서 체크박스를 활성화하고 다시 생성하시면 해당 채널 맞춤형 원고를 만듭니다.
+        </p>
+      </div>
+    );
+  }
 
   switch (platform) {
     case 'naverBlog':

@@ -17,20 +17,48 @@ export default function SNSPreviewPane({ platform, data }) {
 
   // Render mockups based on the selected platform tab
   const renderPreview = () => {
+    const naverData = data.naverBlog || data.naver_blog || data.naver;
+    const shortsData = data.shorts || data.youtubeShorts || data.youtube_shorts;
+    const instagramData = data.instagram || data.insta || data.instagramFeed;
+    const tiktokData = data.tiktok || data.tikTok || data.tik_tok;
+    const mdxData = data.mdx || data.personalBlog || data.personal_blog;
+
     switch (platform) {
       case 'naverBlog':
-        return renderNaverBlogPreview(data.naverBlog || data.naver_blog || data.naver);
+        return naverData ? renderNaverBlogPreview(naverData) : renderDisabledPreview('💚 네이버 블로그');
       case 'shorts':
-        return renderShortsPreview(data.shorts || data.youtubeShorts || data.youtube_shorts);
+        return shortsData ? renderShortsPreview(shortsData) : renderDisabledPreview('🎬 유튜브 쇼츠');
       case 'instagram':
-        return renderInstagramPreview(data.instagram || data.insta || data.instagramFeed);
+        return instagramData ? renderInstagramPreview(instagramData) : renderDisabledPreview('📸 인스타그램');
       case 'tiktok':
-        return renderTikTokPreview(data.tiktok || data.tikTok || data.tik_tok);
+        return tiktokData ? renderTikTokPreview(tiktokData) : renderDisabledPreview('🎵 틱톡 대본');
       case 'mdx':
-        return renderMdxPreview(data.mdx || data.personalBlog || data.personal_blog);
+        return mdxData ? renderMdxPreview(mdxData) : renderDisabledPreview('📝 자체 블로그 (MDX)');
       default:
         return null;
     }
+  };
+
+  // Helper to render a nice mockup when a platform is not generated
+  const renderDisabledPreview = (label) => {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        padding: '24px',
+        textAlign: 'center',
+        color: 'var(--text-secondary)'
+      }}>
+        <Smartphone size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+        <h5 style={{ color: '#fff', fontSize: '0.88rem', marginBottom: '6px' }}>{label} 비활성화</h5>
+        <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+          이 플랫폼은 원고 생성 시 선택하지 않아 모바일 프리뷰가 제공되지 않습니다.
+        </p>
+      </div>
+    );
   };
 
   // 1. NAVER BLOG PREVIEW

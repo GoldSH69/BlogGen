@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Link, Users, MessageSquare, AlertCircle } from 'lucide-react';
+import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare } from 'lucide-react';
 
 const AUDIENCE_PRESETS = [
   { id: 'all', label: '전체 연령대' },
@@ -20,7 +20,24 @@ export default function InputPanel({ onGenerate, isLoading }) {
   const [affiliateLink, setAffiliateLink] = useState('');
   const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
   const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
+  
+  // Platform Checkboxes state
+  const [platforms, setPlatforms] = useState({
+    naverBlog: true,
+    shorts: true,
+    instagram: true,
+    tiktok: true,
+    mdx: true
+  });
+
   const [validationError, setValidationError] = useState('');
+
+  const handlePlatformToggle = (key) => {
+    setPlatforms(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -41,11 +58,19 @@ export default function InputPanel({ onGenerate, isLoading }) {
       return;
     }
 
+    // Filter selected platforms
+    const selectedList = Object.keys(platforms).filter(k => platforms[k]);
+    if (selectedList.length === 0) {
+      setValidationError('원고를 생성할 소셜 플랫폼을 최소 하나 이상 선택해야 합니다.');
+      return;
+    }
+
     onGenerate({
       sourceText: sourceText.trim(),
       affiliateLink: affiliateLink.trim(),
       targetAudience,
-      tone
+      tone,
+      selectedPlatforms: selectedList
     });
   };
 
@@ -56,6 +81,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
         마케팅 설정 & 입력 패널
       </h3>
 
+      {/* Source Text Input */}
       <div style={formGroupStyle}>
         <label style={labelStyle}>
           <span>기사 원문 / 상품 정보 텍스트</span>
@@ -70,6 +96,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
         />
       </div>
 
+      {/* Affiliate Link Input */}
       <div style={formGroupStyle}>
         <label style={labelStyle}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -88,6 +115,65 @@ export default function InputPanel({ onGenerate, isLoading }) {
         />
       </div>
 
+      {/* Selected Platforms Checkboxes */}
+      <div style={formGroupStyle}>
+        <label style={labelStyle}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckSquare size={15} style={{ color: 'var(--color-cyan)' }} />
+            생성할 소셜 플랫폼 선택 (복수 선택)
+          </span>
+          <span style={requiredStyle}>*최소 1개</span>
+        </label>
+        <div style={platformGridStyle}>
+          <label style={checkboxLabelStyle(platforms.naverBlog)}>
+            <input
+              type="checkbox"
+              checked={platforms.naverBlog}
+              onChange={() => handlePlatformToggle('naverBlog')}
+              style={checkboxInputStyle}
+            />
+            💚 네이버 블로그
+          </label>
+          <label style={checkboxLabelStyle(platforms.shorts)}>
+            <input
+              type="checkbox"
+              checked={platforms.shorts}
+              onChange={() => handlePlatformToggle('shorts')}
+              style={checkboxInputStyle}
+            />
+            🎬 유튜브 쇼츠 대본
+          </label>
+          <label style={checkboxLabelStyle(platforms.instagram)}>
+            <input
+              type="checkbox"
+              checked={platforms.instagram}
+              onChange={() => handlePlatformToggle('instagram')}
+              style={checkboxInputStyle}
+            />
+            📸 인스타그램 피드
+          </label>
+          <label style={checkboxLabelStyle(platforms.tiktok)}>
+            <input
+              type="checkbox"
+              checked={platforms.tiktok}
+              onChange={() => handlePlatformToggle('tiktok')}
+              style={checkboxInputStyle}
+            />
+            🎵 틱톡 대본
+          </label>
+          <label style={checkboxLabelStyle(platforms.mdx)}>
+            <input
+              type="checkbox"
+              checked={platforms.mdx}
+              onChange={() => handlePlatformToggle('mdx')}
+              style={checkboxInputStyle}
+            />
+            📝 자체 블로그 (MDX)
+          </label>
+        </div>
+      </div>
+
+      {/* Target Audience Preset */}
       <div style={formGroupStyle}>
         <label style={labelStyle}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -117,6 +203,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
         />
       </div>
 
+      {/* Tone Selection */}
       <div style={formGroupStyle}>
         <label style={labelStyle}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -250,6 +337,36 @@ const toneBtnStyle = (isSelected) => ({
   transition: 'all var(--transition-fast)',
   textAlign: 'left',
 });
+
+const platformGridStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  background: 'rgba(255,255,255,0.01)',
+  padding: '12px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border-color)',
+};
+
+const checkboxLabelStyle = (isChecked) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  fontSize: '0.82rem',
+  color: isChecked ? '#fff' : 'var(--text-secondary)',
+  cursor: 'pointer',
+  padding: '6px 8px',
+  borderRadius: '4px',
+  background: isChecked ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
+  transition: 'all var(--transition-fast)',
+});
+
+const checkboxInputStyle = {
+  accentColor: 'var(--color-violet)',
+  width: '16px',
+  height: '16px',
+  cursor: 'pointer',
+};
 
 const errorContainerStyle = {
   display: 'flex',
