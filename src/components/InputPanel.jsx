@@ -17,7 +17,7 @@ const TONE_PRESETS = [
 
 export default function InputPanel({ onGenerate, isLoading }) {
   const [sourceText, setSourceText] = useState('');
-  const [affiliateLink, setAffiliateLink] = useState('');
+  const [affiliateLink, setAffiliateLink] = useState(() => localStorage.getItem('affiliwrite_default_affiliate_link') || '');
   const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
   const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
   
@@ -48,12 +48,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
       return;
     }
 
-    if (!affiliateLink.trim()) {
-      setValidationError('수익을 창출할 제휴 마케팅 링크(URL)를 입력해주세요.');
-      return;
-    }
-
-    if (!affiliateLink.startsWith('http://') && !affiliateLink.startsWith('https://')) {
+    if (affiliateLink.trim() && !affiliateLink.startsWith('http://') && !affiliateLink.startsWith('https://')) {
       setValidationError('제휴 마케팅 링크는 http:// 또는 https://로 시작하는 유효한 URL이어야 합니다.');
       return;
     }
@@ -103,7 +98,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
             <Link size={15} style={{ color: 'var(--color-cyan)' }} />
             제휴 마케팅 링크 (Affiliate URL)
           </span>
-          <span style={requiredStyle}>*필수</span>
+          <span style={{ ...requiredStyle, color: 'var(--color-cyan)', background: 'rgba(6, 182, 212, 0.08)', borderColor: 'rgba(6, 182, 212, 0.2)' }}>*선택사항</span>
         </label>
         <input
           type="text"

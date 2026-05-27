@@ -61,6 +61,12 @@ export default function App() {
     setIsLoading(true);
     setErrorMessage('');
     setAffiliateLink(params.affiliateLink);
+    
+    if (params.affiliateLink) {
+      localStorage.setItem('affiliwrite_default_affiliate_link', params.affiliateLink);
+    } else {
+      localStorage.removeItem('affiliwrite_default_affiliate_link');
+    }
 
     try {
       const data = await generateContent(params);
