@@ -115,7 +115,8 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
   "mdx": ${selectedPlatforms.includes('mdx') ? `{
     "frontmatter": "title: \\"글 제목\\"\\ndate: \\"현재 날짜\\"\\ntags: [\\"태그1\\", \\"태그2\\"]\\ndescription: \\"글 요약\\"\\nthumbnail: \\"/images/placeholder.jpg\\"",
     "content": "MDX 본문 내용 (#, ##, ### 제목 태그 및 'HighlightBox' 활용, 자연스럽게 제휴 링크 및 하단 법적 고지 포함)"
-  }` : `null`}
+  }` : `null`},
+  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 영문 이미지 생성 프롬프트. 텍스트 배제 지침(no text, without any letters)과 미드저니/Dall-E용 가로세로 비율 접미사(--ar 1200:514)를 반드시 포함한 photorealistic 혹은 vector illustration 묘사"` : `null`}
 }
 \`\`\`
 `;

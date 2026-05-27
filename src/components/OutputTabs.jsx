@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Copy, Check, RefreshCw, Volume2, FileText, Sparkles, MessageSquare, AlertCircle, Send } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
+import ThumbnailKit from './ThumbnailKit';
 
 const PLATFORM_LABELS = {
   naverBlog: '💚 네이버 블로그',
@@ -193,7 +194,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
           </div>
           
           <div style={codeBoxBodyStyle}>
-            {renderTabContent(activeTab, data[activeTab] || data.naverBlog || data.shorts || data.instagram || data.tiktok || data.mdx)}
+            {renderTabContent(activeTab, data[activeTab], data.thumbnailPrompt)}
           </div>
         </div>
 
@@ -269,7 +270,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
 }
 
 // Internal Helper to render styled contents inside codebox
-const renderTabContent = (platform, pData) => {
+const renderTabContent = (platform, pData, thumbnailPrompt) => {
   if (!pData || Object.keys(pData).length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
@@ -286,6 +287,7 @@ const renderTabContent = (platform, pData) => {
     case 'naverBlog':
       return (
         <div style={contentBlockStyle}>
+          <ThumbnailKit prompt={thumbnailPrompt} />
           <div style={titleListStyle}>
             <strong style={subLabelStyle}>💡 추천 블로그 제목 (마음에 드는 것을 선택해 복사하세요):</strong>
             {pData.titleProposals?.map((t, i) => (
@@ -397,6 +399,7 @@ const renderTabContent = (platform, pData) => {
     case 'mdx':
       return (
         <div style={contentBlockStyle}>
+          <ThumbnailKit prompt={thumbnailPrompt} />
           <strong style={subLabelStyle}>⚙️ MDX Frontmatter (YAML):</strong>
           <pre style={frontmatterBlockStyle}>
             {`---\n${pData.frontmatter}\n---`}
