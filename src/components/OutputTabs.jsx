@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, RefreshCw, Volume2, FileText, Sparkles, MessageSquare, AlertCircle, Send } from 'lucide-react';
+import { Copy, Check, FileText, Sparkles, AlertCircle, Send } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
 import ThumbnailKit from './ThumbnailKit';
 
@@ -13,9 +13,17 @@ const PLATFORM_LABELS = {
 
 export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink, activeTab, setActiveTab }) {
   const [copied, setCopied] = useState(false);
+  const [filenameCopied, setFilenameCopied] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [customFeedback, setCustomFeedback] = useState('');
   const [adjustError, setAdjustError] = useState('');
+
+  const handleCopyFilename = (filename) => {
+    if (!filename) return;
+    navigator.clipboard.writeText(filename);
+    setFilenameCopied(true);
+    setTimeout(() => setFilenameCopied(false), 2000);
+  };
 
   if (!data) {
     return (
@@ -73,14 +81,16 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     switch (activeTab) {
       case 'naverBlog':
         return `[제목 후보]\n${(platformData.titleProposals || []).join('\n')}\n\n[본문]\n${platformData.content}\n\n[태그]\n${(platformData.hashtags || []).map(t => `#${t}`).join(' ')}`;
-      case 'shorts':
+      case 'shorts': {
         const shortsScript = (platformData.script || []).map(s => `[${s.time}] 비주얼: ${s.visual}\n내레이션: ${s.audio}`).join('\n\n');
         return `[쇼츠 제목] ${platformData.title}\n\n[3초 오프닝 훅] ${platformData.hook}\n\n[상세 타임라인 스크립트]\n${shortsScript}\n\n[행동유도 CTA] ${platformData.cta}`;
+      }
       case 'instagram':
         return `[피드 캡션]\n${platformData.caption}\n\n[태그]\n${(platformData.hashtags || []).map(t => `#${t}`).join(' ')}\n\n[카드뉴스 구성 가이드]\n${(platformData.cardNewsGuides || []).join('\n')}`;
-      case 'tiktok':
+      case 'tiktok': {
         const tiktokScript = (platformData.script || []).map(s => `[${s.time}] 비주얼: ${s.visual}\n자막: ${s.subtitle}\n내레이션: ${s.audio}`).join('\n\n');
         return `[틱톡 제목] ${platformData.title}\n\n[후킹 오프닝] ${platformData.hook}\n\n[타임라인 대본]\n${tiktokScript}\n\n[행동유도 CTA] ${platformData.cta}`;
+      }
       case 'mdx':
         return `---\n${platformData.frontmatter}\n---\n\n${platformData.content}`;
       default:
@@ -194,7 +204,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
           </div>
           
           <div style={codeBoxBodyStyle}>
-            {renderTabContent(activeTab, data[activeTab], data.thumbnailPrompt)}
+            {renderTabContent(activeTab, data[activeTab], data.thumbnailPrompt, { filenameCopied, handleCopyFilename })}
           </div>
         </div>
 
@@ -270,7 +280,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
 }
 
 // Internal Helper to render styled contents inside codebox
-const renderTabContent = (platform, pData, thumbnailPrompt) => {
+const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => {
   if (!pData || Object.keys(pData).length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
@@ -396,10 +406,28 @@ const renderTabContent = (platform, pData, thumbnailPrompt) => {
         </div>
       );
 
-    case 'mdx':
+    case 'mdx': {
+      const { filenameCopied, handleCopyFilename } = mdxHelpers;
       return (
         <div style={contentBlockStyle}>
           <ThumbnailKit prompt={thumbnailPrompt} />
+          
+          {pData.filename && (
+            <div style={filenameContainerStyle}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <strong style={subLabelStyle}>📁 추천 파일명 (클릭하여 복사):</strong>
+                <code style={filenameCodeStyle}>{pData.filename}</code>
+              </div>
+              <button 
+                onClick={() => handleCopyFilename(pData.filename)}
+                style={filenameCopyBtnStyle(filenameCopied)}
+              >
+                {filenameCopied ? <Check size={14} /> : <Copy size={14} />}
+                {filenameCopied ? '복사됨' : '복사'}
+              </button>
+            </div>
+          )}
+
           <strong style={subLabelStyle}>⚙️ MDX Frontmatter (YAML):</strong>
           <pre style={frontmatterBlockStyle}>
             {`---\n${pData.frontmatter}\n---`}
@@ -409,6 +437,7 @@ const renderTabContent = (platform, pData, thumbnailPrompt) => {
           <pre style={preBlockStyle}>{pData.content}</pre>
         </div>
       );
+    }
 
     default:
       return null;
@@ -699,5 +728,40 @@ const loadingSpinnerBoxStyle = {
   textAlign: 'center',
   padding: '24px',
 };
+
+const filenameContainerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  background: 'rgba(99, 102, 241, 0.08)',
+  border: '1px solid rgba(99, 102, 241, 0.25)',
+  padding: '12px 16px',
+  borderRadius: '8px',
+  marginBottom: '4px',
+};
+
+const filenameCodeStyle = {
+  fontFamily: 'monospace',
+  fontSize: '0.85rem',
+  color: '#c7d2fe',
+  wordBreak: 'break-all',
+};
+
+const filenameCopyBtnStyle = (copied) => ({
+  background: copied ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+  color: copied ? '#34d399' : '#a5b4fc',
+  border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`,
+  borderRadius: '6px',
+  padding: '6px 12px',
+  fontSize: '0.74rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  transition: 'all var(--transition-fast)',
+  borderStyle: 'solid',
+});
 
 

@@ -41,9 +41,32 @@ export async function generateContent({ sourceText, affiliateLink, targetAudienc
 
   const hasLink = affiliateLink && affiliateLink.trim() !== '';
 
+  // Get KST time for MDX frontmatter
+  const kstFormatter = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  
+  const parts = kstFormatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+  
+  const kstDateTimeString = `${year}-${month}-${day} ${hour}:${minute}`;
+  const kstDateOnlyString = `${year}-${month}-${day}`;
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+
   const prompt = `
-당신은 대한민국 최고의 제휴 마케팅 기획자이자 억대 연봉의 카피라이터입니다.
-아래 제공된 [기사 원문/상품 정보]를 바탕으로, 저작권 침해를 완벽히 피하면서 독자의 눈길을 사로잡는 **"스텔스 바이럴 마케팅 콘텐츠"**를 제작해야 합니다.
+당신은 대한민국 최고의 제휴 마케팅 기획자이자 억대 연봉의 카피라이터이며, 특히 구글 애드센스 승인(애드고시)을 단번에 통과하기 위해 최신 구글 유용성 콘텐츠 시스템(Helpful Content System)의 '독창적이고 가치 있는 콘텐츠' 기준을 완벽하게 마스터한 전문 SEO 카피라이터이자 블로그 운영 전문가입니다.
+
+아래 제공된 [기사 원문/상품 정보/주제]를 바탕으로, 저작권 침해를 완벽히 피하면서 독자의 눈길을 사로잡는 **"스텔스 바이럴 마케팅 및 고품질 정보성 블로그 콘텐츠"**를 제작해야 합니다.
 
 사용자가 삽입하려는 제휴 마케팅 링크: ${hasLink ? `"${affiliateLink}"` : "없음 (단순 정보 공유형 콘텐츠이므로 제휴 마케팅 링크나 대가성 법적 고지 문구는 절대로 삽입하지 말아야 하며, 독자가 순수하게 유용한 정보를 자연스럽게 전달받도록 글을 구성하세요.)"}
 타겟 고객층: "${targetAudience}"
@@ -55,22 +78,34 @@ export async function generateContent({ sourceText, affiliateLink, targetAudienc
 ### 작성 지침:
 1. **기사 비틀기 (Stealth Copywriting)**: 기사의 핵심적 정보(Fact)는 그대로 살리되, 문장 구조와 단어를 완전히 재배열하고 흥미진진한 스토리텔링 형식으로 비틀어 작성하세요. 절대로 단순 기사 요약처럼 느껴지지 않게 하세요.
 2. **자연스러운 제휴 링크 삽입**: ${hasLink ? `글의 맥락상 가장 적절하고 궁금증이 극대화되는 시점에 제휴 링크(${affiliateLink})를 자연스러운 앵커 텍스트("제가 직접 써본 실리콘 찜기는 여기서...", "자세한 상품 스펙 확인은...")와 함께 삽입하세요.` : '제휴 링크가 지정되지 않았으므로 본문에 구매 링크나 상품 추천 링크를 일체 삽입하지 마시고, 독자의 유입과 공감을 이끄는 순수 유용 정보로 매끄럽게 마무리해 주세요.'}
-3. **법적 고지 필수 삽입**: ${hasLink ? `모든 텍스트 기반 플랫폼(네이버 블로그, 인스타그램, 개인 블로그 MDX)의 하단에는 공정거래위원회 지침에 의거한 투명한 대가성 표기 문구(예: "이 포스팅은 제휴 마케팅 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받을 수 있습니다.")를 고급스럽고 가시성 있게 포함해 주세요.` : '제휴 링크가 없으므로 공정위 법적 고지(대가성 수수료 표기 등) 문구를 절대로 삽입하지 마세요. 순수 정보성 글처럼 작성해야 합니다.'}
-4. **선택된 플랫폼별 상세 작성 가이드**:
+3. **법적 고지 필수 삽입**: ${hasLink ? `텍스트 기반 소셜 플랫폼(네이버 블로그, 인스타그램)의 하단에는 공정거래위원회 지침에 의거한 투명한 대가성 표기 문구(예: "이 포스팅은 제휴 마케팅 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받을 수 있습니다.")를 고급스럽고 가시성 있게 포함해 주세요. 단, 개인 블로그 MDX 원고의 경우 구글 애드센스 심사를 위해 제휴 마케팅 링크(${affiliateLink})가 있더라도 법적 고지 문구를 삽입하지 않고 본문에만 자연스럽게 삽입되도록 하거나 생략하여 순수 전문 정보성 글로 보이도록 하십시오.` : '제휴 링크가 없으므로 공정위 법적 고지(대가성 수수료 표기 등) 문구를 절대로 삽입하지 마세요. 순수 정보성 글처럼 작성해야 합니다.'}
+4. **구글 애드센스 승인(애드고시) & SEO 최적화 규칙 (개인 블로그 MDX에 엄격 적용)**:
+   - **외부 링크 생성 절대 금지 (No Outbound Links)**: 본문, 출처 표기, 참고 문헌 등 그 어떤 형태의 외부 웹사이트 URL이나 하이퍼링크도 본문에 절대 포함하지 마십시오. 오직 텍스트 정보로만 완결성을 가질 것. (예외: 사용자가 명시적으로 전달한 제휴 마케팅 링크는 사용자가 원한 경우에만 최소한으로 본문에 텍스트 앵커 형태로 자연스럽게 녹여내고, 그 외의 불필요한 링크는 철저히 배제)
+   - **키워드 반복 및 도배 금지**: 타겟 검색어(주요 키워드)를 문장 내에서 기계적으로 연속 반복하지 마십시오. 문장마다 어순을 바꾸거나, 동의어 및 문맥적 연관어(LSI 키워드)로 자연스럽게 전환할 것. (예: '식단 관리' -> '영양 섭취 방식', '균형 잡힌 식사 구성' 등)
+   - **AI 특유의 정형화된 어투 제거**: "~에 대해 알아보겠습니다", "~하는 방법이 있습니다", "첫째, 둘째" 같은 획일적이고 기계적인 문장 구조를 완전히 탈피할 것. 진짜 사람이 자신의 전문 지식과 노하우를 친절하게 구어체와 서술형을 섞어 설명하듯 자연스러운 어조(~습니다, ~입니다)로 작성하십시오.
+   - **불필요한 인트로/아웃트로 생략**: 독자가 검색 후 유입되었을 때 즉시 정보를 얻을 수 있도록 "안녕하세요", "반갑습니다", "오늘 알아볼 내용은" 같은 블로그 인사말이나 소감은 일절 배제하고 바로 제목과 본론으로 들어갈 것.
+   - **이모지 및 특수문자 라인 사용 금지**: 구글 봇이 텍스트의 전문성을 오판하지 않도록 본문 내 이모티콘이나 문단 구분용 특수문자 선(예: ---, ***)은 일절 사용하지 마십시오. (단, MDX의 YAML frontmatter 구분선인 맨 위/아래의 ---는 시스템 구동을 위해 유지함)
+   - **글자수 분량**: 공백 제외 최소 1,500자 ~ 2,000자 이상의 깊이 있는 정보성 글로 작성하되, 의미 없는 수식어나 미사여구로 분량을 채우지 말 것 (Thin Content 방지).
+   - **구조화**: H2(소제목, 마크다운 ##), H3(하위 소제목, 마크다운 ###)의 명확한 계층 구조를 갖추어 논리적으로 작성하십시오. 한 단락은 독자의 가독성을 위해 3~4문장 단위로 줄바꿈을 할 것.
+   - **전개 방식**:
+     - 서론: 독자가 겪는 현실적인 문제 제기 및 본문에서 얻을 수 있는 해결책 제시
+     - 본론 1, 2, 3 (H2, H3): 주제와 관련된 원인 분석, 구체적인 실행 지침(행동 가능한 팁과 수치 포함), 흔히 하는 실수나 주의사항 기술
+     - 결론 (H2): 본문 내용을 다른 어휘로 자연스럽게 요약하며 신뢰감을 주는 당부의 말로 마무리
+5. **선택된 플랫폼별 상세 작성 가이드**:
 ${selectedPlatforms.includes('naverBlog') ? `   - naverBlog: 기사 비틀기 기법을 사용한 네이버 블로그 포스팅 본문, 제목 제안 3개, 해시태그 포함.` : ''}
 ${selectedPlatforms.includes('shorts') ? `   - shorts: 유튜브 쇼츠 대본. 3초 시선강탈 훅, 비주얼 가이드와 대사가 포함된 타임라인 스크립트, CTA 포함.` : ''}
 ${selectedPlatforms.includes('instagram') ? `   - instagram: 인스타그램 피드용 가독성 높은 캡션, 해시태그 묶음, 카드뉴스 표지/본문 문구 4페이지분량 가이드 포함.` : ''}
 ${selectedPlatforms.includes('tiktok') ? `   - tiktok: 틱톡 대본. 역동적 연출가이드, 틱톡 자막 텍스트, 빠른 나레이션 대사, CTA 포함.` : ''}
-${selectedPlatforms.includes('mdx') ? `   - mdx: 개인 블로그용 MDX 포맷. YAML Frontmatter(제목, 태그, 날짜 등)로 시작하고 마크다운 본문과 <HighlightBox type="tip" | "warning">을 포함한 원고.` : ''}
+${selectedPlatforms.includes('mdx') ? `   - mdx: 구글 애드센스 승인 기준을 엄격히 준수한 개인 블로그용 MDX 포맷. YAML Frontmatter(아래 제공된 필수 키 목록 준수)로 시작하고 마크다운 본문만을 포함한 고품질 원고.` : ''}
 
 ---
-[기사 원문/상품 정보]
+[기사 원문/상품 정보/주제]
 ${sourceText}
 ---
 
 ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 
-반드시 다음 JSON 구조를 완벽하게 만족하여 답변해야 하며, 선택된 키에 해당하는 세부 객체는 완성도 있게 채우고 선택되지 않은 키(예: ${['naverBlog', 'shorts', 'instagram', 'tiktok', 'mdx'].filter(x => !selectedPlatforms.includes(x)).join(', ') || '없음'})는 반드시 null로 채워 응답하세요.
+반드시 다음 JSON 구조를 완벽하게 만족하여 답변해야 하며, 선택된 키에 해당하는 세부 객체는 완성도 있게 채우고 선택되지 않은 키는 반드시 null로 채워 응답하세요.
 
 \`\`\`json
 {
@@ -115,8 +150,9 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     "cta": "프로필 링크 클릭 유도"
   }` : `null`},
   "mdx": ${selectedPlatforms.includes('mdx') ? `{
-    "frontmatter": "title: \\"글 제목\\"\\ndate: \\"현재 날짜\\"\\ntags: [\\"태그1\\", \\"태그2\\"]\\ndescription: \\"글 요약\\"\\nthumbnail: \\"/images/placeholder.jpg\\"",
-    "content": "MDX 본문 내용 (#, ##, ### 제목 태그 및 'HighlightBox' 활용, 자연스럽게 제휴 링크 및 하단 법적 고지 포함)"
+    "filename": "${kstDateOnlyString}-영문슬러그.mdx 형태로 작성하되 영문 슬러그는 글 주제를 나타내는 2~4개 영단어를 하이픈으로 연결하여 소문자로만 생성하시오 (예: ${kstDateOnlyString}-dark-psychology-jade.mdx)",
+    "frontmatter": "title: \\"글 제목 (애드센스 SEO 최적화 직관적 제목)\\"\\ndescription: \\"글 전체를 명확히 요약해 주는 1~2문장의 핵심 설명\\"\\ndate: \\"${kstDateTimeString}\\"\\ncategory: \\"주제와 관련된 적절한 영문 소문자 카테고리 (예: mind, health, tech, study, life 등)\\"\\ntags: [\\"태그1\\", \\"태그2\\", \\"태그3\\", \\"태그4\\", \\"태그5\\"] (본문 내용과 밀접한 연관 핵심 태그 5개, 한글 단어 위주)\\nkeywords: \\"키워드1, 키워드2, 키워드3, 키워드4, 키워드5\\" (쉼표로 구분된 핵심 키워드 5개 나열)\\nthumbnail: \\"/images/blog/${randomNum}.webp\\"\\nauthor: \\"Insight Retreat\\"\\npublished: false",
+    "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 완벽하게 구조화하여 최소 1,500자에서 2,000자 사이의 사람이 직접 쓴 듯 깊이 있는 정보글로 작성하시오. 하단 대가성 법적 고지 문구 및 무분별한 외부 링크는 구글 애드센스 감점을 피하기 위해 절대 포함하지 마십시오."
   }` : `null`},
   "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 영문 이미지 생성 프롬프트. 텍스트 배제 지침(no text, without any letters)과 미드저니/Dall-E용 가로세로 비율 접미사(--ar 1200:514)를 반드시 포함한 photorealistic 혹은 vector illustration 묘사"` : `null`}
 }
