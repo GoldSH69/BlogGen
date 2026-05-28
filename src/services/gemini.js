@@ -91,6 +91,8 @@ export async function generateContent({ sourceText, affiliateLink, targetAudienc
      - 서론: 독자가 겪는 현실적인 문제 제기 및 본문에서 얻을 수 있는 해결책 제시
      - 본론 1, 2, 3 (H2, H3): 주제와 관련된 원인 분석, 구체적인 실행 지침(행동 가능한 팁과 수치 포함), 흔히 하는 실수나 주의사항 기술
      - 결론 (H2): 본문 내용을 다른 어휘로 자연스럽게 요약하며 신뢰감을 주는 당부의 말로 마무리
+   - **의학적/건강 정보 면책 고지 자동 삽입 (구글 E-E-A-T 신뢰도 강화)**: 본문 맨 마지막 라인에는 자가진단을 예방하고 구글의 정보성 기준을 충족하기 위해, 다음 문구를 마크다운 인용구(>) 형태로 완전히 토씨 하나 틀리지 않고 그대로 본문 끝에 반드시 포함하십시오.
+     > 본 포스팅에서 제공하는 정보는 일반적인 건강 상식 및 참고용 자료이며, 전문의의 개별적인 진단이나 진료를 절대 대신할 수 없습니다. 개별적인 증상이나 구체적인 치료 처방은 반드시 전문 의료진과의 직접 상담을 권장합니다.
 5. **선택된 플랫폼별 상세 작성 가이드**:
 ${selectedPlatforms.includes('naverBlog') ? `   - naverBlog: 기사 비틀기 기법을 사용한 네이버 블로그 포스팅 본문, 제목 제안 3개, 해시태그 포함.` : ''}
 ${selectedPlatforms.includes('shorts') ? `   - shorts: 유튜브 쇼츠 대본. 3초 시선강탈 훅, 비주얼 가이드와 대사가 포함된 타임라인 스크립트, CTA 포함.` : ''}
@@ -152,7 +154,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
   "mdx": ${selectedPlatforms.includes('mdx') ? `{
     "filename": "${kstDateOnlyString}-영문슬러그.mdx 형태로 작성하되 영문 슬러그는 글 주제를 나타내는 2~4개 영단어를 하이픈으로 연결하여 소문자로만 생성하시오 (예: ${kstDateOnlyString}-dark-psychology-jade.mdx)",
     "frontmatter": "title: \\"글 제목 (애드센스 SEO 최적화 직관적 제목)\\"\\ndescription: \\"글 전체를 명확히 요약해 주는 1~2문장의 핵심 설명\\"\\ndate: \\"${kstDateTimeString}\\"\\ncategory: \\"주제와 관련된 적절한 영문 소문자 카테고리 (예: mind, health, tech, study, life 등)\\"\\ntags: [\\"태그1\\", \\"태그2\\", \\"태그3\\", \\"태그4\\", \\"태그5\\"] (본문 내용과 밀접한 연관 핵심 태그 5개, 한글 단어 위주)\\nkeywords: \\"키워드1, 키워드2, 키워드3, 키워드4, 키워드5\\" (쉼표로 구분된 핵심 키워드 5개 나열)\\nthumbnail: \\"/images/blog/${randomNum}.webp\\"\\nauthor: \\"Insight Retreat\\"\\npublished: false (실제 발행 시에는 true로 변경)",
-    "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 완벽하게 구조화하여 최소 1,500자에서 2,000자 사이의 사람이 직접 쓴 듯 깊이 있는 정보글로 작성하시오. 하단 대가성 법적 고지 문구 및 무분별한 외부 링크는 구글 애드센스 감점을 피하기 위해 절대 포함하지 마십시오."
+    "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 완벽하게 구조화하여 최소 1,500자에서 2,000자 사이의 사람이 직접 쓴 듯 깊이 있는 정보글로 작성하시오. 하단 대가성 법적 고지 문구 및 무분별한 외부 링크는 구글 애드센스 감점을 피하기 위해 절대 포함하지 마십시오. 단, 본문 맨 마지막 라인에는 구글 E-E-A-T 신뢰도 확보를 위해 다음의 의학적 면책 고지 문구를 마크다운 인용구 형태로 반드시 포함해 주십시오. [문구: > 본 포스팅에서 제공하는 정보는 일반적인 건강 상식 및 참고용 자료이며, 전문의의 개별적인 진단이나 진료를 절대 대신할 수 없습니다. 개별적인 증상이나 구체적인 치료 처방은 반드시 전문 의료진과의 직접 상담을 권장합니다.]"
   }` : `null`},
   "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 영문 이미지 생성 프롬프트. 텍스트 배제 지침(no text, without any letters)과 미드저니/Dall-E용 가로세로 비율 접미사(--ar 1200:514)를 반드시 포함한 photorealistic 혹은 vector illustration 묘사"` : `null`}
 }

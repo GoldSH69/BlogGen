@@ -429,25 +429,58 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
 
     case 'mdx': {
       const { filenameCopied, handleCopyFilename } = mdxHelpers;
+      
+      // filename이 누락되었을 경우(과거 히스토리 데이터 등)를 대비한 똑똑한 Dynamic Fallback 파일명 생성기
+      let displayFilename = pData.filename;
+      if (!displayFilename) {
+        let dateStr = new Date().toISOString().split('T')[0]; // 오늘 날짜 기본값
+        let slugStr = 'untitled-post';
+        
+        if (pData.frontmatter) {
+          // date 추출
+          const dateMatch = pData.frontmatter.match(/date:\s*"(.*?)"/);
+          if (dateMatch) {
+            dateStr = dateMatch[1].split(' ')[0]; // YYYY-MM-DD
+          }
+          
+          // title 혹은 category를 이용해 영문 슬러그 생성
+          const catMatch = pData.frontmatter.match(/category:\s*"(.*?)"/);
+          const categoryVal = catMatch ? catMatch[1] : 'mind';
+          
+          // 만약 title에 영어 텍스트가 섞여있다면 슬러그로 활용, 아니면 카테고리 활용
+          const titleMatch = pData.frontmatter.match(/title:\s*"(.*?)"/);
+          if (titleMatch) {
+            const titleVal = titleMatch[1];
+            const engWords = titleVal.replace(/[^a-zA-Z0-9 ]/g, '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+            if (engWords.length > 0) {
+              slugStr = engWords.slice(0, 4).join('-');
+            } else {
+              slugStr = `${categoryVal}-mind-wellness`;
+            }
+          } else {
+            slugStr = `${categoryVal}-post`;
+          }
+        }
+        displayFilename = `${dateStr}-${slugStr}.mdx`;
+      }
+
       return (
         <div style={contentBlockStyle}>
           <ThumbnailKit prompt={thumbnailPrompt} />
           
-          {pData.filename && (
-            <div style={filenameContainerStyle}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                <strong style={subLabelStyle}>📁 추천 파일명 (클릭하여 복사):</strong>
-                <code style={filenameCodeStyle}>{pData.filename}</code>
-              </div>
-              <button 
-                onClick={() => handleCopyFilename(pData.filename)}
-                style={filenameCopyBtnStyle(filenameCopied)}
-              >
-                {filenameCopied ? <Check size={14} /> : <Copy size={14} />}
-                {filenameCopied ? '복사됨' : '복사'}
-              </button>
+          <div style={filenameContainerStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+              <strong style={subLabelStyle}>📁 추천 파일명 (클릭하여 복사):</strong>
+              <code style={filenameCodeStyle}>{displayFilename}</code>
             </div>
-          )}
+            <button 
+              onClick={() => handleCopyFilename(displayFilename)}
+              style={filenameCopyBtnStyle(filenameCopied)}
+            >
+              {filenameCopied ? <Check size={14} /> : <Copy size={14} />}
+              {filenameCopied ? '복사됨' : '복사'}
+            </button>
+          </div>
 
           <strong style={subLabelStyle}>⚙️ MDX Frontmatter (YAML):</strong>
           <pre style={frontmatterBlockStyle}>
@@ -835,6 +868,15 @@ function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
         return <h3 key={i} style={modalH3Style}>{trimmed.substring(4)}</h3>;
       }
       
+      // 마크다운 인용구 (면책 고지 등 > 시작 라인)
+      if (trimmed.startsWith('> ')) {
+        return (
+          <blockquote key={i} style={modalBlockquoteStyle}>
+            {trimmed.substring(2)}
+          </blockquote>
+        );
+      }
+      
       // HighlightBox 커스텀 컴포넌트 렌더링
       if (trimmed.includes('<HighlightBox')) {
         return (
@@ -1055,6 +1097,19 @@ const modalParaStyle = {
   lineHeight: '1.75',
   color: '#1F2933', // morning 테마 --color-text
   margin: 0,
+  textAlign: 'justify',
+};
+
+const modalBlockquoteStyle = {
+  background: '#F1F0EE', // morning 테마 --color-bg-secondary
+  borderLeft: '4px solid #8B6B3D', // morning 테마 --color-point
+  padding: '16px 20px',
+  margin: '18px 0',
+  borderRadius: '0 8px 8px 0',
+  fontSize: '0.82rem',
+  lineHeight: '1.65',
+  color: '#5B5248', // morning 테마 --color-sub
+  fontStyle: 'italic',
   textAlign: 'justify',
 };
 
