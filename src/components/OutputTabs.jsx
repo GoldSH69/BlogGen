@@ -851,11 +851,18 @@ function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
 
   return (
     <div style={modalOverlayStyle}>
-      <div style={modalWindowStyle}>
+      {/* 프리텐다드 웹폰트 실시간 로드 및 모닝테마 전용 스타일 스코프 강제 */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
+        .morning-preview-window * {
+          font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif !important;
+        }
+      `}} />
+      <div className="morning-preview-window" style={modalWindowStyle}>
         {/* Modal Header */}
         <div style={modalHeaderStyle}>
           <span style={{ fontSize: '0.86rem', fontWeight: '700', color: '#8B6B3D', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            ☕ [data-theme="morning"] 블로그 스킨 프리뷰
+            ☕ [data-theme="morning"] 블로그 스킨 프리뷰 (Pretendard)
           </span>
           <button onClick={onClose} style={modalCloseBtnStyle}>닫기 ✕</button>
         </div>
