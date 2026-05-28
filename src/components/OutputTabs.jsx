@@ -17,6 +17,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
   const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [customFeedback, setCustomFeedback] = useState('');
   const [adjustError, setAdjustError] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleCopyFilename = (filename) => {
     if (!filename) return;
@@ -174,6 +175,19 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
           <div style={codeBoxHeaderStyle}>
             <span style={codeBoxLabelStyle}>📋 스마트 복사 코드박스</span>
             <div style={{ display: 'flex', gap: '8px' }}>
+              {activeTab === 'mdx' && (
+                <button 
+                  onClick={() => setIsPreviewOpen(true)}
+                  style={{
+                    ...copyBtnStyle(false), 
+                    background: 'rgba(206, 182, 149, 0.12)', 
+                    color: '#ceb695', 
+                    borderColor: 'rgba(206, 182, 149, 0.3)'
+                  }}
+                >
+                  👁️ 모닝테마 미리보기
+                </button>
+              )}
               <button 
                 onClick={handleSendTelegram} 
                 disabled={isSendingTelegram}
@@ -275,6 +289,13 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
           )}
         </div>
       </div>
+
+      <BlogPreviewModal 
+        isOpen={isPreviewOpen} 
+        onClose={() => setIsPreviewOpen(false)} 
+        pData={data.mdx} 
+        thumbnailPrompt={data.thumbnailPrompt}
+      />
     </div>
   );
 }
@@ -763,5 +784,271 @@ const filenameCopyBtnStyle = (copied) => ({
   transition: 'all var(--transition-fast)',
   borderStyle: 'solid',
 });
+
+// -------------------------------------------------------------
+// Morning 테마 기반 고해상도 블로그 실시간 프리뷰 모달
+// -------------------------------------------------------------
+function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
+  if (!isOpen || !pData) return null;
+
+  // Frontmatter 파서
+  const frontmatterObj = {};
+  const lines = (pData.frontmatter || '').split('\n');
+  lines.forEach(line => {
+    const parts = line.split(':');
+    if (parts.length >= 2) {
+      const key = parts[0].trim();
+      const val = parts.slice(1).join(':').trim().replace(/^["']|["']$/g, '');
+      frontmatterObj[key] = val;
+    }
+  });
+
+  const title = frontmatterObj.title || '나를 지키는 대처법, JADE 심리 대처법';
+  const category = frontmatterObj.category || 'mind';
+  const author = frontmatterObj.author || 'Insight Retreat';
+  const date = frontmatterObj.date || '2026-05-29 10:00';
+  
+  let tags = [];
+  try {
+    const tagMatch = pData.frontmatter.match(/tags:\s*\[(.*?)\]/);
+    if (tagMatch) {
+      tags = tagMatch[1].split(',').map(t => t.trim().replace(/^["']|["']$/g, ''));
+    }
+  } catch (e) {
+    tags = [];
+  }
+
+  // 본문 파싱 렌더러
+  const renderMdxBody = () => {
+    if (!pData.content) return <p>본문 내용이 존재하지 않습니다.</p>;
+
+    return pData.content.split('\n').map((para, i) => {
+      const trimmed = para.trim();
+      if (!trimmed) return <div key={i} style={{ height: '14px' }}></div>;
+
+      // H2 제목 (## )
+      if (trimmed.startsWith('## ')) {
+        return <h2 key={i} style={modalH2Style}>{trimmed.substring(3)}</h2>;
+      }
+      // H3 제목 (### )
+      if (trimmed.startsWith('### ')) {
+        return <h3 key={i} style={modalH3Style}>{trimmed.substring(4)}</h3>;
+      }
+      
+      // HighlightBox 커스텀 컴포넌트 렌더링
+      if (trimmed.includes('<HighlightBox')) {
+        return (
+          <div key={i} style={modalHighlightBoxStyle}>
+            <span style={{ fontWeight: '700', fontSize: '0.82rem', color: '#B08952', display: 'block', marginBottom: '6px' }}>💡 INSIGHT</span>
+            {trimmed.replace(/<HighlightBox.*?>|<\/HighlightBox>/g, '')}
+          </div>
+        );
+      }
+
+      return <p key={i} style={modalParaStyle}>{trimmed}</p>;
+    });
+  };
+
+  return (
+    <div style={modalOverlayStyle}>
+      <div style={modalWindowStyle}>
+        {/* Modal Header */}
+        <div style={modalHeaderStyle}>
+          <span style={{ fontSize: '0.86rem', fontWeight: '700', color: '#8B6B3D', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ☕ [data-theme="morning"] 블로그 스킨 프리뷰
+          </span>
+          <button onClick={onClose} style={modalCloseBtnStyle}>닫기 ✕</button>
+        </div>
+        
+        {/* Modal Scrollable Body */}
+        <div style={modalBodyScrollStyle}>
+          {/* Blog Hero Area */}
+          <div style={blogHeroStyle}>
+            <span style={blogCategoryStyle}>{category.toUpperCase()}</span>
+            <h1 style={blogTitleStyle}>{title}</h1>
+            <div style={blogMetaStyle}>
+              <span>✍️ {author}</span>
+              <span>•</span>
+              <span>📅 {date}</span>
+            </div>
+            
+            {/* Tags Row */}
+            {tags.length > 0 && (
+              <div style={blogTagsRowStyle}>
+                {tags.map((tag, idx) => (
+                  <span key={idx} style={blogTagStyle}>#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div style={blogDividerStyle}></div>
+
+          {/* Blog Content Layout */}
+          <div style={blogContentContainerStyle}>
+            {renderMdxBody()}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Morning 테마 시뮬레이터 전용 CSS Styles
+// -------------------------------------------------------------
+const modalOverlayStyle = {
+  position: 'fixed',
+  top: 0, left: 0, right: 0, bottom: 0,
+  background: 'rgba(10, 10, 15, 0.85)',
+  backdropFilter: 'blur(8px)',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 1000,
+  padding: '20px',
+};
+
+const modalWindowStyle = {
+  width: '100%',
+  maxWidth: '820px',
+  height: '85vh',
+  background: '#F9F8F6', // morning 테마 --color-bg
+  borderRadius: '16px',
+  border: '1px solid #ceb695', // morning 테마 --color-border
+  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+};
+
+const modalHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '14px 24px',
+  background: '#F1F0EE', // morning 테마 --color-bg-secondary
+  borderBottom: '1px solid #ceb695', // morning 테마 --color-border
+};
+
+const modalCloseBtnStyle = {
+  background: 'none',
+  border: 'none',
+  color: '#5B5248', // morning 테마 --color-sub
+  fontSize: '0.84rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  padding: '4px 8px',
+  borderRadius: '4px',
+  transition: 'all 0.2s',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const modalBodyScrollStyle = {
+  flex: 1,
+  overflowY: 'auto',
+  padding: '40px 50px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '24px',
+};
+
+const blogHeroStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+};
+
+const blogCategoryStyle = {
+  fontSize: '0.76rem',
+  fontWeight: '800',
+  color: '#8B6B3D', // morning 테마 --color-point
+  letterSpacing: '0.08em',
+};
+
+const blogTitleStyle = {
+  fontSize: '1.85rem',
+  fontWeight: '800',
+  color: '#1F2933', // morning 테마 --color-text
+  lineHeight: '1.35',
+  margin: 0,
+};
+
+const blogMetaStyle = {
+  display: 'flex',
+  gap: '12px',
+  fontSize: '0.78rem',
+  color: '#5B5248', // morning 테마 --color-sub
+  fontWeight: '500',
+};
+
+const blogTagsRowStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '8px',
+  marginTop: '4px',
+};
+
+const blogTagStyle = {
+  fontSize: '0.74rem',
+  fontWeight: '600',
+  color: '#B08952', // morning 테마 --color-sub-point
+  background: '#F1F0EE', // morning 테마 --color-bg-secondary
+  padding: '4px 10px',
+  borderRadius: '6px',
+};
+
+const blogDividerStyle = {
+  height: '1px',
+  background: '#ceb695', // morning 테마 --color-border
+  margin: '10px 0',
+  opacity: 0.7,
+};
+
+const blogContentContainerStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '18px',
+};
+
+const modalH2Style = {
+  fontSize: '1.3rem',
+  fontWeight: '800',
+  color: '#1F2933', // morning 테마 --color-text
+  borderBottom: '2px solid #ceb695', // morning 테마 --color-border
+  paddingBottom: '8px',
+  marginTop: '24px',
+  marginBottom: '6px',
+};
+
+const modalH3Style = {
+  fontSize: '1.05rem',
+  fontWeight: '700',
+  color: '#1F2933', // morning 테마 --color-text
+  marginTop: '16px',
+  marginBottom: '4px',
+};
+
+const modalHighlightBoxStyle = {
+  background: '#FFFDF9', // morning 테마 --color-card
+  borderLeft: '4px solid #B08952', // morning 테마 --color-sub-point
+  padding: '16px 20px',
+  borderRadius: '0 8px 8px 0',
+  fontSize: '0.84rem',
+  lineHeight: '1.6',
+  color: '#5B5248', // morning 테마 --color-sub
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)',
+  margin: '12px 0',
+};
+
+const modalParaStyle = {
+  fontSize: '0.88rem',
+  lineHeight: '1.75',
+  color: '#1F2933', // morning 테마 --color-text
+  margin: 0,
+  textAlign: 'justify',
+};
 
 
