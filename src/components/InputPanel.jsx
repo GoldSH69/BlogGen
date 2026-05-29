@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare } from 'lucide-react';
+import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare, Shield } from 'lucide-react';
 
 const AUDIENCE_PRESETS = [
   { id: 'all', label: '전체 연령대' },
@@ -20,6 +20,7 @@ export default function InputPanel({ onGenerate, isLoading }) {
   const [affiliateLink, setAffiliateLink] = useState(() => localStorage.getItem('affiliwrite_default_affiliate_link') || '');
   const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
   const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
+  const [disclaimerType, setDisclaimerType] = useState('general');
   
   // Platform Checkboxes state
   const [platforms, setPlatforms] = useState({
@@ -43,14 +44,37 @@ export default function InputPanel({ onGenerate, isLoading }) {
     e.preventDefault();
     setValidationError('');
 
-    if (!sourceText.trim()) {
+    const trimmedSource = sourceText.trim();
+    if (!trimmedSource) {
       setValidationError('기사 원문 또는 분석할 텍스트 내용을 입력해주세요.');
       return;
     }
 
-    if (affiliateLink.trim() && !affiliateLink.startsWith('http://') && !affiliateLink.startsWith('https://')) {
-      setValidationError('제휴 마케팅 링크는 http:// 또는 https://로 시작하는 유효한 URL이어야 합니다.');
+    // URL만 입력했을 때 유저에게 안내 에러 노출 (CORS 및 AI API 미지원 대응)
+    const isUrlOnly = !trimmedSource.includes(' ') && (
+      trimmedSource.startsWith('http://') || 
+      trimmedSource.startsWith('https://') || 
+      /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s]*)?$/.test(trimmedSource)
+    );
+    if (isUrlOnly) {
+      setValidationError('기사 원문 입력란에 URL 링크만 입력되어 있습니다. 브라우저 보안 정책(CORS) 및 AI 모델의 인터넷 브라우징 미지원으로 인해 URL에서 직접 내용을 긁어올 수 없습니다. 귀찮으시더라도 원문 기사나 상품 상세 페이지의 실제 텍스트 내용을 직접 드래그하여 복사 후 이곳에 붙여넣어 주세요!');
       return;
+    }
+
+    let cleanAffiliateLink = affiliateLink.trim();
+    if (cleanAffiliateLink) {
+      // 프로토콜(http/https)이 누락된 경우 자동으로 https:// 추가하여 유저 편의성 극대화
+      if (!/^https?:\/\//i.test(cleanAffiliateLink)) {
+        cleanAffiliateLink = 'https://' + cleanAffiliateLink;
+      }
+
+      // 간단한 URL 포맷 유효성 검사
+      try {
+        new URL(cleanAffiliateLink);
+      } catch (err) {
+        setValidationError('제휴 마케팅 링크가 유효한 URL 형식이 아닙니다. 올바른 주소인지 다시 확인해 주세요.');
+        return;
+      }
     }
 
     // Filter selected platforms
@@ -61,11 +85,12 @@ export default function InputPanel({ onGenerate, isLoading }) {
     }
 
     onGenerate({
-      sourceText: sourceText.trim(),
-      affiliateLink: affiliateLink.trim(),
+      sourceText: trimmedSource,
+      affiliateLink: cleanAffiliateLink,
       targetAudience,
       tone,
-      selectedPlatforms: selectedList
+      selectedPlatforms: selectedList,
+      disclaimerType
     });
   };
 
@@ -218,6 +243,37 @@ export default function InputPanel({ onGenerate, isLoading }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Disclaimer Selection */}
+      <div style={formGroupStyle}>
+        <label style={labelStyle}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Shield size={15} style={{ color: 'var(--color-cyan)' }} />
+            블로그 하단 면책문구 설정 (E-E-A-T)
+          </span>
+        </label>
+        <select
+          className="input-field"
+          value={disclaimerType}
+          onChange={(e) => setDisclaimerType(e.target.value)}
+          style={{ 
+            width: '100%', 
+            background: '#1a1a26', 
+            color: '#fff', 
+            border: '1px solid var(--border-color)',
+            padding: '10px 12px',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            outline: 'none',
+            fontSize: '0.82rem'
+          }}
+        >
+          <option value="general" style={{ background: '#12121c' }}>일반 정보용 (리빙, IT, 일상 팁 등)</option>
+          <option value="medical" style={{ background: '#12121c' }}>의학/건강용 (건강기능식품, 질병 예방 등)</option>
+          <option value="financial" style={{ background: '#12121c' }}>금융/투자용 (재테크, 자산 관리 등)</option>
+          <option value="none" style={{ background: '#12121c' }}>면책문구 없음</option>
+        </select>
       </div>
 
       {validationError && (
