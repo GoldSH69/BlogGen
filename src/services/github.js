@@ -37,17 +37,26 @@ export function clearGithubConfig() {
 }
 
 /**
- * Helper to encode unicode string to base64 safely (handles Korean characters)
+ * Helper to encode unicode string to base64 safely (handles Korean and emojis)
  */
 function utf8_to_b64(str) {
-  return window.btoa(unescape(encodeURIComponent(str)));
+  return btoa(
+    encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    )
+  );
 }
 
 /**
- * Helper to decode base64 to unicode string safely
+ * Helper to decode base64 to unicode string safely (handles Korean and emojis)
  */
 function b64_to_utf8(str) {
-  return decodeURIComponent(escape(window.atob(str)));
+  return decodeURIComponent(
+    atob(str)
+      .split('')
+      .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+      .join('')
+  );
 }
 
 /**
