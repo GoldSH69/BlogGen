@@ -80,7 +80,8 @@ export async function fetchHistoryFromGithub() {
       headers: {
         'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json'
-      }
+      },
+      cache: 'no-store'
     });
 
     if (response.status === 404) {
@@ -252,8 +253,10 @@ export async function fetchTrendConfigFromGithub() {
       headers: {
         'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json'
-      }
+      },
+      cache: 'no-store'
     });
+
 
     if (response.status === 404) {
       return null;
@@ -291,8 +294,10 @@ export async function fetchTrendIssuesFromGithub() {
       headers: {
         'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json'
-      }
+      },
+      cache: 'no-store'
     });
+
 
     if (!response.ok) {
       const errData = await response.json();

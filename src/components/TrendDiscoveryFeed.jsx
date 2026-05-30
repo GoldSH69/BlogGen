@@ -24,14 +24,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       }
       
       await triggerTrendCrawlerWorkflow();
-      setTriggerStatus('수집 서버 작동 중 (약 25초 소요)...');
+      setTriggerStatus('수집 서버 작동 중 (약 1분 소요)...');
       
-      // 25초 대기 후 자동 새로고침 및 버튼 잠금 해제
+      // 1분(60초) 대기 후 자동 새로고침 및 버튼 잠금 해제
       setTimeout(() => {
         loadTrends();
         setTriggerStatus('');
         setIsTriggering(false);
-      }, 25000);
+      }, 60000);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || '크롤러 서버를 가동하지 못했습니다. API 토큰에 [workflow] 권한이 활성화되어 있는지 확인해 주세요.');
@@ -72,27 +72,32 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     return '📌 내 관심사';
   };
 
-  // Helper to extract trend info from issue body (Robust Parsing)
+  // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
   const parseTrendBody = (body) => {
     if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
 
-    const scoreMatch = body.match(/클린 필터링 스코어:\s*`(\d+점)/);
-    const channelMatch = body.match(/수집 채널:\s*`([\s\S]*?)`/);
-    const bloggerMatch = body.match(/수집처\/작성자:\s*`([\s\S]*?)`/);
-    const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([\s\S]*?)\)/);
-    const groupMatch = body.match(/(?:수집 그룹|수집그룹)\s*:\s*(?:`|\*\*|)?([\s\S]*?)(?:`|\*\*|\n|\r|$)/);
-    const pubDateMatch = body.match(/원글 발행 시간:\s*`([\s\S]*?)`/);
+    const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^`\n\r]+)/i);
+    const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^`\n\r]+)/i);
+    const bloggerMatch = body.match(/-\s*\*\*수집처\/작성자\*\*:\s*`?([^`\n\r]+)/i);
+    const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([^)]+)\)/i) || body.match(/\[원본\s*연결\s*링크\]\(([^)]+)\)/i) || body.match(/\[원본 상세 본문 링크\]\(([^)]+)\)/i);
+    const groupMatch = body.match(/-\s*\*\*수집\s*그룹\*\*:\s*`?([^`\n\r]+)/i);
+    const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^`\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '내 관심사';
+    const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '기타';
+    const parsedScore = scoreMatch ? scoreMatch[1].replace(/[`*]/g, '').trim() : 'N/A';
+    const parsedBlogger = bloggerMatch ? bloggerMatch[1].replace(/[`*]/g, '').trim() : '작성자';
+    const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
+    const parsedPubDate = pubDateMatch ? pubDateMatch[1].replace(/[`*]/g, '').trim() : '';
 
     return {
-      type: channelMatch ? channelMatch[1] : '기타',
-      blogger: bloggerMatch ? bloggerMatch[1] : '작성자',
-      score: scoreMatch ? scoreMatch[1] : 'N/A',
-      link: linkMatch ? linkMatch[1] : '#',
+      type: parsedType,
+      blogger: parsedBlogger,
+      score: parsedScore,
+      link: parsedLink,
       group: parsedGroup,
-      pubDate: pubDateMatch ? pubDateMatch[1] : '',
+      pubDate: parsedPubDate,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
