@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Key, FileText, Settings, History, Trash2, Heart, Award, HelpCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, Key, FileText, Settings, History, Trash2, Heart, Award, HelpCircle, RefreshCw, TrendingUp } from 'lucide-react';
 import InputPanel from './components/InputPanel';
 import OutputTabs from './components/OutputTabs';
 import SNSPreviewPane from './components/SNSPreviewPane';
 import SettingsPanel from './components/SettingsPanel';
+import TrendDiscoveryFeed from './components/TrendDiscoveryFeed';
+import TrendSettingsPanel from './components/TrendSettingsPanel';
 import { generateContent, getApiKey } from './services/gemini';
 import { getGithubConfig, fetchHistoryFromGithub, saveHistoryToGithub } from './services/github';
 
@@ -17,6 +19,14 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [historyList, setHistoryList] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [currentTab, setCurrentTab] = useState('generator');
+  const [showTrendSettings, setShowTrendSettings] = useState(false);
+  const [prefilledTrend, setPrefilledTrend] = useState(null);
+
+  const handleSelectTrend = (trendData) => {
+    setPrefilledTrend(trendData);
+    setCurrentTab('generator');
+  };
 
   // Load history & configurations on mount and when settings close
   useEffect(() => {
@@ -186,7 +196,59 @@ export default function App() {
           </div>
         </div>
 
+        {/* Tab Selector */}
+        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+          <button 
+            onClick={() => setCurrentTab('generator')}
+            style={{ 
+              background: currentTab === 'generator' ? 'rgba(139, 92, 246, 0.15)' : 'none',
+              border: 'none',
+              color: currentTab === 'generator' ? '#c084fc' : 'var(--text-secondary)',
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              fontWeight: '600',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all var(--transition-fast)'
+            }}
+          >
+            <FileText size={14} />
+            원고 생성기
+          </button>
+          <button 
+            onClick={() => setCurrentTab('trend')}
+            style={{ 
+              background: currentTab === 'trend' ? 'rgba(6, 182, 212, 0.15)' : 'none',
+              border: 'none',
+              color: currentTab === 'trend' ? '#a5f3fc' : 'var(--text-secondary)',
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              fontWeight: '600',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all var(--transition-fast)'
+            }}
+          >
+            <TrendingUp size={14} />
+            트렌드 피드
+          </button>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            className="btn-secondary" 
+            onClick={() => setShowTrendSettings(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', color: '#c084fc', borderColor: 'rgba(139, 92, 246, 0.25)' }}
+          >
+            <TrendingUp size={16} />
+            트렌드 설정
+          </button>
           <button 
             className="btn-secondary" 
             onClick={() => setShowSettings(true)}
@@ -199,102 +261,118 @@ export default function App() {
       </header>
 
       {/* Main Workspace Layout */}
-      <main style={mainGridStyle}>
-        {/* Left Column: Source Input, Configuration, and History */}
-        <section style={leftColStyle}>
-          <InputPanel onGenerate={handleGenerate} isLoading={isLoading} />
+      {currentTab === 'generator' ? (
+        <main style={mainGridStyle}>
+          {/* Left Column: Source Input, Configuration, and History */}
+          <section style={leftColStyle}>
+            <InputPanel 
+              onGenerate={handleGenerate} 
+              isLoading={isLoading} 
+              prefilledData={prefilledTrend} 
+            />
 
-          {/* Local conversion History Panel */}
-          <div className="glass-card" style={historyPanelStyle}>
-            <div style={historyHeaderStyle}>
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#fff' }}>
-                <History size={16} style={{ color: 'var(--color-indigo)' }} />
-                최근 변환 내역
-              </h4>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button 
-                  onClick={handleSyncHistory} 
-                  disabled={isHistoryLoading}
-                  style={syncHistoryBtnStyle}
-                  title="GitHub 클라우드 동기화"
-                >
-                  <RefreshCw 
-                    size={12} 
-                    style={{ 
-                      animation: isHistoryLoading ? 'spin 1.5s linear infinite' : 'none',
-                      color: isHistoryLoading ? 'var(--color-cyan)' : 'inherit'
-                    }} 
-                  />
-                  {isHistoryLoading ? '동기화 중...' : '불러오기'}
-                </button>
-                {historyList.length > 0 && (
-                  <button onClick={handleClearHistory} style={clearHistoryBtnStyle}>
-                    <Trash2 size={12} /> 비우기
+            {/* Local conversion History Panel */}
+            <div className="glass-card" style={historyPanelStyle}>
+              <div style={historyHeaderStyle}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#fff' }}>
+                  <History size={16} style={{ color: 'var(--color-indigo)' }} />
+                  최근 변환 내역
+                </h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button 
+                    onClick={handleSyncHistory} 
+                    disabled={isHistoryLoading}
+                    style={syncHistoryBtnStyle}
+                    title="GitHub 클라우드 동기화"
+                  >
+                    <RefreshCw 
+                      size={12} 
+                      style={{ 
+                        animation: isHistoryLoading ? 'spin 1.5s linear infinite' : 'none',
+                        color: isHistoryLoading ? 'var(--color-cyan)' : 'inherit'
+                      }} 
+                    />
+                    {isHistoryLoading ? '동기화 중...' : '불러오기'}
                   </button>
+                  {historyList.length > 0 && (
+                    <button onClick={handleClearHistory} style={clearHistoryBtnStyle}>
+                      <Trash2 size={12} /> 비우기
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div style={historyBodyStyle}>
+                {historyList.length === 0 ? (
+                  <div style={emptyHistoryStyle}>
+                    최근 기록이 존재하지 않습니다.
+                  </div>
+                ) : (
+                  <div style={historyListWrapperStyle}>
+                    {historyList.map((item) => (
+                      <div 
+                        key={item.id} 
+                        onClick={() => handleLoadHistory(item)}
+                        style={historyItemStyle(generatedData === item.data)}
+                      >
+                        <div style={historyTitleStyle}>{item.title}</div>
+                        <div style={historyTimeStyle}>{item.timestamp}</div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-            
-            <div style={historyBodyStyle}>
-              {historyList.length === 0 ? (
-                <div style={emptyHistoryStyle}>
-                  최근 기록이 존재하지 않습니다.
-                </div>
-              ) : (
-                <div style={historyListWrapperStyle}>
-                  {historyList.map((item) => (
-                    <div 
-                      key={item.id} 
-                      onClick={() => handleLoadHistory(item)}
-                      style={historyItemStyle(generatedData === item.data)}
-                    >
-                      <div style={historyTitleStyle}>{item.title}</div>
-                      <div style={historyTimeStyle}>{item.timestamp}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Right Column: Codebox Output Tabs and Mobile Visual Previews */}
-        <section style={rightColStyle}>
-          {errorMessage && (
-            <div style={errorBannerStyle}>
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
-                ⚠️ 작업 처리 실패
-              </h4>
-              <p style={{ fontSize: '0.82rem', marginTop: '4px' }}>{errorMessage}</p>
-            </div>
-          )}
+          {/* Right Column: Codebox Output Tabs and Mobile Visual Previews */}
+          <section style={rightColStyle}>
+            {errorMessage && (
+              <div style={errorBannerStyle}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                  ⚠️ 작업 처리 실패
+                </h4>
+                <p style={{ fontSize: '0.82rem', marginTop: '4px' }}>{errorMessage}</p>
+              </div>
+            )}
 
-          <div style={dashboardGridStyle}>
-            {/* Output 원고 영역 */}
-            <div style={outputSectionStyle}>
-              <OutputTabs
-                data={generatedData}
-                onAdjust={handleAdjust}
-                isAdjusting={isAdjusting}
-                affiliateLink={affiliateLink}
-                activeTab={activePlatform}
-                setActiveTab={setActivePlatform}
-              />
-            </div>
+            <div style={dashboardGridStyle}>
+              {/* Output 원고 영역 */}
+              <div style={outputSectionStyle}>
+                <OutputTabs
+                  data={generatedData}
+                  onAdjust={handleAdjust}
+                  isAdjusting={isAdjusting}
+                  affiliateLink={affiliateLink}
+                  activeTab={activePlatform}
+                  setActiveTab={setActivePlatform}
+                />
+              </div>
 
-            {/* Mobile Preview 영역 */}
-            <div style={previewSectionStyle}>
-              <SNSPreviewPane
-                platform={activePlatform}
-                data={generatedData}
-              />
+              {/* Mobile Preview 영역 */}
+              <div style={previewSectionStyle}>
+                <SNSPreviewPane
+                  platform={activePlatform}
+                  data={generatedData}
+                />
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
+        </main>
+      ) : (
+        <main style={{ padding: '30px 5%', flex: 1, display: 'flex' }}>
+          <TrendDiscoveryFeed 
+            onSelectTrend={handleSelectTrend} 
+            activeTab={currentTab} 
+          />
+        </main>
+      )}
 
       {/* Settings Modal Layer */}
       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Trend Settings Modal Layer */}
+      <TrendSettingsPanel isOpen={showTrendSettings} onClose={() => setShowTrendSettings(false)} />
 
       {/* Footer Info */}
       <footer style={footerStyle}>

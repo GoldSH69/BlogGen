@@ -153,3 +153,139 @@ export async function saveHistoryToGithub(historyArray) {
     throw error;
   }
 }
+
+/**
+ * Save trend configuration to the GitHub repository
+ * @param {Object} configObj - The full config object to write
+ */
+export async function saveTrendConfigToGithub(configObj) {
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    throw new Error('GitHub 연동 정보가 설정되어 있지 않습니다. API 설정에서 깃허브 계정을 등록해주세요.');
+  }
+
+  const path = 'config/trend-config.json';
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
+  const jsonString = JSON.stringify(configObj, null, 2);
+  const base64Content = utf8_to_b64(jsonString);
+
+  try {
+    let sha = '';
+    const getResponse = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    if (getResponse.ok) {
+      const currentFileData = await getResponse.json();
+      sha = currentFileData.sha;
+    }
+
+    const putBody = {
+      message: 'config: update TCCG trend configuration',
+      content: base64Content
+    };
+    if (sha) {
+      putBody.sha = sha;
+    }
+
+    const putResponse = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${pat}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify(putBody)
+    });
+
+    if (!putResponse.ok) {
+      const errData = await putResponse.json();
+      throw new Error(errData.message || 'GitHub에 트렌드 설정을 저장하는데 실패했습니다.');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('GitHub Trend Config Write Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch trend configuration from GitHub repository
+ */
+export async function fetchTrendConfigFromGithub() {
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    return null;
+  }
+
+  const path = 'config/trend-config.json';
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || 'GitHub 트렌드 설정을 가져오는데 실패했습니다.');
+    }
+
+    const fileData = await response.json();
+    const base64Content = fileData.content.replace(/\s/g, '');
+    const decodedText = b64_to_utf8(base64Content);
+    return JSON.parse(decodedText);
+  } catch (error) {
+    console.error('GitHub Trend Config Fetch Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetch open trend issues from the GitHub repository
+ */
+export async function fetchTrendIssuesFromGithub() {
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    return [];
+  }
+
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/issues?labels=trend-candidate&state=open&per_page=50`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `token ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Cache-Control': 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || '트렌드 이슈 목록을 가져오는데 실패했습니다.');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('GitHub Fetch Issues Error:', error);
+    throw error;
+  }
+}
+

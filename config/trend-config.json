@@ -1,0 +1,28 @@
+{
+  "keywords": [
+    "나혼자산다 핫템",
+    "편스토랑 레시피",
+    "백종원 레시피",
+    "연예인 패션"
+  ],
+  "sources": {
+    "naverBlog": true,
+    "naverNews": true,
+    "naverCafe": false,
+    "naverShopping": true
+  },
+  "filtering": {
+    "minCleanScore": 75,
+    "customBlacklist": [
+      "공구",
+      "마켓",
+      "추천인",
+      "최저가링크",
+      "파트너스"
+    ],
+    "checkAdRegex": true
+  },
+  "scheduler": {
+    "intervalHours": 6
+  }
+}

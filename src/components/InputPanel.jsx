@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare, Shield } from 'lucide-react';
 
 const AUDIENCE_PRESETS = [
@@ -15,12 +15,18 @@ const TONE_PRESETS = [
   { id: 'sensory', label: '🔥 감성을 자극하는 스토리텔링' },
 ];
 
-export default function InputPanel({ onGenerate, isLoading }) {
+export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   const [sourceText, setSourceText] = useState('');
   const [affiliateLink, setAffiliateLink] = useState(() => localStorage.getItem('affiliwrite_default_affiliate_link') || '');
   const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
   const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
   const [disclaimerType, setDisclaimerType] = useState('general');
+
+  useEffect(() => {
+    if (prefilledData && prefilledData.content) {
+      setSourceText(prefilledData.content);
+    }
+  }, [prefilledData]);
   
   // Platform Checkboxes state
   const [platforms, setPlatforms] = useState({

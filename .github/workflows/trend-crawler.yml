@@ -1,0 +1,26 @@
+name: TCCG Trend Crawler
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # 6시간마다 자동 실행
+  workflow_dispatch: # 깃허브 웹 화면에서 수동 실행 가능하도록 설정
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Trend Scraper & Clean Filter
+        env:
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/trend-crawler.js
