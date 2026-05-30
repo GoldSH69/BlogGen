@@ -331,7 +331,7 @@ async function run() {
   // 4. Fetch existing open issues in GitHub to avoid duplicates
   let existingIssueTitles = new Set();
   try {
-    const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=all&per_page=100`;
+    const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=open&per_page=100`;
     const res = await fetch(issuesUrl, {
       headers: {
         'Authorization': `Bearer ${githubToken}`,
