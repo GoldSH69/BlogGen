@@ -72,7 +72,7 @@ export async function fetchHistoryFromGithub() {
     return null; // GitHub sync is not fully configured
   }
 
-  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}?_nocache=${Date.now()}`;
 
   try {
     const response = await fetch(url, {
@@ -244,7 +244,7 @@ export async function fetchTrendConfigFromGithub() {
   }
 
   const path = 'trend-rules.json';
-  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}?_nocache=${Date.now()}`;
 
   try {
     const response = await fetch(url, {
@@ -283,7 +283,7 @@ export async function fetchTrendIssuesFromGithub() {
     return [];
   }
 
-  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/issues?labels=trend-candidate&state=open&per_page=50`;
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/issues?labels=trend-candidate&state=open&per_page=50&_nocache=${Date.now()}`;
 
   try {
     const response = await fetch(url, {

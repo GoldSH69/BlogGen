@@ -206,6 +206,61 @@ async function fetchGoogleTrendingKeywords() {
   return keywords;
 }
 
+// [NEW] 구글 뉴스 RSS 직접 검색 및 수집 엔진
+async function fetchGoogleNewsResults(keyword) {
+  console.log(`- 구글 뉴스 RSS에서 키워드 "${keyword}" 검색 중...`);
+  const newsList = [];
+  try {
+    const encodedKeyword = encodeURIComponent(keyword);
+    const url = `https://news.google.com/rss/search?q=${encodedKeyword}&hl=ko&gl=KR&ceid=KR:ko`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+
+    if (res.ok) {
+      const xml = await res.text();
+      const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
+      let match;
+      let count = 0;
+      while ((match = itemPattern.exec(xml)) !== null && count < 5) {
+        const itemContent = match[1];
+        const titleMatch = itemContent.match(/<title>([\s\S]*?)<\/title>/i);
+        const linkMatch = itemContent.match(/<link>([\s\S]*?)<\/link>/i);
+        const pubDateMatch = itemContent.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+        const sourceMatch = itemContent.match(/<source[^>]*>([\s\S]*?)<\/source>/i);
+
+        if (titleMatch && titleMatch[1] && linkMatch && linkMatch[1]) {
+          const rawTitle = cleanHtml(titleMatch[1]);
+          const rawLink = cleanHtml(linkMatch[1]);
+          const rawPubDate = pubDateMatch ? cleanHtml(pubDateMatch[1]) : '';
+          const sourceName = sourceMatch ? cleanHtml(sourceMatch[1]) : '구글 뉴스';
+
+          newsList.push({
+            keyword,
+            type: '구글 뉴스',
+            title: rawTitle,
+            description: `[구글 뉴스 실시간 기사] ${rawTitle}\n출처: ${sourceName}\n이 뉴스는 구글 트렌드 급상승 핫이슈로 탐지된 최신 기사입니다. 원고 작성 기능을 통해 이 상세 기사 내용을 바탕으로 마케팅 블로그 포스팅용 스텔스 원고를 빠르게 생성할 수 있습니다.`,
+            link: rawLink,
+            bloggername: sourceName,
+            score: 95, 
+            reasons: ['구글 실시간 뉴스 기사 검증 통과'],
+            groupName: '실시간 핫이슈',
+            pubDate: formatPubDate(rawPubDate)
+          });
+          count++;
+        }
+      }
+    }
+    console.log(`  => 구글 뉴스 RSS 키워드 검색 결과 ${newsList.length}개 추출 완료.`);
+  } catch (e) {
+    console.error('  구글 뉴스 RSS 검색 실패:', e.message);
+  }
+  return newsList;
+}
+
 // [NEW] 네이버 쇼핑 베스트 100 인기 상품명 파서 (정교한 HTML 클래스 믹스)
 async function fetchNaverShoppingBestKeywords() {
   console.log('- 네이버 쇼핑 베스트 인기 상품 키워드 수집 중...');
@@ -508,6 +563,17 @@ async function run() {
   
   for (const keyword of realtimeKeywords) {
     console.log(`\n실시간 핫 키워드 검색 중: "${keyword}"`);
+    
+    // [NEW] 구글 실시간 기사 직접 수집 추가
+    try {
+      const googleNewsItems = await fetchGoogleNewsResults(keyword);
+      if (googleNewsItems && googleNewsItems.length > 0) {
+        group3Candidates.push(...googleNewsItems);
+      }
+    } catch (e) {
+      console.error('실시간 구글 뉴스 직접 수집 실패:', e.message);
+    }
+
     const encodedKeyword = encodeURIComponent(keyword);
 
     if (sources.naverBlog) {

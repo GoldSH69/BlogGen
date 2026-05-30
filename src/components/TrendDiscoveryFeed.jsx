@@ -4,6 +4,7 @@ import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflo
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
+  const [activeGroupTab, setActiveGroupTab] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
@@ -71,7 +72,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     return '📌 내 관심사';
   };
 
-  // Helper to extract trend info from issue body
+  // Helper to extract trend info from issue body (Robust Parsing)
   const parseTrendBody = (body) => {
     if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
 
@@ -79,23 +80,24 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const channelMatch = body.match(/수집 채널:\s*`([\s\S]*?)`/);
     const bloggerMatch = body.match(/수집처\/작성자:\s*`([\s\S]*?)`/);
     const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([\s\S]*?)\)/);
-    const groupMatch = body.match(/수집 그룹:\s*`([\s\S]*?)`/);
+    const groupMatch = body.match(/(?:수집 그룹|수집그룹)\s*:\s*(?:`|\*\*|)?([\s\S]*?)(?:`|\*\*|\n|\r|$)/);
     const pubDateMatch = body.match(/원글 발행 시간:\s*`([\s\S]*?)`/);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
+
+    const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '내 관심사';
 
     return {
       type: channelMatch ? channelMatch[1] : '기타',
       blogger: bloggerMatch ? bloggerMatch[1] : '작성자',
       score: scoreMatch ? scoreMatch[1] : 'N/A',
       link: linkMatch ? linkMatch[1] : '#',
-      group: groupMatch ? groupMatch[1] : '내 관심사',
+      group: parsedGroup,
       pubDate: pubDateMatch ? pubDateMatch[1] : '',
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
 
   const handleSelect = (issue, parsed) => {
-    // Send core content, title, and link back to App.jsx to populate inputs
     onSelectTrend({
       content: parsed.content,
       title: issue.title.replace(/^\[트렌드\]\s*/, ''),
@@ -103,16 +105,26 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
   };
 
+  // Filter trends locally based on segmented group tab
+  const filteredTrends = trends.filter(issue => {
+    if (activeGroupTab === 'all') return true;
+    const parsed = parseTrendBody(issue.body);
+    if (activeGroupTab === 'my') return parsed.group === '내 관심사';
+    if (activeGroupTab === 'naver') return parsed.group === '네이버 핫토픽';
+    if (activeGroupTab === 'google') return parsed.group === '실시간 핫이슈';
+    return true;
+  });
+
   return (
     <div className="glass-card" style={feedPanelStyle}>
       <div style={feedHeaderStyle}>
         <div>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.05rem', fontWeight: '800' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: '800' }}>
             <Sparkles size={18} className="pulse-glow" style={{ color: 'var(--color-cyan)' }} />
             TCCG 실시간 미디어 & 핫템 발굴 피드
           </h3>
           <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Actions 크롤러가 네이버 검색 API로 광고성 글을 3단계 필터로 정제하여 실시간 발굴한 핫템 목록입니다.
+            Actions 크롤러가 광고성 글을 3단계 필터로 정제하여 실시간 발굴한 핫템 목록입니다.
           </p>
         </div>
 
@@ -121,9 +133,9 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
             onClick={handleTriggerWorkflow} 
             disabled={isTriggering || isLoading}
             style={triggerBtnStyle(isTriggering)}
-            title="깃허브 서버를 가동해 네이버 실시간 트렌드 기사/블로그를 강제 수집합니다."
+            title="깃허브 서버를 가동해 실시간 트렌드 기사/블로그를 강제 수집합니다."
           >
-            <Sparkles size={13} style={{ color: '#c084fc', animation: isTriggering ? 'spin 1.5s linear infinite' : 'none' }} />
+            <Sparkles size={13} style={{ color: 'var(--color-violet)', animation: isTriggering ? 'spin 1.5s linear infinite' : 'none' }} />
             {isTriggering ? triggerStatus : "지금 트렌드 수집"}
           </button>
 
@@ -136,6 +148,34 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
             새로고침
           </button>
         </div>
+      </div>
+
+      {/* Category Segmented Tabs */}
+      <div style={tabContainerStyle}>
+        <button 
+          onClick={() => setActiveGroupTab('all')}
+          style={tabItemStyle(activeGroupTab === 'all', 'all')}
+        >
+          🌐 전체보기
+        </button>
+        <button 
+          onClick={() => setActiveGroupTab('my')}
+          style={tabItemStyle(activeGroupTab === 'my', 'my')}
+        >
+          📌 내 관심사
+        </button>
+        <button 
+          onClick={() => setActiveGroupTab('naver')}
+          style={tabItemStyle(activeGroupTab === 'naver', 'naver')}
+        >
+          🔥 네이버 핫토픽
+        </button>
+        <button 
+          onClick={() => setActiveGroupTab('google')}
+          style={tabItemStyle(activeGroupTab === 'google', 'google')}
+        >
+          ⚡ 실시간 핫이슈
+        </button>
       </div>
 
       <div style={feedBodyStyle}>
@@ -154,14 +194,22 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         ) : trends.length === 0 ? (
           <div style={emptyContainerStyle}>
             <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📡</div>
-            <h4 style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '700' }}>탐지된 최신 핫템 이슈가 없습니다.</h4>
+            <h4 style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '700' }}>탐지된 최신 핫템 이슈가 없습니다.</h4>
             <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', maxWidth: '320px', lineHeight: '1.4' }}>
               우측 상단의 **[트렌드 설정]**에서 관심 방송 키워드를 추가하고, GitHub Actions가 백그라운드 수집을 정상적으로 완료할 때까지 기다려 주세요.
             </p>
           </div>
+        ) : filteredTrends.length === 0 ? (
+          <div style={emptyContainerStyle}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
+            <h4 style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: '700' }}>선택하신 카테고리의 핫템이 존재하지 않습니다.</h4>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
+              다른 카테고리 탭을 선택하거나, 우측 상단 **[지금 트렌드 수집]**을 눌러보세요.
+            </p>
+          </div>
         ) : (
           <div style={cardsGridStyle}>
-            {trends.map((issue) => {
+            {filteredTrends.map((issue) => {
               const parsed = parseTrendBody(issue.body);
               const isHighClean = parseInt(parsed.score) >= 80;
 
@@ -171,7 +219,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   <div style={badgeRowStyle}>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                       <span style={groupBadgeStyle(parsed.group)}>{getGroupLabelWithEmoji(parsed.group)}</span>
-                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type === '기타' ? '네이버 블로그' : parsed.type}</span>
+                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
                     </div>
                     <span style={scoreBadgeStyle(isHighClean)}>
                       <Award size={12} />
@@ -222,7 +270,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
 // Styles
 const feedPanelStyle = {
-  background: 'rgba(18, 18, 26, 0.45)',
+  background: 'var(--bg-surface)',
   border: '1px solid var(--border-color)',
   padding: '24px',
   display: 'flex',
@@ -240,8 +288,47 @@ const feedHeaderStyle = {
   gap: '16px',
 };
 
+const tabContainerStyle = {
+  display: 'flex',
+  gap: '8px',
+  background: 'var(--bg-surface-solid)',
+  padding: '6px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border-color)',
+  marginBottom: '20px',
+  flexWrap: 'wrap',
+};
+
+const tabItemStyle = (isActive, type) => {
+  let activeColor = 'var(--color-violet)';
+  let activeBg = 'var(--color-violet-glow)';
+  
+  if (type === 'naver') {
+    activeColor = '#10b981';
+    activeBg = 'rgba(16, 185, 129, 0.08)';
+  } else if (type === 'google') {
+    activeColor = '#3b82f6';
+    activeBg = 'rgba(59, 130, 246, 0.08)';
+  }
+
+  return {
+    background: isActive ? activeBg : 'transparent',
+    border: isActive ? '1px solid currentColor' : '1px solid transparent',
+    color: isActive ? activeColor : 'var(--text-secondary)',
+    padding: '8px 16px',
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    borderRadius: 'var(--radius-sm)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'all var(--transition-fast)'
+  };
+};
+
 const syncBtnStyle = {
-  background: 'rgba(255,255,255,0.03)',
+  background: 'var(--bg-surface-solid)',
   border: '1px solid var(--border-color)',
   color: 'var(--color-cyan)',
   padding: '8px 12px',
@@ -256,18 +343,18 @@ const syncBtnStyle = {
 };
 
 const groupBadgeStyle = (group) => {
-  let color = '#93c5fd';
-  let bg = 'rgba(147, 197, 253, 0.08)';
-  let border = 'rgba(147, 197, 253, 0.2)';
+  let color = 'var(--color-violet)';
+  let bg = 'var(--color-violet-glow)';
+  let border = 'var(--border-color)';
   
   if (group.includes('핫토픽')) {
-    color = '#4ade80';
-    bg = 'rgba(74, 222, 128, 0.08)';
-    border = 'rgba(74, 222, 128, 0.2)';
+    color = '#10b981';
+    bg = 'rgba(16, 185, 129, 0.08)';
+    border = 'rgba(16, 185, 129, 0.2)';
   } else if (group.includes('핫이슈') || group.includes('실시간')) {
-    color = '#c084fc';
-    bg = 'rgba(192, 132, 252, 0.08)';
-    border = 'rgba(192, 132, 252, 0.2)';
+    color = '#3b82f6';
+    bg = 'rgba(59, 130, 246, 0.08)';
+    border = 'rgba(59, 130, 246, 0.2)';
   }
   
   return {
@@ -282,9 +369,9 @@ const groupBadgeStyle = (group) => {
 };
 
 const triggerBtnStyle = (isTriggering) => ({
-  background: isTriggering ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.05)',
-  border: `1px solid ${isTriggering ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.25)'}`,
-  color: isTriggering ? '#f3e8ff' : '#e9d5ff',
+  background: isTriggering ? 'var(--color-indigo-glow)' : 'var(--color-violet-glow)',
+  border: `1px solid var(--color-violet)`,
+  color: 'var(--color-violet)',
   padding: '8px 12px',
   borderRadius: 'var(--radius-sm)',
   fontSize: '0.78rem',
@@ -294,7 +381,7 @@ const triggerBtnStyle = (isTriggering) => ({
   gap: '6px',
   fontWeight: '700',
   transition: 'all var(--transition-fast)',
-  boxShadow: isTriggering ? '0 0 10px rgba(168, 85, 247, 0.2)' : 'none',
+  boxShadow: isTriggering ? 'var(--shadow-neon)' : 'none',
   pointerEvents: isTriggering ? 'none' : 'auto'
 });
 
@@ -311,13 +398,14 @@ const cardsGridStyle = {
 };
 
 const cardStyle = {
-  background: 'rgba(30, 30, 46, 0.35)',
+  background: 'var(--bg-surface-solid)',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-md)',
   padding: '16px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
+  boxShadow: 'var(--shadow-card)',
   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
@@ -328,15 +416,31 @@ const badgeRowStyle = {
   marginBottom: '12px',
 };
 
-const channelBadgeStyle = (type) => ({
-  fontSize: '0.68rem',
-  padding: '3px 8px',
-  borderRadius: '4px',
-  fontWeight: '700',
-  color: type.includes('뉴스') ? '#93c5fd' : '#86efac',
-  background: type.includes('뉴스') ? 'rgba(147, 197, 253, 0.08)' : 'rgba(134, 239, 172, 0.08)',
-  border: `1px solid ${type.includes('뉴스') ? 'rgba(147, 197, 253, 0.2)' : 'rgba(134, 239, 172, 0.2)'}`,
-});
+const channelBadgeStyle = (type) => {
+  let color = '#10b981'; // 블로그 (green)
+  let bg = 'rgba(16, 185, 129, 0.08)';
+  let border = 'rgba(16, 185, 129, 0.2)';
+
+  if (type.includes('뉴스') || type.includes('구글')) {
+    color = '#3b82f6'; // 뉴스 / 구글 (blue)
+    bg = 'rgba(59, 130, 246, 0.08)';
+    border = 'rgba(59, 130, 246, 0.2)';
+  } else if (type.includes('쇼핑')) {
+    color = '#eab308'; // 쇼핑 (yellow)
+    bg = 'rgba(234, 179, 8, 0.08)';
+    border = 'rgba(234, 179, 8, 0.2)';
+  }
+
+  return {
+    fontSize: '0.68rem',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    fontWeight: '700',
+    color,
+    background: bg,
+    border: `1px solid ${border}`,
+  };
+};
 
 const scoreBadgeStyle = (isHigh) => ({
   fontSize: '0.68rem',
@@ -346,15 +450,15 @@ const scoreBadgeStyle = (isHigh) => ({
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
-  color: isHigh ? '#fcd34d' : 'var(--text-secondary)',
-  background: isHigh ? 'rgba(252, 211, 77, 0.08)' : 'rgba(255,255,255,0.03)',
-  border: `1px solid ${isHigh ? 'rgba(252, 211, 77, 0.2)' : 'var(--border-color)'}`,
+  color: isHigh ? 'var(--color-indigo)' : 'var(--text-secondary)',
+  background: isHigh ? 'var(--color-indigo-glow)' : 'var(--bg-surface)',
+  border: `1px solid ${isHigh ? 'var(--color-indigo)' : 'var(--border-color)'}`,
 });
 
 const cardTitleStyle = {
   fontSize: '0.85rem',
   fontWeight: '700',
-  color: '#fff',
+  color: 'var(--text-primary)',
   lineHeight: '1.45',
   marginBottom: '8px',
   display: '-webkit-box',
@@ -407,7 +511,7 @@ const loadingContainerStyle = {
 const spinnerStyle = {
   width: '24px',
   height: '24px',
-  border: '2px solid rgba(255, 255, 255, 0.1)',
+  border: '2px solid var(--border-color)',
   borderTop: '2px solid var(--color-cyan)',
   borderRadius: '50%',
   animation: 'spin 0.8s linear infinite',
@@ -431,8 +535,9 @@ const errorContainerStyle = {
   borderRadius: 'var(--radius-sm)',
   background: 'rgba(244, 63, 94, 0.08)',
   border: '1px solid rgba(244, 63, 94, 0.2)',
-  color: '#fecdd3',
+  color: 'var(--color-rose)',
   fontSize: '0.8rem',
   lineHeight: '1.4',
   marginBottom: '20px',
 };
+

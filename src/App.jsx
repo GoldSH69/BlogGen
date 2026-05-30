@@ -22,6 +22,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('generator');
   const [showTrendSettings, setShowTrendSettings] = useState(false);
   const [prefilledTrend, setPrefilledTrend] = useState(null);
+  const [infoMessage, setInfoMessage] = useState('');
   
   // Morning/Evening Theme State
   const [theme, setTheme] = useState(() => {
@@ -180,20 +181,29 @@ export default function App() {
 
     setIsHistoryLoading(true);
     setErrorMessage('');
+    setInfoMessage('');
     try {
       const ghHistory = await fetchHistoryFromGithub();
       if (ghHistory) {
         setHistoryList(ghHistory);
         localStorage.setItem('affiliwrite_history', JSON.stringify(ghHistory));
+        
+        // 💡 성공 피드백 알림 3초간 노출
+        setInfoMessage(`💡 GitHub 클라우드와 실시간 동기화를 완료하여 총 ${ghHistory.length}개의 원고 히스토리 내역을 완벽히 복원하였습니다.`);
+        setTimeout(() => {
+          setInfoMessage('');
+        }, 4000);
+      } else {
+        setErrorMessage('💡 GitHub 저장소에 원고 기록이 아직 생성되지 않았습니다.');
       }
     } catch (err) {
       console.error(err);
       if (err.message === 'history_not_found') {
-        // 만약 깃허브에 백업 파일이 아예 없다면, 현재 로컬 히스토리를 서버에 즉각 최초 백업 업로드!
         if (historyList && historyList.length > 0) {
           try {
             await saveHistoryToGithub(historyList);
-            setErrorMessage('💡 깃허브 서버에 백업 파일이 존재하지 않아, 현재 기기에 있는 오프라인 원고 내역을 클라우드에 최초로 백업 전송 및 신설 완료하였습니다.');
+            setInfoMessage('💡 깃허브 서버에 백업 파일이 존재하지 않아, 현재 기기에 있는 오프라인 원고 내역을 클라우드에 최초로 백업 전송 및 신설 완료하였습니다.');
+            setTimeout(() => setInfoMessage(''), 4000);
           } catch (saveErr) {
             console.error('Failed to auto-create history on GitHub:', saveErr);
             setErrorMessage(`깃허브 백업 생성 실패: ${saveErr.message || '토큰의 쓰기(Write) 권한을 확인해주세요.'}`);
@@ -201,8 +211,10 @@ export default function App() {
         } else {
           setErrorMessage('💡 깃허브 서버에 저장된 history.json 백업 파일이 존재하지 않습니다. 먼저 원고를 1회 이상 생성하여 동기화를 진행해 주세요.');
         }
+      } else if (err.message.includes('JSON') || err.message.includes('파싱')) {
+        setErrorMessage(`⚠️ 백업 파일(history.json)의 데이터 형식이 손상되었습니다. 원고 생성기에서 새로운 원고를 작성하여 저장하면 로컬 데이터가 깃허브에 다시 덮어씌워지며 자동으로 복구됩니다. (상세 원인: ${err.message})`);
       } else {
-        setErrorMessage(`GitHub 클라우드 데이터를 가져오는데 실패했습니다: ${err.message || 'API 토큰을 다시 확인해주세요.'}`);
+        setErrorMessage(`GitHub 클라우드 데이터를 가져오는데 실패했습니다: ${err.message || 'API 토큰 및 네트워크 연결을 확인해주세요.'}`);
       }
     } finally {
       setIsHistoryLoading(false);
@@ -377,6 +389,15 @@ export default function App() {
 
           {/* Right Column: Codebox Output Tabs and Mobile Visual Previews */}
           <section style={rightColStyle}>
+            {infoMessage && (
+              <div style={infoBannerStyle}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                  💡 실시간 동기화 완료
+                </h4>
+                <p style={{ fontSize: '0.82rem', marginTop: '4px' }}>{infoMessage}</p>
+              </div>
+            )}
+
             {errorMessage && (
               <div style={errorBannerStyle}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
@@ -603,6 +624,15 @@ const historyTimeStyle = {
   fontSize: '0.65rem',
   color: 'var(--text-muted)',
   marginTop: '4px',
+};
+
+const infoBannerStyle = {
+  background: 'var(--color-violet-glow)',
+  border: '1px solid var(--border-color)',
+  color: 'var(--color-violet)',
+  padding: '16px 20px',
+  borderRadius: 'var(--radius-md)',
+  lineHeight: '1.4',
 };
 
 const errorBannerStyle = {
