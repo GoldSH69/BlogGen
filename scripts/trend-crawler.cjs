@@ -88,7 +88,7 @@ async function scrapeFullText(link, type) {
     });
     
     if (!res.ok) {
-      console.log(`  본문 스크래핑 실패 (HTTP ${res.status})`);
+      console.log(`  본문 스크래핑 실패 (HTTP ${res.status}) - 사용자 가이드에 따라 가볍게 폴백 처리`);
       return null;
     }
     
@@ -111,29 +111,39 @@ async function scrapeFullText(link, type) {
         }
       }
     } else {
+      // 일반 기사/뉴스 선행 청정화 필터 (스크립트, 스타일, 헤더, 푸터, 아이프레임 등을 청소해 토큰 소모 최소화)
+      const cleanHtmlDump = html
+        .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
+        .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
+        .replace(/<header[^>]*>([\s\S]*?)<\/header>/gi, '')
+        .replace(/<footer[^>]*>([\s\S]*?)<\/footer>/gi, '')
+        .replace(/<nav[^>]*>([\s\S]*?)<\/nav>/gi, '')
+        .replace(/<aside[^>]*>([\s\S]*?)<\/aside>/gi)
+        .replace(/<iframe[^>]*>([\s\S]*?)<\/iframe>/gi, '');
+
       // 네이버 뉴스 또는 기타 기사
-      if (html.includes('id="dic_area"')) {
-        const chunk = html.split('id="dic_area"')[1];
+      if (cleanHtmlDump.includes('id="dic_area"')) {
+        const chunk = cleanHtmlDump.split('id="dic_area"')[1];
         const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</article>')[0];
         bodyText = cleanHtml(rawContent);
-      } else if (html.includes('id="newsct_article"')) {
-        const chunk = html.split('id="newsct_article"')[1];
+      } else if (cleanHtmlDump.includes('id="newsct_article"')) {
+        const chunk = cleanHtmlDump.split('id="newsct_article"')[1];
         const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</div>')[0];
         bodyText = cleanHtml(rawContent);
-      } else if (html.includes('id="articleBodyContents"')) {
-        const chunk = html.split('id="articleBodyContents"')[1];
+      } else if (cleanHtmlDump.includes('id="articleBodyContents"')) {
+        const chunk = cleanHtmlDump.split('id="articleBodyContents"')[1];
         const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</div>')[0];
         bodyText = cleanHtml(rawContent);
       }
       
       if (!bodyText) {
         // 일반 뉴스 사이트 또는 fallback 기사 파싱
-        const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+        const articleMatch = cleanHtmlDump.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
         if (articleMatch) {
           bodyText = cleanHtml(articleMatch[1]);
         } else {
           // 기사 본문으로 추정되는 긴 영역을 splitter로 시도
-          const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          const bodyMatch = cleanHtmlDump.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
           if (bodyMatch) {
             bodyText = cleanHtml(bodyMatch[1]);
           }
@@ -148,9 +158,9 @@ async function scrapeFullText(link, type) {
         .replace(/\n\s*\n/g, '\n\n') // 연속 줄바꿈 방지
         .trim();
       
-      const limit = 4000;
+      const limit = 2500;
       if (bodyText.length > limit) {
-        bodyText = bodyText.substring(0, limit) + '\n\n... (이하 본문 생략 / 전체 원본 내용이 너무 길어 일부만 수집되었습니다. 원고 재작성에는 충분한 분량입니다) ...';
+        bodyText = bodyText.substring(0, limit) + '\n\n... (이하 본문 생략 / 원고 재작성 비용 및 AI 토큰 절감을 위해 2500자 크기로 부분 절단하였습니다) ...';
       }
       return bodyText;
     }

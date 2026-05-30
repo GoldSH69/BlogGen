@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Key, FileText, Settings, History, Trash2, Heart, Award, HelpCircle, RefreshCw, TrendingUp } from 'lucide-react';
+import { Sparkles, Key, FileText, Settings, History, Trash2, Heart, Award, HelpCircle, RefreshCw, TrendingUp, Sun, Moon } from 'lucide-react';
 import InputPanel from './components/InputPanel';
 import OutputTabs from './components/OutputTabs';
 import SNSPreviewPane from './components/SNSPreviewPane';
@@ -22,6 +22,18 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('generator');
   const [showTrendSettings, setShowTrendSettings] = useState(false);
   const [prefilledTrend, setPrefilledTrend] = useState(null);
+  
+  // Morning/Evening Theme State
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('affiliwrite_theme');
+    return savedTheme || 'morning';
+  });
+
+  // Apply theme to document html element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('affiliwrite_theme', theme);
+  }, [theme]);
 
   const handleSelectTrend = (trendData) => {
     setPrefilledTrend(trendData);
@@ -243,8 +255,31 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button 
             className="btn-secondary" 
+            onClick={() => setTheme(theme === 'morning' ? 'evening' : 'morning')}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '10px 16px', 
+              color: theme === 'morning' ? '#D9A441' : '#a78bfa', 
+              borderColor: theme === 'morning' ? 'rgba(217, 164, 65, 0.25)' : 'rgba(167, 139, 250, 0.25)' 
+            }}
+            title={theme === 'morning' ? '저녁모드로 전환' : '아침모드로 전환'}
+          >
+            {theme === 'morning' ? <Sun size={16} /> : <Moon size={16} />}
+            {theme === 'morning' ? '아침모드' : '저녁모드'}
+          </button>
+          <button 
+            className="btn-secondary" 
             onClick={() => setShowTrendSettings(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', color: '#c084fc', borderColor: 'rgba(139, 92, 246, 0.25)' }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '10px 16px', 
+              color: theme === 'morning' ? '#E0B15C' : '#c084fc', 
+              borderColor: theme === 'morning' ? 'rgba(224, 177, 92, 0.25)' : 'rgba(139, 92, 246, 0.25)' 
+            }}
           >
             <TrendingUp size={16} />
             트렌드 설정

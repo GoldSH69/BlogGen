@@ -1,6 +1,77 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
 
 :root {
+  /* Default: Morning Theme */
+  --bg-base: #0F1722;
+  --bg-surface: rgba(22, 31, 44, 0.7);
+  --bg-surface-solid: #161F2C;
+  --bg-surface-hover: rgba(30, 41, 55, 0.85);
+  
+  --border-color: #2A3442;
+  --border-color-hover: rgba(217, 164, 65, 0.3);
+  
+  --text-primary: #F5E9D2;
+  --text-secondary: #CDBFA8;
+  --text-muted: rgba(205, 191, 168, 0.6);
+  
+  --color-violet: #D9A441;
+  --color-violet-glow: rgba(217, 164, 65, 0.15);
+  --color-indigo: #E0B15C;
+  --color-indigo-glow: rgba(224, 177, 92, 0.15);
+  --color-cyan: #CDBFA8;
+  --color-cyan-glow: rgba(205, 191, 168, 0.15);
+  --color-emerald: #10b981;
+  --color-emerald-glow: rgba(16, 185, 129, 0.15);
+  --color-rose: #f43f5e;
+  --color-rose-glow: rgba(244, 63, 94, 0.15);
+  
+  --gradient-neon: linear-gradient(135deg, var(--color-violet) 0%, var(--color-indigo) 100%);
+  --gradient-dark: linear-gradient(180deg, #0F1722 0%, #090e15 100%);
+  
+  --shadow-neon: 0 0 20px rgba(217, 164, 65, 0.15);
+  --shadow-neon-cyan: 0 0 20px rgba(205, 191, 168, 0.15);
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  
+  --font-sans: 'Outfit', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="morning"] {
+  --bg-base: #0F1722;
+  --bg-surface: rgba(22, 31, 44, 0.7);
+  --bg-surface-solid: #161F2C;
+  --bg-surface-hover: rgba(30, 41, 55, 0.85);
+  
+  --border-color: #2A3442;
+  --border-color-hover: rgba(217, 164, 65, 0.3);
+  
+  --text-primary: #F5E9D2;
+  --text-secondary: #CDBFA8;
+  --text-muted: rgba(205, 191, 168, 0.6);
+  
+  --color-violet: #D9A441;
+  --color-violet-glow: rgba(217, 164, 65, 0.15);
+  --color-indigo: #E0B15C;
+  --color-indigo-glow: rgba(224, 177, 92, 0.15);
+  --color-cyan: #CDBFA8;
+  --color-cyan-glow: rgba(205, 191, 168, 0.15);
+  
+  --gradient-neon: linear-gradient(135deg, var(--color-violet) 0%, var(--color-indigo) 100%);
+  --gradient-dark: linear-gradient(180deg, #0F1722 0%, #090e15 100%);
+  
+  --shadow-neon: 0 0 20px rgba(217, 164, 65, 0.15);
+  --shadow-neon-cyan: 0 0 20px rgba(205, 191, 168, 0.15);
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="evening"] {
   --bg-base: #08080c;
   --bg-surface: rgba(18, 18, 26, 0.7);
   --bg-surface-solid: #12121a;
@@ -19,10 +90,6 @@
   --color-indigo-glow: rgba(99, 102, 241, 0.15);
   --color-cyan: #06b6d4;
   --color-cyan-glow: rgba(6, 182, 212, 0.15);
-  --color-emerald: #10b981;
-  --color-emerald-glow: rgba(16, 185, 129, 0.15);
-  --color-rose: #f43f5e;
-  --color-rose-glow: rgba(244, 63, 94, 0.15);
   
   --gradient-neon: linear-gradient(135deg, var(--color-violet) 0%, var(--color-indigo) 50%, var(--color-cyan) 100%);
   --gradient-dark: linear-gradient(180deg, #0b0b10 0%, #060608 100%);
@@ -30,16 +97,6 @@
   --shadow-neon: 0 0 20px rgba(139, 92, 246, 0.15);
   --shadow-neon-cyan: 0 0 20px rgba(6, 182, 212, 0.15);
   --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  
-  --font-sans: 'Outfit', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -53,9 +110,8 @@
 body {
   background-color: var(--bg-base);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, var(--color-violet-glow) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--color-indigo-glow) 0px, transparent 50%),
     var(--gradient-dark);
   color: var(--text-primary);
   font-family: var(--font-sans);
@@ -64,6 +120,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 /* Custom Scrollbar */
