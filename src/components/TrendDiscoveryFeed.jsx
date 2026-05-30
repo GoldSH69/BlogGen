@@ -11,7 +11,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   const handleTriggerWorkflow = async () => {
     setIsTriggering(true);
-    setTriggerStatus('서버 기동 신호 전송 중...');
+    setTriggerStatus('서버 가동 신호 전송 중...');
     setErrorMsg('');
     try {
       const { username, repo, pat } = getGithubConfig();
@@ -23,14 +23,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       }
       
       await triggerTrendCrawlerWorkflow();
-      setTriggerStatus('수집 서버 가동 성공! (15초 후 자동 갱신)');
+      setTriggerStatus('수집 서버 작동 중 (약 25초 소요)...');
       
-      // 15초 후 자동 새로고침 기동
+      // 25초 대기 후 자동 새로고침 및 버튼 잠금 해제
       setTimeout(() => {
         loadTrends();
         setTriggerStatus('');
         setIsTriggering(false);
-      }, 15000);
+      }, 25000);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || '크롤러 서버를 가동하지 못했습니다. API 토큰에 [workflow] 권한이 활성화되어 있는지 확인해 주세요.');
