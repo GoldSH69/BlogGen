@@ -265,8 +265,8 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
           onChange={(e) => setDisclaimerType(e.target.value)}
           style={{ 
             width: '100%', 
-            background: '#1a1a26', 
-            color: '#fff', 
+            background: 'var(--bg-surface-solid)', 
+            color: 'var(--text-primary)', 
             border: '1px solid var(--border-color)',
             padding: '10px 12px',
             borderRadius: 'var(--radius-sm)',
@@ -275,10 +275,10 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
             fontSize: '0.82rem'
           }}
         >
-          <option value="general" style={{ background: '#12121c' }}>일반 정보용 (리빙, IT, 일상 팁 등)</option>
-          <option value="medical" style={{ background: '#12121c' }}>의학/건강용 (건강기능식품, 질병 예방 등)</option>
-          <option value="financial" style={{ background: '#12121c' }}>금융/투자용 (재테크, 자산 관리 등)</option>
-          <option value="none" style={{ background: '#12121c' }}>면책문구 없음</option>
+          <option value="general" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>일반 정보용 (리빙, IT, 일상 팁 등)</option>
+          <option value="medical" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>의학/건강용 (건강기능식품, 질병 예방 등)</option>
+          <option value="financial" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>금융/투자용 (재테크, 자산 관리 등)</option>
+          <option value="none" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>면책문구 없음</option>
         </select>
       </div>
 
@@ -317,7 +317,7 @@ const panelStyle = {
   flexDirection: 'column',
   gap: '20px',
   padding: '24px',
-  background: 'rgba(18, 18, 26, 0.45)',
+  background: 'var(--bg-surface)',
   border: '1px solid var(--border-color)',
 };
 
@@ -326,7 +326,7 @@ const headerStyle = {
   alignItems: 'center',
   gap: '8px',
   fontSize: '1.15rem',
-  color: '#fff',
+  color: 'var(--text-primary)',
   borderBottom: '1px solid var(--border-color)',
   paddingBottom: '12px',
   marginBottom: '4px',
@@ -364,8 +364,8 @@ const presetGridStyle = {
 };
 
 const presetBtnStyle = (isSelected) => ({
-  background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.02)',
-  color: isSelected ? '#a5b4fc' : 'var(--text-secondary)',
+  background: isSelected ? 'var(--color-indigo-glow)' : 'var(--bg-surface-solid)',
+  color: isSelected ? 'var(--color-indigo)' : 'var(--text-secondary)',
   border: `1px solid ${isSelected ? 'var(--color-indigo)' : 'var(--border-color)'}`,
   borderRadius: 'var(--radius-sm)',
   padding: '10px 8px',
@@ -383,8 +383,8 @@ const presetColStyle = {
 };
 
 const toneBtnStyle = (isSelected) => ({
-  background: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-  color: isSelected ? '#c084fc' : 'var(--text-secondary)',
+  background: isSelected ? 'var(--color-violet-glow)' : 'var(--bg-surface-solid)',
+  color: isSelected ? 'var(--color-violet)' : 'var(--text-secondary)',
   border: `1px solid ${isSelected ? 'var(--color-violet)' : 'var(--border-color)'}`,
   borderRadius: 'var(--radius-sm)',
   padding: '12px 14px',
@@ -399,7 +399,7 @@ const platformGridStyle = {
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
-  background: 'rgba(255,255,255,0.01)',
+  background: 'var(--bg-surface-solid)',
   padding: '12px',
   borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--border-color)',
@@ -410,11 +410,11 @@ const checkboxLabelStyle = (isChecked) => ({
   alignItems: 'center',
   gap: '10px',
   fontSize: '0.82rem',
-  color: isChecked ? '#fff' : 'var(--text-secondary)',
+  color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
   cursor: 'pointer',
   padding: '6px 8px',
   borderRadius: '4px',
-  background: isChecked ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
+  background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
   transition: 'all var(--transition-fast)',
 });
 
@@ -433,7 +433,7 @@ const errorContainerStyle = {
   borderRadius: 'var(--radius-sm)',
   background: 'rgba(244, 63, 94, 0.08)',
   border: '1px solid rgba(244, 63, 94, 0.2)',
-  color: '#fecdd3',
+  color: 'var(--color-rose)',
   fontSize: '0.82rem',
   lineHeight: '1.4',
 };

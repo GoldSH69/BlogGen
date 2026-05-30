@@ -40,23 +40,23 @@ export function clearGithubConfig() {
  * Helper to encode unicode string to base64 safely (handles Korean and emojis)
  */
 function utf8_to_b64(str) {
-  return btoa(
-    encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
-      String.fromCharCode(parseInt(p1, 16))
-    )
-  );
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
-/**
- * Helper to decode base64 to unicode string safely (handles Korean and emojis)
- */
 function b64_to_utf8(str) {
-  return decodeURIComponent(
-    atob(str)
-      .split('')
-      .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-      .join('')
-  );
+  const normalized = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
+  const binaryString = atob(normalized);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 /**
@@ -89,11 +89,15 @@ export async function fetchHistoryFromGithub() {
     }
 
     const fileData = await response.json();
-    // GitHub returns content with newlines sometimes, strip them
     const base64Content = fileData.content.replace(/\s/g, '');
     const decodedText = b64_to_utf8(base64Content);
     
-    return JSON.parse(decodedText);
+    try {
+      return JSON.parse(decodedText);
+    } catch (jsonErr) {
+      console.warn('GitHub history.json parsing failed, fallback to empty array:', jsonErr);
+      return [];
+    }
   } catch (error) {
     console.error('GitHub Fetch Error:', error);
     throw error;

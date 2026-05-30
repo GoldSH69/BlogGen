@@ -53,7 +53,7 @@ export default function SNSPreviewPane({ platform, data }) {
         color: 'var(--text-secondary)'
       }}>
         <Smartphone size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
-        <h5 style={{ color: '#fff', fontSize: '0.88rem', marginBottom: '6px' }}>{label} 비활성화</h5>
+        <h5 style={{ color: 'var(--text-primary)', fontSize: '0.88rem', marginBottom: '6px' }}>{label} 비활성화</h5>
         <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
           이 플랫폼은 원고 생성 시 선택하지 않아 모바일 프리뷰가 제공되지 않습니다.
         </p>
@@ -76,7 +76,7 @@ export default function SNSPreviewPane({ platform, data }) {
         <div style={naverProfileRow}>
           <div style={profileCircleStyle}><User size={16} /></div>
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#fff' }}>스마트 마케터</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>스마트 마케터</div>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>방금 전 · 전체공개</div>
           </div>
         </div>
@@ -185,9 +185,9 @@ export default function SNSPreviewPane({ platform, data }) {
             <div style={{ ...profileCircleStyle, width: '28px', height: '28px', background: 'var(--gradient-neon)' }}>
               <User size={14} />
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: '700' }}>insta_influencer</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>insta_influencer</span>
           </div>
-          <span style={{ fontWeight: '900', letterSpacing: '1px', fontSize: '0.8rem' }}>•••</span>
+          <span style={{ fontWeight: '900', letterSpacing: '1px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>•••</span>
         </div>
 
         {/* Image / Card News Area */}
@@ -233,7 +233,7 @@ export default function SNSPreviewPane({ platform, data }) {
         </div>
 
         {/* Likes Count */}
-        <div style={{ padding: '0 12px', fontSize: '0.78rem', fontWeight: '700', color: '#fff' }}>
+        <div style={{ padding: '0 12px', fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-primary)' }}>
           좋아요 1,482개
         </div>
 
@@ -330,7 +330,7 @@ export default function SNSPreviewPane({ platform, data }) {
 
         {/* Content Body Rendering */}
         <div style={mdxContentBody}>
-          <h1 style={{ fontSize: '1.2rem', marginBottom: '12px', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+          <h1 style={{ fontSize: '1.2rem', marginBottom: '12px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
             {mdxData.frontmatter?.match(/title:\s*"(.*?)"/)?.[1] || 'MDX 포스팅'}
           </h1>
           
@@ -345,9 +345,9 @@ export default function SNSPreviewPane({ platform, data }) {
               mdxData.content.split('\n').map((para, i) => {
                 if (!para.trim()) return null;
                 // Header style checks
-                if (para.startsWith('# ')) return <h1 key={i} style={{ fontSize: '1.25rem', marginTop: '14px', color: '#fff' }}>{para.substring(2)}</h1>;
-                if (para.startsWith('## ')) return <h2 key={i} style={{ fontSize: '1.1rem', marginTop: '12px', color: '#fff' }}>{para.substring(3)}</h2>;
-                if (para.startsWith('### ')) return <h3 key={i} style={{ fontSize: '0.95rem', marginTop: '10px', color: '#fff' }}>{para.substring(4)}</h3>;
+                if (para.startsWith('# ')) return <h1 key={i} style={{ fontSize: '1.25rem', marginTop: '14px', color: 'var(--text-primary)' }}>{para.substring(2)}</h1>;
+                if (para.startsWith('## ')) return <h2 key={i} style={{ fontSize: '1.1rem', marginTop: '12px', color: 'var(--text-primary)' }}>{para.substring(3)}</h2>;
+                if (para.startsWith('### ')) return <h3 key={i} style={{ fontSize: '0.95rem', marginTop: '10px', color: 'var(--text-primary)' }}>{para.substring(4)}</h3>;
                 
                 // HighlightBox custom component parse
                 if (para.includes('<HighlightBox')) {
@@ -386,6 +386,7 @@ export default function SNSPreviewPane({ platform, data }) {
 }
 
 // Styling Objects for Mockups
+// Styling Objects for Mockups
 const containerStyle = {
   display: 'flex',
   flexDirection: 'column',
@@ -420,12 +421,13 @@ const phoneBezelStyle = {
 const phoneScreenStyle = {
   width: '100%',
   height: '100%',
-  background: '#0c0c12',
+  background: 'var(--bg-base)',
   borderRadius: '24px',
   overflowY: 'auto',
   overflowX: 'hidden',
   position: 'relative',
-  border: '1px solid rgba(0, 0, 0, 0.8)',
+  border: '1px solid var(--border-color)',
+  transition: 'background var(--transition-normal)',
 };
 
 const emptyPreviewStyle = {
@@ -440,7 +442,7 @@ const emptyPreviewStyle = {
 
 // 1. Naver Styles
 const naverBlogContainer = {
-  background: '#12121a',
+  background: 'var(--bg-base)',
   minHeight: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -450,8 +452,8 @@ const naverBlogHeader = {
   display: 'flex',
   alignItems: 'center',
   padding: '12px 16px',
-  borderBottom: '1px solid rgba(255,255,255,0.05)',
-  background: '#161622',
+  borderBottom: '1px solid var(--border-color)',
+  background: 'var(--bg-surface-solid)',
 };
 
 const naverProfileRow = {
@@ -465,11 +467,12 @@ const profileCircleStyle = {
   width: '32px',
   height: '32px',
   borderRadius: '50%',
-  background: 'rgba(255,255,255,0.1)',
+  background: 'var(--color-violet-glow)',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
   color: 'var(--text-secondary)',
+  border: '1px solid var(--border-color)',
 };
 
 const naverBlogBody = {
@@ -479,15 +482,16 @@ const naverBlogBody = {
 const naverBlogTitle = {
   fontSize: '1.05rem',
   fontWeight: '800',
-  color: '#fff',
+  color: 'var(--text-primary)',
   lineHeight: '1.4',
   margin: '8px 0',
 };
 
 const dividerStyle = {
   height: '1px',
-  background: 'rgba(255,255,255,0.06)',
+  background: 'var(--border-color)',
   margin: '12px 0',
+  opacity: 0.5,
 };
 
 const naverContentStyle = {
@@ -497,12 +501,12 @@ const naverContentStyle = {
 };
 
 const naverLinkStyle = {
-  color: 'var(--color-cyan)',
+  color: 'var(--color-indigo)',
   fontWeight: '600',
-  background: 'rgba(6, 182, 212, 0.06)',
+  background: 'var(--color-indigo-glow)',
   padding: '8px 10px',
   borderRadius: '6px',
-  border: '1px dashed rgba(6, 182, 212, 0.2)',
+  border: '1px dashed var(--border-color)',
   wordBreak: 'break-all',
   fontSize: '0.74rem',
   margin: '12px 0',
@@ -524,7 +528,7 @@ const naverTagStyle = {
   border: '1px solid rgba(3, 199, 90, 0.15)',
 };
 
-// 2. Shorts / TikTok Styles
+// 2. Shorts / TikTok Styles (YouTube/TikTok style forces dark theme natively)
 const shortsContainer = {
   height: '100%',
   background: '#09090e',
@@ -572,10 +576,10 @@ const shortsPlayIndicator = {
 const shortsVisualPrompt = {
   fontSize: '0.7rem',
   background: 'rgba(18, 18, 26, 0.85)',
-  color: 'var(--text-secondary)',
+  color: 'rgba(255,255,255,0.85)',
   padding: '8px 12px',
-  borderRadius: 'var(--radius-sm)',
-  border: '1px solid var(--border-color)',
+  borderRadius: '8px',
+  border: '1px solid rgba(255,255,255,0.15)',
   textAlign: 'center',
   lineHeight: '1.4',
 };
@@ -637,7 +641,7 @@ const shortsAudioRow = {
   alignItems: 'center',
   gap: '6px',
   fontSize: '0.68rem',
-  color: 'var(--text-secondary)',
+  color: 'rgba(255,255,255,0.7)',
   marginTop: '6px',
 };
 
@@ -652,7 +656,7 @@ const shortsSubtitleContainer = {
 };
 
 const shortsSubtitle = {
-  background: 'rgba(139, 92, 246, 0.15)',
+  background: 'rgba(139, 92, 246, 0.25)',
   border: '1px solid rgba(139, 92, 246, 0.4)',
   padding: '8px 12px',
   borderRadius: '8px',
@@ -666,7 +670,7 @@ const shortsSubtitle = {
 
 // 3. Instagram Styles
 const instaContainer = {
-  background: '#09090e',
+  background: 'var(--bg-base)',
   minHeight: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -677,25 +681,25 @@ const instaHeader = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '10px 12px',
-  borderBottom: '1px solid rgba(255,255,255,0.05)',
+  borderBottom: '1px solid var(--border-color)',
 };
 
 const instaImageArea = {
   width: '100%',
   height: '240px',
-  background: 'linear-gradient(45deg, #1e1e2d 0%, #0c0c16 100%)',
+  background: 'var(--bg-surface-solid)',
   position: 'relative',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  borderBottom: '1px solid rgba(255,255,255,0.05)',
+  borderBottom: '1px solid var(--border-color)',
 };
 
 const cardNewsContainer = {
   width: '80%',
   height: '75%',
-  background: 'rgba(255,255,255,0.02)',
-  border: '1px solid rgba(255,255,255,0.06)',
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
   borderRadius: '16px',
   padding: '16px',
   display: 'flex',
@@ -703,7 +707,7 @@ const cardNewsContainer = {
   alignItems: 'center',
   position: 'relative',
   textAlign: 'center',
-  boxShadow: 'inset 0 0 10px rgba(255,255,255,0.02)',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const cardNewsBadge = {
@@ -711,7 +715,8 @@ const cardNewsBadge = {
   top: '10px',
   right: '10px',
   fontSize: '0.62rem',
-  background: 'rgba(0,0,0,0.4)',
+  background: 'var(--color-indigo-glow)',
+  border: '1px solid var(--border-color)',
   padding: '2px 6px',
   borderRadius: '99px',
   color: 'var(--text-secondary)',
@@ -719,7 +724,7 @@ const cardNewsBadge = {
 
 const cardNewsContentText = {
   fontSize: '0.74rem',
-  color: '#fff',
+  color: 'var(--text-primary)',
   fontWeight: '700',
   lineHeight: '1.5',
 };
@@ -732,9 +737,9 @@ const cardNavStyle = {
 };
 
 const cardNavBtnStyle = (disabled) => ({
-  background: disabled ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
-  color: disabled ? 'var(--text-muted)' : '#fff',
-  border: 'none',
+  background: disabled ? 'var(--bg-base)' : 'var(--color-violet-glow)',
+  color: disabled ? 'var(--text-muted)' : 'var(--color-violet)',
+  border: '1px solid var(--border-color)',
   borderRadius: '4px',
   width: '24px',
   height: '20px',
@@ -760,18 +765,19 @@ const instaBody = {
 
 // 5. MDX Styles
 const mdxContainer = {
-  background: '#09090e',
+  background: 'var(--bg-base)',
   minHeight: '100%',
   padding: '16px',
 };
 
 const mdxFrontmatterBox = {
-  background: '#0e1715',
-  border: '1px solid rgba(16, 185, 129, 0.15)',
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
   borderRadius: '8px',
   padding: '10px',
   marginBottom: '16px',
   position: 'relative',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const mdxBadge = {
@@ -779,8 +785,8 @@ const mdxBadge = {
   top: '-6px',
   left: '10px',
   fontSize: '0.52rem',
-  background: '#10b981',
-  color: '#000',
+  background: 'var(--color-indigo)',
+  color: '#fff',
   padding: '1px 6px',
   borderRadius: '3px',
   fontWeight: '900',
@@ -791,8 +797,8 @@ const mdxContentBody = {
 };
 
 const mdxBoxTip = {
-  background: 'rgba(16, 185, 129, 0.06)',
-  borderLeft: '3px solid #34d399',
+  background: 'var(--color-emerald-glow)',
+  borderLeft: '3px solid var(--color-emerald)',
   padding: '10px',
   borderRadius: '4px',
   fontSize: '0.7rem',
@@ -801,11 +807,11 @@ const mdxBoxTip = {
 };
 
 const mdxBoxWarning = {
-  background: 'rgba(244, 63, 94, 0.06)',
-  borderLeft: '3px solid #fb7185',
+  background: 'var(--color-rose-glow)',
+  borderLeft: '3px solid var(--color-rose)',
   padding: '10px',
   borderRadius: '4px',
   fontSize: '0.7rem',
   color: 'var(--text-secondary)',
-  margin: '12px 0',
+  marginBottom: '12px',
 };

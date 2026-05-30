@@ -137,7 +137,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         
         {/* Header */}
         <div style={modalHeaderStyle}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
             <Settings size={20} className="pulse-glow" style={{ color: 'var(--color-violet)' }} />
             TCCG 트렌드 수집 제어 센터
           </h3>
@@ -305,9 +305,9 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 블랙리스트 단어가 없습니다.</div>
                   ) : (
                     blacklist.map((word, i) => (
-                      <span key={i} style={{ ...tagStyle, background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.2)', color: '#fecdd3' }}>
+                      <span key={i} style={{ ...tagStyle, background: 'var(--color-rose-glow)', border: '1px solid rgba(244, 63, 94, 0.25)', color: 'var(--color-rose)' }}>
                         {word}
-                        <button type="button" onClick={() => handleRemoveBlacklist(word)} style={{ ...tagRemoveStyle, color: '#fecdd3' }}>
+                        <button type="button" onClick={() => handleRemoveBlacklist(word)} style={{ ...tagRemoveStyle, color: 'var(--color-rose)' }}>
                           <X size={11} />
                         </button>
                       </span>
@@ -352,7 +352,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(5, 5, 8, 0.85)',
+  backgroundColor: 'rgba(5, 5, 8, 0.7)',
   backdropFilter: 'blur(8px)',
   display: 'flex',
   justifyContent: 'center',
@@ -363,7 +363,7 @@ const modalOverlayStyle = {
 const modalContentStyle = {
   width: '95%',
   maxWidth: '520px',
-  background: '#12121c',
+  background: 'var(--bg-surface-solid)',
   padding: '0px',
   borderRadius: 'var(--radius-lg)',
   overflow: 'hidden',
@@ -371,6 +371,7 @@ const modalContentStyle = {
   flexDirection: 'column',
   maxHeight: '90vh',
   border: '1px solid var(--border-color)',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const modalHeaderStyle = {
@@ -409,7 +410,7 @@ const scrollContainerStyle = {
 const sectionTitleStyle = {
   fontSize: '0.82rem',
   fontWeight: '700',
-  color: '#fff',
+  color: 'var(--text-primary)',
   marginBottom: '10px',
   letterSpacing: '0.03em',
 };
@@ -418,7 +419,7 @@ const tagWrapperStyle = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: '6px',
-  background: 'rgba(255,255,255,0.01)',
+  background: 'var(--bg-surface-solid)',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-sm)',
   padding: '10px',
@@ -431,9 +432,9 @@ const tagStyle = {
   alignItems: 'center',
   gap: '5px',
   fontSize: '0.74rem',
-  background: 'rgba(139, 92, 246, 0.08)',
-  border: '1px solid rgba(139, 92, 246, 0.25)',
-  color: '#c084fc',
+  background: 'var(--color-violet-glow)',
+  border: '1px solid var(--border-color)',
+  color: 'var(--color-violet)',
   padding: '4px 8px',
   borderRadius: '4px',
 };
@@ -441,7 +442,7 @@ const tagStyle = {
 const tagRemoveStyle = {
   background: 'none',
   border: 'none',
-  color: '#c084fc',
+  color: 'var(--color-violet)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -452,7 +453,7 @@ const sourceGridStyle = {
   display: 'grid',
   gridTemplateColumns: '1fr',
   gap: '8px',
-  background: 'rgba(255,255,255,0.01)',
+  background: 'var(--bg-surface-solid)',
   padding: '12px',
   borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--border-color)',
@@ -463,10 +464,11 @@ const checkboxLabelStyle = (isChecked) => ({
   alignItems: 'center',
   gap: '10px',
   fontSize: '0.82rem',
-  color: isChecked ? '#fff' : 'var(--text-secondary)',
+  color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
   cursor: 'pointer',
   padding: '4px 6px',
   borderRadius: '4px',
+  background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
   transition: 'all var(--transition-fast)',
 });
 
@@ -481,7 +483,7 @@ const inputRowStyle = {
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
-  background: 'rgba(255,255,255,0.01)',
+  background: 'var(--bg-surface-solid)',
   padding: '12px',
   borderRadius: 'var(--radius-sm)',
   border: '1px solid var(--border-color)',
@@ -524,7 +526,7 @@ const errorContainerStyle = {
   borderRadius: 'var(--radius-sm)',
   background: 'rgba(244, 63, 94, 0.08)',
   border: '1px solid rgba(244, 63, 94, 0.2)',
-  color: '#fecdd3',
+  color: 'var(--color-rose)',
   fontSize: '0.8rem',
   lineHeight: '1.4',
   marginBottom: '16px',

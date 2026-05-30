@@ -111,7 +111,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
     <div style={modalOverlayStyle}>
       <div className="glass-card animate-slide-up" style={modalContentStyle}>
         <div style={modalHeaderStyle}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
             <Key size={20} className="pulse-glow" style={{ color: 'var(--color-cyan)' }} />
             API & 연동 설정 센터
           </h3>
@@ -311,7 +311,7 @@ export default function SettingsPanel({ isOpen, onClose }) {
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(5, 5, 8, 0.85)',
+  backgroundColor: 'rgba(5, 5, 8, 0.7)',
   backdropFilter: 'blur(8px)',
   display: 'flex',
   justifyContent: 'center',
@@ -322,13 +322,15 @@ const modalOverlayStyle = {
 const modalContentStyle = {
   width: '95%',
   maxWidth: '500px',
-  background: '#12121c',
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
   padding: '0px',
   borderRadius: 'var(--radius-lg)',
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
   maxHeight: '90vh',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const modalHeaderStyle = {
@@ -366,14 +368,15 @@ const scrollContainerStyle = {
 
 const dividerStyle = {
   height: '1px',
-  background: 'rgba(255,255,255,0.06)',
-  margin: '20px 0'
+  background: 'var(--border-color)',
+  margin: '20px 0',
+  opacity: 0.5,
 };
 
 const sectionTitleStyle = {
   fontSize: '0.85rem',
   fontWeight: '700',
-  color: '#fff',
+  color: 'var(--text-primary)',
   marginBottom: '10px',
   textTransform: 'uppercase',
   letterSpacing: '0.03em',
@@ -385,10 +388,10 @@ const statusBannerStyle = (isSuccess) => ({
   gap: '10px',
   padding: '10px 14px',
   borderRadius: 'var(--radius-sm)',
-  background: isSuccess ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)',
+  background: isSuccess ? 'var(--color-emerald-glow)' : 'var(--color-rose-glow)',
   border: `1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)'}`,
   marginBottom: '14px',
-  color: isSuccess ? '#a7f3d0' : '#fecdd3',
+  color: isSuccess ? 'var(--color-emerald)' : 'var(--color-rose)',
 });
 
 const inputGroupStyle = {

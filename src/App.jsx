@@ -188,7 +188,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setErrorMessage('GitHub 클라우드 데이터를 가져오는데 실패했습니다. API 토큰을 다시 확인해주세요.');
+      setErrorMessage(`GitHub 클라우드 데이터를 가져오는데 실패했습니다: ${err.message || 'API 토큰을 다시 확인해주세요.'}`);
     } finally {
       setIsHistoryLoading(false);
     }
@@ -209,13 +209,13 @@ export default function App() {
         </div>
 
         {/* Tab Selector */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', padding: '4px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-surface-solid)', padding: '4px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
           <button 
             onClick={() => setCurrentTab('generator')}
             style={{ 
-              background: currentTab === 'generator' ? 'rgba(139, 92, 246, 0.15)' : 'none',
+              background: currentTab === 'generator' ? 'var(--color-violet-glow)' : 'none',
               border: 'none',
-              color: currentTab === 'generator' ? '#c084fc' : 'var(--text-secondary)',
+              color: currentTab === 'generator' ? 'var(--color-violet)' : 'var(--text-secondary)',
               padding: '6px 12px',
               fontSize: '0.78rem',
               fontWeight: '600',
@@ -233,9 +233,9 @@ export default function App() {
           <button 
             onClick={() => setCurrentTab('trend')}
             style={{ 
-              background: currentTab === 'trend' ? 'rgba(6, 182, 212, 0.15)' : 'none',
+              background: currentTab === 'trend' ? 'var(--color-indigo-glow)' : 'none',
               border: 'none',
-              color: currentTab === 'trend' ? '#a5f3fc' : 'var(--text-secondary)',
+              color: currentTab === 'trend' ? 'var(--color-indigo)' : 'var(--text-secondary)',
               padding: '6px 12px',
               fontSize: '0.78rem',
               fontWeight: '600',
@@ -309,7 +309,7 @@ export default function App() {
             {/* Local conversion History Panel */}
             <div className="glass-card" style={historyPanelStyle}>
               <div style={historyHeaderStyle}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#fff' }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
                   <History size={16} style={{ color: 'var(--color-indigo)' }} />
                   최근 변환 내역
                 </h4>
@@ -429,7 +429,7 @@ const headerStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '16px 5%',
-  background: 'rgba(10, 10, 14, 0.4)',
+  background: 'var(--bg-surface)',
   borderBottom: '1px solid var(--border-color)',
   backdropFilter: 'blur(12px)',
   position: 'sticky',
@@ -452,7 +452,7 @@ const logoTitleStyle = {
   fontSize: '1.25rem',
   fontWeight: '800',
   letterSpacing: '-0.02em',
-  color: '#fff',
+  color: 'var(--text-primary)',
   lineHeight: '1',
 };
 
@@ -510,10 +510,11 @@ const previewSectionStyle = {
 };
 
 const historyPanelStyle = {
-  background: 'rgba(18, 18, 26, 0.35)',
+  background: 'var(--bg-surface)',
   padding: '16px',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-md)',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const historyHeaderStyle = {
@@ -566,8 +567,8 @@ const historyListWrapperStyle = {
 };
 
 const historyItemStyle = (isActive) => ({
-  background: isActive ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255, 255, 255, 0.01)',
-  border: `1px solid ${isActive ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-color)'}`,
+  background: isActive ? 'var(--color-indigo-glow)' : 'var(--bg-surface-solid)',
+  border: `1px solid ${isActive ? 'var(--color-indigo)' : 'var(--border-color)'}`,
   borderRadius: '6px',
   padding: '10px 12px',
   cursor: 'pointer',
@@ -577,7 +578,7 @@ const historyItemStyle = (isActive) => ({
 const historyTitleStyle = {
   fontSize: '0.78rem',
   fontWeight: '600',
-  color: '#fff',
+  color: 'var(--text-primary)',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -592,7 +593,7 @@ const historyTimeStyle = {
 const errorBannerStyle = {
   background: 'rgba(244, 63, 94, 0.08)',
   border: '1px solid rgba(244, 63, 94, 0.25)',
-  color: '#fecdd3',
+  color: 'var(--color-rose)',
   padding: '16px 20px',
   borderRadius: 'var(--radius-md)',
   lineHeight: '1.4',
@@ -604,6 +605,6 @@ const footerStyle = {
   borderTop: '1px solid var(--border-color)',
   fontSize: '0.78rem',
   color: 'var(--text-muted)',
-  background: '#060608',
+  background: 'var(--bg-surface-solid)',
   marginTop: '40px',
 };

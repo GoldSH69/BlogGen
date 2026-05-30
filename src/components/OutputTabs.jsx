@@ -30,7 +30,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     return (
       <div style={emptyStateStyle}>
         <FileText size={48} style={{ color: 'var(--text-muted)', marginBottom: '16px' }} className="pulse-glow" />
-        <h4 style={{ color: '#fff', marginBottom: '8px' }}>생성된 원고가 아직 없습니다</h4>
+        <h4 style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>생성된 원고가 아직 없습니다</h4>
         <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
           왼쪽 패널에 마케팅 기본 설정과 정보를 입력하고 '생성하기' 단추를 누르면 5개 소셜 플랫폼 맞춤 원고가 한 번에 완성됩니다.
         </p>
@@ -306,7 +306,7 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
     return (
       <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
         <AlertCircle size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
-        <h5 style={{ color: '#fff', marginBottom: '6px' }}>생성 대상으로 선택되지 않은 플랫폼입니다</h5>
+        <h5 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>생성 대상으로 선택되지 않은 플랫폼입니다</h5>
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
           왼쪽 패널의 [생성할 소셜 플랫폼 선택] 항목에서 체크박스를 활성화하고 다시 생성하시면 해당 채널 맞춤형 원고를 만듭니다.
         </p>
@@ -357,7 +357,7 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
                   <div style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginBottom: '3px' }}>
                     🎥 비주얼 연출: {item.visual}
                   </div>
-                  <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '500' }}>
+                  <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
                     🎤 내레이션: "{item.audio}"
                   </div>
                 </div>
@@ -413,7 +413,7 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
                   <div style={{ color: '#22d3ee', fontSize: '0.74rem', marginBottom: '3px', fontStyle: 'italic' }}>
                     💬 자막 싱크: "{item.subtitle}"
                   </div>
-                  <div style={{ color: '#fff', fontSize: '0.8rem', fontWeight: '500' }}>
+                  <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
                     🎤 내레이션: "{item.audio}"
                   </div>
                 </div>
@@ -512,7 +512,7 @@ const emptyStateStyle = {
   justifyContent: 'center',
   alignItems: 'center',
   padding: '60px 24px',
-  background: 'rgba(18, 18, 26, 0.3)',
+  background: 'var(--bg-surface)',
   border: '1px dashed var(--border-color)',
   borderRadius: 'var(--radius-lg)',
   textAlign: 'center',
@@ -527,7 +527,7 @@ const tabsListStyle = {
 };
 
 const tabBtnStyle = (isActive) => ({
-  background: isActive ? 'var(--gradient-neon)' : 'rgba(255, 255, 255, 0.02)',
+  background: isActive ? 'var(--gradient-neon)' : 'var(--bg-surface-solid)',
   color: isActive ? '#fff' : 'var(--text-secondary)',
   border: isActive ? 'none' : '1px solid var(--border-color)',
   borderRadius: 'var(--radius-sm)',
@@ -539,19 +539,20 @@ const tabBtnStyle = (isActive) => ({
 });
 
 const codeBoxContainerStyle = {
-  background: 'rgba(18, 18, 26, 0.5)',
+  background: 'var(--bg-surface)',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-md)',
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const codeBoxHeaderStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(255, 255, 255, 0.02)',
+  background: 'var(--bg-surface-solid)',
   padding: '12px 16px',
   borderBottom: '1px solid var(--border-color)',
 };
@@ -564,14 +565,14 @@ const codeBoxLabelStyle = {
 
 const copyBtnStyle = (copied) => ({
   background: copied ? 'rgba(16, 185, 129, 0.12)' : 'rgba(139, 92, 246, 0.12)',
-  color: copied ? '#34d399' : '#c084fc',
-  border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'rgba(139, 92, 246, 0.3)'}`,
+  color: copied ? 'var(--color-emerald)' : 'var(--color-violet)',
+  border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-color-hover)'}`,
   borderRadius: '4px',
   padding: '6px 12px',
   fontSize: '0.74rem',
   fontWeight: '600',
   cursor: 'pointer',
-  display: 'flex',
+  display: 'inline-flex',
   alignItems: 'center',
   gap: '6px',
   transition: 'all var(--transition-fast)',
@@ -585,13 +586,14 @@ const codeBoxBodyStyle = {
 
 // Refine Adjust Panel Styles
 const adjustPanelStyle = {
-  background: 'rgba(18, 18, 26, 0.4)',
+  background: 'var(--bg-surface)',
   padding: '16px',
   borderRadius: 'var(--radius-md)',
   border: '1px solid var(--border-color)',
   display: 'flex',
   flexDirection: 'column',
   gap: '12px',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const adjustTitleStyle = {
@@ -600,7 +602,7 @@ const adjustTitleStyle = {
   gap: '6px',
   fontSize: '0.82rem',
   fontWeight: '700',
-  color: '#fff',
+  color: 'var(--text-primary)',
 };
 
 const quickAdjustRowStyle = {
@@ -625,7 +627,7 @@ const errorStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '6px',
-  color: '#fca5a5',
+  color: 'var(--color-rose)',
   fontSize: '0.74rem',
   background: 'rgba(244, 63, 94, 0.05)',
   padding: '8px 12px',
@@ -665,11 +667,11 @@ const titleListStyle = {
 
 const titleItemStyle = {
   fontSize: '0.82rem',
-  background: 'rgba(255, 255, 255, 0.02)',
+  background: 'var(--bg-surface-solid)',
   padding: '8px 12px',
   borderRadius: '6px',
   border: '1px solid var(--border-color)',
-  color: '#fff',
+  color: 'var(--text-primary)',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
@@ -690,8 +692,9 @@ const numBadgeStyle = {
 
 const dividerStyle = {
   height: '1px',
-  background: 'rgba(255,255,255,0.06)',
+  background: 'var(--border-color)',
   margin: '6px 0',
+  opacity: 0.5,
 };
 
 const preBlockStyle = {
@@ -701,26 +704,26 @@ const preBlockStyle = {
   fontSize: '0.78rem',
   lineHeight: '1.6',
   color: 'var(--text-primary)',
-  background: 'rgba(0,0,0,0.15)',
+  background: 'var(--bg-base)',
   padding: '12px',
   borderRadius: '6px',
-  border: '1px solid rgba(255,255,255,0.02)',
+  border: '1px solid var(--border-color)',
 };
 
 const frontmatterBlockStyle = {
   fontFamily: 'monospace',
   whiteSpace: 'pre-wrap',
   fontSize: '0.74rem',
-  color: '#a7f3d0',
-  background: '#091814',
+  color: 'var(--color-violet)',
+  background: 'var(--bg-base)',
   padding: '12px',
   borderRadius: '6px',
-  border: '1px solid rgba(16, 185, 129, 0.15)',
+  border: '1px solid var(--border-color)',
 };
 
 const hashtagBlockStyle = {
   fontSize: '0.78rem',
-  color: 'var(--color-cyan)',
+  color: 'var(--color-indigo)',
   fontWeight: '600',
 };
 
@@ -734,16 +737,16 @@ const timelineItemStyle = {
   display: 'flex',
   alignItems: 'flex-start',
   gap: '12px',
-  background: 'rgba(255,255,255,0.02)',
+  background: 'var(--bg-surface-solid)',
   padding: '10px 12px',
   borderRadius: '6px',
   border: '1px solid var(--border-color)',
 };
 
 const timeBadgeStyle = {
-  background: 'rgba(139, 92, 246, 0.15)',
-  color: '#c084fc',
-  border: '1px solid rgba(139, 92, 246, 0.3)',
+  background: 'var(--color-violet-glow)',
+  color: 'var(--color-violet)',
+  border: '1px solid var(--border-color)',
   padding: '2px 8px',
   borderRadius: '4px',
   fontSize: '0.68rem',
@@ -756,16 +759,16 @@ const shortsMetaRowStyle = {
   gap: '6px',
   fontSize: '0.8rem',
   color: 'var(--text-secondary)',
-  background: 'rgba(0,0,0,0.15)',
+  background: 'var(--bg-base)',
   padding: '12px',
   borderRadius: '6px',
-  border: '1px solid rgba(255,255,255,0.02)',
+  border: '1px solid var(--border-color)',
 };
 
 const loadingOverlayStyle = {
   position: 'absolute',
   top: 0, left: 0, right: 0, bottom: 0,
-  background: 'rgba(10, 10, 15, 0.82)',
+  background: 'var(--bg-surface)',
   backdropFilter: 'blur(4px)',
   display: 'flex',
   justifyContent: 'center',
@@ -788,8 +791,8 @@ const filenameContainerStyle = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: '12px',
-  background: 'rgba(99, 102, 241, 0.08)',
-  border: '1px solid rgba(99, 102, 241, 0.25)',
+  background: 'var(--color-indigo-glow)',
+  border: '1px solid var(--border-color)',
   padding: '12px 16px',
   borderRadius: '8px',
   marginBottom: '4px',
@@ -798,7 +801,7 @@ const filenameContainerStyle = {
 const filenameCodeStyle = {
   fontFamily: 'monospace',
   fontSize: '0.85rem',
-  color: '#c7d2fe',
+  color: 'var(--text-primary)',
   wordBreak: 'break-all',
 };
 
