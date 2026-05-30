@@ -66,8 +66,7 @@ export async function fetchHistoryFromGithub() {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
@@ -113,8 +112,7 @@ export async function saveHistoryToGithub(historyArray) {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
@@ -175,8 +173,7 @@ export async function saveTrendConfigToGithub(configObj) {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
@@ -232,8 +229,7 @@ export async function fetchTrendConfigFromGithub() {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
@@ -272,8 +268,7 @@ export async function fetchTrendIssuesFromGithub() {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache'
+        'Accept': 'application/vnd.github.v3+json'
       }
     });
 
