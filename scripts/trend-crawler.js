@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Constants
-const CONFIG_PATH = path.join(__dirname, '../config/trend-config.json');
+const CONFIG_PATH = path.join(__dirname, '../trend-rules.json');
 
 // HTML tag cleaner helper
 function cleanHtml(text) {

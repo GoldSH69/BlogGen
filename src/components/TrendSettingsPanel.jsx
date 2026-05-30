@@ -153,7 +153,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
             </div>
           ) : (
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
-              수집 키워드와 필터 규칙은 깃허브의 <code style={{ color: 'var(--color-cyan)', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>config/trend-config.json</code> 파일에 저장되며, 6시간 크론 크롤러가 이를 읽어 자동 수집을 실행합니다.
+              수집 키워드와 필터 규칙은 깃허브의 <code style={{ color: 'var(--color-cyan)', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>trend-rules.json</code> 파일에 저장되며, 6시간 크론 크롤러가 이를 읽어 자동 수집을 실행합니다.
             </p>
           )}
 

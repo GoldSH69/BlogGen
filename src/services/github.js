@@ -164,7 +164,7 @@ export async function saveTrendConfigToGithub(configObj) {
     throw new Error('GitHub 연동 정보가 설정되어 있지 않습니다. API 설정에서 깃허브 계정을 등록해주세요.');
   }
 
-  const path = 'config/trend-config.json';
+  const path = 'trend-rules.json';
   const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
   const jsonString = JSON.stringify(configObj, null, 2);
   const base64Content = utf8_to_b64(jsonString);
@@ -224,7 +224,7 @@ export async function fetchTrendConfigFromGithub() {
     return null;
   }
 
-  const path = 'config/trend-config.json';
+  const path = 'trend-rules.json';
   const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/contents/${path}`;
 
   try {
