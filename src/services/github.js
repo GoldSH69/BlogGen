@@ -50,7 +50,11 @@ function utf8_to_b64(str) {
 }
 
 function b64_to_utf8(str) {
-  const normalized = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
+  let normalized = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
+  // Auto-correct base64 padding if incomplete
+  while (normalized.length % 4 !== 0) {
+    normalized += '=';
+  }
   const binaryString = atob(normalized);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -89,14 +93,19 @@ export async function fetchHistoryFromGithub() {
     }
 
     const fileData = await response.json();
+    if (!fileData || typeof fileData.content !== 'string') {
+      throw new Error('깃허브 파일 데이터(content)를 정상적으로 수신하지 못했습니다. 파일 크기가 1MB를 초과했거나 잘못된 API 응답입니다.');
+    }
+
     const base64Content = fileData.content.replace(/\s/g, '');
     const decodedText = b64_to_utf8(base64Content);
     
     try {
+      if (!decodedText.trim()) return [];
       return JSON.parse(decodedText);
     } catch (jsonErr) {
-      console.warn('GitHub history.json parsing failed, fallback to empty array:', jsonErr);
-      return [];
+      console.error('GitHub history.json parsing failed:', jsonErr);
+      throw new Error(`JSON 포맷 파싱 에러: ${jsonErr.message}. 디코딩된 내용 앞부분: ${decodedText.substring(0, 80)}...`);
     }
   } catch (error) {
     console.error('GitHub Fetch Error:', error);
