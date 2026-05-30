@@ -64,6 +64,13 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     loadTrends();
   }, [activeTab]);
 
+  const getGroupLabelWithEmoji = (group) => {
+    if (!group) return '📌 내 관심사';
+    if (group.includes('핫토픽')) return '🔥 네이버 핫토픽';
+    if (group.includes('핫이슈') || group.includes('실시간')) return '⚡ 실시간 핫이슈';
+    return '📌 내 관심사';
+  };
+
   // Helper to extract trend info from issue body
   const parseTrendBody = (body) => {
     if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
@@ -163,8 +170,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <span style={groupBadgeStyle(parsed.group)}>{parsed.group}</span>
-                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
+                      <span style={groupBadgeStyle(parsed.group)}>{getGroupLabelWithEmoji(parsed.group)}</span>
+                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type === '기타' ? '네이버 블로그' : parsed.type}</span>
                     </div>
                     <span style={scoreBadgeStyle(isHighClean)}>
                       <Award size={12} />
