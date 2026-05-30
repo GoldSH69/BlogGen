@@ -84,7 +84,7 @@ export async function fetchHistoryFromGithub() {
     });
 
     if (response.status === 404) {
-      return []; // File doesn't exist yet, return empty list
+      throw new Error('history_not_found'); // 깃허브에 백업 파일이 아예 없음을 명시적으로 알림
     }
 
     if (!response.ok) {

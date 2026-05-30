@@ -188,7 +188,22 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setErrorMessage(`GitHub 클라우드 데이터를 가져오는데 실패했습니다: ${err.message || 'API 토큰을 다시 확인해주세요.'}`);
+      if (err.message === 'history_not_found') {
+        // 만약 깃허브에 백업 파일이 아예 없다면, 현재 로컬 히스토리를 서버에 즉각 최초 백업 업로드!
+        if (historyList && historyList.length > 0) {
+          try {
+            await saveHistoryToGithub(historyList);
+            setErrorMessage('💡 깃허브 서버에 백업 파일이 존재하지 않아, 현재 기기에 있는 오프라인 원고 내역을 클라우드에 최초로 백업 전송 및 신설 완료하였습니다.');
+          } catch (saveErr) {
+            console.error('Failed to auto-create history on GitHub:', saveErr);
+            setErrorMessage(`깃허브 백업 생성 실패: ${saveErr.message || '토큰의 쓰기(Write) 권한을 확인해주세요.'}`);
+          }
+        } else {
+          setErrorMessage('💡 깃허브 서버에 저장된 history.json 백업 파일이 존재하지 않습니다. 먼저 원고를 1회 이상 생성하여 동기화를 진행해 주세요.');
+        }
+      } else {
+        setErrorMessage(`GitHub 클라우드 데이터를 가져오는데 실패했습니다: ${err.message || 'API 토큰을 다시 확인해주세요.'}`);
+      }
     } finally {
       setIsHistoryLoading(false);
     }
