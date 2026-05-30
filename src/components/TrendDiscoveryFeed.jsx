@@ -76,12 +76,12 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const parseTrendBody = (body) => {
     if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
 
-    const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^`\n\r]+)/i);
-    const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^`\n\r]+)/i);
-    const bloggerMatch = body.match(/-\s*\*\*수집처\/작성자\*\*:\s*`?([^`\n\r]+)/i);
+    const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^\n\r]+)/i);
+    const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^\n\r]+)/i);
+    const bloggerMatch = body.match(/-\s*\*\*수집처\/작성자\*\*:\s*`?([^\n\r]+)/i);
     const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([^)]+)\)/i) || body.match(/\[원본\s*연결\s*링크\]\(([^)]+)\)/i) || body.match(/\[원본 상세 본문 링크\]\(([^)]+)\)/i);
-    const groupMatch = body.match(/-\s*\*\*수집\s*그룹\*\*:\s*`?([^`\n\r]+)/i);
-    const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^`\n\r]+)/i);
+    const groupMatch = body.match(/-\s*\*\*수집\s*그룹\*\*:\s*`?([^\n\r]+)/i);
+    const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '내 관심사';
@@ -101,6 +101,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
+
 
   const handleSelect = (issue, parsed) => {
     onSelectTrend({
