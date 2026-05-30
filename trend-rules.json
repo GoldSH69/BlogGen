@@ -1,29 +1,68 @@
 {
-  "keywords": [
-    "편스토랑 레시피",
-    "백종원 레시피",
-    "연예인 패션",
-    "장원영",
-    "최수지",
-    "나혼자산다",
-    "나혼산"
-  ],
-  "sources": {
-    "naverBlog": true,
-    "naverNews": true,
-    "naverCafe": false,
-    "naverShopping": true
-  },
-  "filtering": {
-    "minCleanScore": 75,
-    "customBlacklist": [
-      "공구",
-      "마켓",
-      "추천인",
-      "최저가링크",
-      "파트너스"
+  "myInterest": {
+    "keywords": [
+      "건강 정보",
+      "경제 재테크",
+      "IT 트렌드"
     ],
-    "checkAdRegex": true
+    "sources": {
+      "naverBlog": true,
+      "naverNews": true,
+      "naverShopping": false
+    },
+    "filtering": {
+      "minCleanScore": 80,
+      "customBlacklist": [
+        "공구",
+        "마켓",
+        "추천인",
+        "최저가링크",
+        "파트너스"
+      ],
+      "checkAdRegex": true
+    }
+  },
+  "naverHotTopic": {
+    "keywords": [
+      "다이소 꿀템",
+      "코스트코 추천템",
+      "가전 전자제품"
+    ],
+    "sources": {
+      "naverBlog": true,
+      "naverNews": false,
+      "naverShopping": false
+    },
+    "filtering": {
+      "minCleanScore": 90,
+      "customBlacklist": [
+        "홍보",
+        "체험단",
+        "협찬",
+        "대여제외"
+      ],
+      "checkAdRegex": true
+    }
+  },
+  "realtimeHotIssue": {
+    "keywords": [
+      "AI 인공지능",
+      "신제품 출시"
+    ],
+    "sources": {
+      "naverBlog": true,
+      "naverNews": true,
+      "naverShopping": true
+    },
+    "filtering": {
+      "minCleanScore": 75,
+      "customBlacklist": [
+        "광고",
+        "협찬문의",
+        "제공받아"
+      ],
+      "checkAdRegex": true
+    }
   },
   "scheduler": {
     "intervalHours": 6

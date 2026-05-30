@@ -3,17 +3,27 @@ import { Settings, Plus, X, Save, Trash2, CheckCircle, Flame, ShieldAlert, Alert
 import { getGithubConfig, fetchTrendConfigFromGithub, saveTrendConfigToGithub } from '../services/github';
 
 export default function TrendSettingsPanel({ isOpen, onClose }) {
-  const [keywords, setKeywords] = useState([]);
-  const [newKeyword, setNewKeyword] = useState('');
-  const [sources, setSources] = useState({
-    naverBlog: true,
-    naverNews: true,
-    naverCafe: false,
-    naverShopping: true
+  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue
+
+  const [configs, setConfigs] = useState({
+    myInterest: {
+      keywords: [],
+      sources: { naverBlog: true, naverNews: true, naverShopping: false },
+      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true }
+    },
+    naverHotTopic: {
+      keywords: [],
+      sources: { naverBlog: true, naverNews: false, naverShopping: false },
+      filtering: { minCleanScore: 90, customBlacklist: [], checkAdRegex: true }
+    },
+    realtimeHotIssue: {
+      keywords: [],
+      sources: { naverBlog: true, naverNews: true, naverShopping: true },
+      filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true }
+    }
   });
-  const [minCleanScore, setMinCleanScore] = useState(75);
-  const [checkAdRegex, setCheckAdRegex] = useState(true);
-  const [blacklist, setBlacklist] = useState([]);
+
+  const [newKeyword, setNewKeyword] = useState('');
   const [newBlacklistWord, setNewBlacklistWord] = useState('');
   const [intervalHours, setIntervalHours] = useState(6);
 
@@ -37,22 +47,57 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
-        if (cloudConfig) {
-          setKeywords(cloudConfig.keywords || []);
-          setSources(cloudConfig.sources || {
-            naverBlog: true,
-            naverNews: true,
-            naverCafe: false,
-            naverShopping: true
+        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue)) {
+          setConfigs({
+            myInterest: {
+              keywords: cloudConfig.myInterest?.keywords || [],
+              sources: cloudConfig.myInterest?.sources || { naverBlog: true, naverNews: true, naverShopping: false },
+              filtering: {
+                minCleanScore: cloudConfig.myInterest?.filtering?.minCleanScore ?? 80,
+                customBlacklist: cloudConfig.myInterest?.filtering?.customBlacklist || [],
+                checkAdRegex: cloudConfig.myInterest?.filtering?.checkAdRegex ?? true
+              }
+            },
+            naverHotTopic: {
+              keywords: cloudConfig.naverHotTopic?.keywords || [],
+              sources: cloudConfig.naverHotTopic?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
+              filtering: {
+                minCleanScore: cloudConfig.naverHotTopic?.filtering?.minCleanScore ?? 90,
+                customBlacklist: cloudConfig.naverHotTopic?.filtering?.customBlacklist || [],
+                checkAdRegex: cloudConfig.naverHotTopic?.filtering?.checkAdRegex ?? true
+              }
+            },
+            realtimeHotIssue: {
+              keywords: cloudConfig.realtimeHotIssue?.keywords || [],
+              sources: cloudConfig.realtimeHotIssue?.sources || { naverBlog: true, naverNews: true, naverShopping: true },
+              filtering: {
+                minCleanScore: cloudConfig.realtimeHotIssue?.filtering?.minCleanScore ?? 75,
+                customBlacklist: cloudConfig.realtimeHotIssue?.filtering?.customBlacklist || [],
+                checkAdRegex: cloudConfig.realtimeHotIssue?.filtering?.checkAdRegex ?? true
+              }
+            }
           });
-          setMinCleanScore(cloudConfig.filtering?.minCleanScore ?? 75);
-          setCheckAdRegex(cloudConfig.filtering?.checkAdRegex ?? true);
-          setBlacklist(cloudConfig.filtering?.customBlacklist || []);
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
         } else {
           // Fallback default presets
-          setKeywords(["나혼자산다 핫템", "편스토랑 레시피", "백종원 레시피", "연예인 패션"]);
-          setBlacklist(["공구", "마켓", "추천인", "최저가링크", "파트너스"]);
+          setConfigs({
+            myInterest: {
+              keywords: ["건강 정보", "경제 재테크", "IT 트렌드"],
+              sources: { naverBlog: true, naverNews: true, naverShopping: false },
+              filtering: { minCleanScore: 80, customBlacklist: ["공구", "마켓", "추천인", "최저가링크", "파트너스"], checkAdRegex: true }
+            },
+            naverHotTopic: {
+              keywords: ["다이소 꿀템", "코스트코 추천템", "가전 전자제품"],
+              sources: { naverBlog: true, naverNews: false, naverShopping: false },
+              filtering: { minCleanScore: 90, customBlacklist: ["홍보", "체험단", "협찬", "대여제외"], checkAdRegex: true }
+            },
+            realtimeHotIssue: {
+              keywords: ["AI 인공지능", "신제품 출시"],
+              sources: { naverBlog: true, naverNews: true, naverShopping: true },
+              filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true }
+            }
+          });
+          setIntervalHours(cloudConfig?.scheduler?.intervalHours || 6);
         }
       } catch (err) {
         console.error(err);
@@ -65,35 +110,65 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     loadConfig();
   }, [isOpen]);
 
+  const currentTabConfig = configs[activeSubTab];
+
+  const updateCurrentConfig = (updates) => {
+    setConfigs(prev => ({
+      ...prev,
+      [activeSubTab]: {
+        ...prev[activeSubTab],
+        ...updates
+      }
+    }));
+  };
+
   const handleAddKeyword = (e) => {
     e.preventDefault();
     const trimmed = newKeyword.trim();
-    if (trimmed && !keywords.includes(trimmed)) {
-      setKeywords([...keywords, trimmed]);
+    if (trimmed && !currentTabConfig.keywords.includes(trimmed)) {
+      updateCurrentConfig({
+        keywords: [...currentTabConfig.keywords, trimmed]
+      });
       setNewKeyword('');
     }
   };
 
   const handleRemoveKeyword = (kw) => {
-    setKeywords(keywords.filter(item => item !== kw));
+    updateCurrentConfig({
+      keywords: currentTabConfig.keywords.filter(item => item !== kw)
+    });
   };
 
   const handleAddBlacklist = (e) => {
     e.preventDefault();
     const trimmed = newBlacklistWord.trim();
-    if (trimmed && !blacklist.includes(trimmed)) {
-      setBlacklist([...blacklist, trimmed]);
+    if (trimmed && !currentTabConfig.filtering.customBlacklist.includes(trimmed)) {
+      updateCurrentConfig({
+        filtering: {
+          ...currentTabConfig.filtering,
+          customBlacklist: [...currentTabConfig.filtering.customBlacklist, trimmed]
+        }
+      });
       setNewBlacklistWord('');
     }
   };
 
   const handleRemoveBlacklist = (word) => {
-    setBlacklist(blacklist.filter(item => item !== word));
+    updateCurrentConfig({
+      filtering: {
+        ...currentTabConfig.filtering,
+        customBlacklist: currentTabConfig.filtering.customBlacklist.filter(item => item !== word)
+      }
+    });
   };
 
   const handleSave = async () => {
-    if (keywords.length === 0) {
-      setErrorMsg('최소 1개 이상의 트렌드 수집 키워드를 지정해야 합니다.');
+    if (configs.myInterest.keywords.length === 0) {
+      setErrorMsg('📌 내 관심사 수집 키워드를 최소 1개 이상 지정해 주세요.');
+      return;
+    }
+    if (configs.naverHotTopic.keywords.length === 0) {
+      setErrorMsg('🔥 네이버 핫토픽 수집 키워드를 최소 1개 이상 지정해 주세요.');
       return;
     }
 
@@ -102,13 +177,9 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     setStatusMsg('');
 
     const configObj = {
-      keywords,
-      sources,
-      filtering: {
-        minCleanScore,
-        customBlacklist: blacklist,
-        checkAdRegex
-      },
+      myInterest: configs.myInterest,
+      naverHotTopic: configs.naverHotTopic,
+      realtimeHotIssue: configs.realtimeHotIssue,
       scheduler: {
         intervalHours
       }
@@ -144,6 +215,37 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           <button style={closeBtnStyle} onClick={onClose}>&times;</button>
         </div>
 
+        {/* Tab Selection Navigation */}
+        <div style={tabContainerStyle}>
+          <button
+            onClick={() => {
+              setActiveSubTab('myInterest');
+              setErrorMsg('');
+            }}
+            style={activeSubTab === 'myInterest' ? activeTabStyle : inactiveTabStyle}
+          >
+            📌 내 관심사
+          </button>
+          <button
+            onClick={() => {
+              setActiveSubTab('naverHotTopic');
+              setErrorMsg('');
+            }}
+            style={activeSubTab === 'naverHotTopic' ? activeTabStyle : inactiveTabStyle}
+          >
+            🔥 네이버 핫토픽
+          </button>
+          <button
+            onClick={() => {
+              setActiveSubTab('realtimeHotIssue');
+              setErrorMsg('');
+            }}
+            style={activeSubTab === 'realtimeHotIssue' ? activeTabStyle : inactiveTabStyle}
+          >
+            ⚡ 실시간 핫이슈
+          </button>
+        </div>
+
         {/* Body */}
         <div style={modalBodyStyle}>
           {errorMsg ? (
@@ -153,7 +255,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
             </div>
           ) : (
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
-              수집 키워드와 필터 규칙은 깃허브의 <code style={{ color: 'var(--color-cyan)', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>trend-rules.json</code> 파일에 저장되며, 6시간 크론 크롤러가 이를 읽어 자동 수집을 실행합니다.
+              각 카테고리별 수집 키워드와 필터 규칙은 격리 저장되며, 6시간 주기 자동화 크롤러가 <code style={{ color: 'var(--color-cyan)', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>trend-rules.json</code> 파일을 참고하여 실시간 수집을 기동합니다.
             </p>
           )}
 
@@ -167,12 +269,16 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               
               {/* 1. Keywords Settings */}
               <div style={{ marginBottom: '22px' }}>
-                <h4 style={sectionTitleStyle}>1. 최신 방송 / 뉴스 트렌드 키워드 관리</h4>
+                <h4 style={sectionTitleStyle}>1. 수집 타겟 키워드 관리</h4>
                 <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                   <input
                     type="text"
                     className="input-field"
-                    placeholder="예: 나혼자산다 핫템, 편스토랑 레시피"
+                    placeholder={
+                      activeSubTab === 'myInterest' ? "예: 건강 정보, 경제 재테크" :
+                      activeSubTab === 'naverHotTopic' ? "예: 다이소 꿀템, 코스트코 추천템" :
+                      "예: AI 인공지능, 신제품 출시"
+                    }
                     value={newKeyword}
                     onChange={(e) => setNewKeyword(e.target.value)}
                     disabled={!!errorMsg}
@@ -184,10 +290,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </form>
 
                 <div style={tagWrapperStyle}>
-                  {keywords.length === 0 ? (
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 수집 키워드가 없습니다.</div>
+                  {currentTabConfig.keywords.length === 0 ? (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 수집 키워드가 없습니다. 직접 추가해 주세요.</div>
                   ) : (
-                    keywords.map((kw, i) => (
+                    currentTabConfig.keywords.map((kw, i) => (
                       <span key={i} style={tagStyle}>
                         {kw}
                         <button type="button" onClick={() => handleRemoveKeyword(kw)} style={tagRemoveStyle}>
@@ -203,31 +309,37 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               <div style={{ marginBottom: '22px' }}>
                 <h4 style={sectionTitleStyle}>2. 수집 채널 범위 설정</h4>
                 <div style={sourceGridStyle}>
-                  <label style={checkboxLabelStyle(sources.naverBlog)}>
+                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverBlog)}>
                     <input
                       type="checkbox"
-                      checked={sources.naverBlog}
-                      onChange={(e) => setSources({ ...sources, naverBlog: e.target.checked })}
+                      checked={currentTabConfig.sources.naverBlog}
+                      onChange={(e) => updateCurrentConfig({
+                        sources: { ...currentTabConfig.sources, naverBlog: e.target.checked }
+                      })}
                       disabled={!!errorMsg}
                       style={checkboxInputStyle}
                     />
                     💚 네이버 블로그 포스팅
                   </label>
-                  <label style={checkboxLabelStyle(sources.naverNews)}>
+                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverNews)}>
                     <input
                       type="checkbox"
-                      checked={sources.naverNews}
-                      onChange={(e) => setSources({ ...sources, naverNews: e.target.checked })}
+                      checked={currentTabConfig.sources.naverNews}
+                      onChange={(e) => updateCurrentConfig({
+                        sources: { ...currentTabConfig.sources, naverNews: e.target.checked }
+                      })}
                       disabled={!!errorMsg}
                       style={checkboxInputStyle}
                     />
                     📰 네이버 최신 뉴스 기사
                   </label>
-                  <label style={checkboxLabelStyle(sources.naverShopping)}>
+                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverShopping)}>
                     <input
                       type="checkbox"
-                      checked={sources.naverShopping}
-                      onChange={(e) => setSources({ ...sources, naverShopping: e.target.checked })}
+                      checked={currentTabConfig.sources.naverShopping}
+                      onChange={(e) => updateCurrentConfig({
+                        sources: { ...currentTabConfig.sources, naverShopping: e.target.checked }
+                      })}
                       disabled={!!errorMsg}
                       style={checkboxInputStyle}
                     />
@@ -238,7 +350,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
               {/* 3. Filtering Logic */}
               <div style={{ marginBottom: '22px' }}>
-                <h4 style={sectionTitleStyle}>3. 3단계 고도화 클린 필터 임계치</h4>
+                <h4 style={sectionTitleStyle}>3. 3단계 고도화 클킨 필터 임계치</h4>
                 
                 <div style={inputRowStyle}>
                   <label style={formLabelStyle}>
@@ -246,15 +358,17 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                       <Flame size={14} style={{ color: 'var(--color-rose)' }} />
                       최소 통과 클린도 스코어
                     </span>
-                    <span style={{ color: 'var(--color-cyan)', fontWeight: '700' }}>{minCleanScore}점</span>
+                    <span style={{ color: 'var(--color-cyan)', fontWeight: '700' }}>{currentTabConfig.filtering.minCleanScore}점</span>
                   </label>
                   <input
                     type="range"
                     min="50"
                     max="95"
                     step="5"
-                    value={minCleanScore}
-                    onChange={(e) => setMinCleanScore(parseInt(e.target.value))}
+                    value={currentTabConfig.filtering.minCleanScore}
+                    onChange={(e) => updateCurrentConfig({
+                      filtering: { ...currentTabConfig.filtering, minCleanScore: parseInt(e.target.value) }
+                    })}
                     disabled={!!errorMsg}
                     style={{ width: '100%', accentColor: 'var(--color-violet)' }}
                   />
@@ -266,11 +380,13 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
-                  <label style={checkboxLabelStyle(checkAdRegex)}>
+                  <label style={checkboxLabelStyle(currentTabConfig.filtering.checkAdRegex)}>
                     <input
                       type="checkbox"
-                      checked={checkAdRegex}
-                      onChange={(e) => setCheckAdRegex(e.target.checked)}
+                      checked={currentTabConfig.filtering.checkAdRegex}
+                      onChange={(e) => updateCurrentConfig({
+                        filtering: { ...currentTabConfig.filtering, checkAdRegex: e.target.checked }
+                      })}
                       disabled={!!errorMsg}
                       style={checkboxInputStyle}
                     />
@@ -301,10 +417,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </form>
 
                 <div style={tagWrapperStyle}>
-                  {blacklist.length === 0 ? (
+                  {currentTabConfig.filtering.customBlacklist.length === 0 ? (
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 블랙리스트 단어가 없습니다.</div>
                   ) : (
-                    blacklist.map((word, i) => (
+                    currentTabConfig.filtering.customBlacklist.map((word, i) => (
                       <span key={i} style={{ ...tagStyle, background: 'var(--color-rose-glow)', border: '1px solid rgba(244, 63, 94, 0.25)', color: 'var(--color-rose)' }}>
                         {word}
                         <button type="button" onClick={() => handleRemoveBlacklist(word)} style={{ ...tagRemoveStyle, color: 'var(--color-rose)' }}>
@@ -349,6 +465,44 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 }
 
 // Styling Objects matching SettingsPanel.jsx premium style
+const tabContainerStyle = {
+  display: 'flex',
+  gap: '4px',
+  background: 'rgba(255, 255, 255, 0.02)',
+  padding: '6px',
+  borderRadius: '8px',
+  border: '1px solid var(--border-color)',
+  margin: '0 24px 16px',
+};
+
+const activeTabStyle = {
+  flex: 1,
+  padding: '10px 4px',
+  background: 'var(--color-violet-glow)',
+  border: '1px solid rgba(139, 92, 246, 0.3)',
+  borderRadius: '6px',
+  color: 'var(--color-violet)',
+  fontWeight: '700',
+  fontSize: '0.8rem',
+  cursor: 'pointer',
+  textAlign: 'center',
+  transition: 'all var(--transition-fast)',
+};
+
+const inactiveTabStyle = {
+  flex: 1,
+  padding: '10px 4px',
+  background: 'transparent',
+  border: '1px solid transparent',
+  borderRadius: '6px',
+  color: 'var(--text-secondary)',
+  fontWeight: '500',
+  fontSize: '0.8rem',
+  cursor: 'pointer',
+  textAlign: 'center',
+  transition: 'all var(--transition-fast)',
+};
+
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0, left: 0, right: 0, bottom: 0,
