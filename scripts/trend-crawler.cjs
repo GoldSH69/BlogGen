@@ -651,13 +651,24 @@ async function run() {
   const topG3 = group3Candidates.slice(0, 5);
 
   const topTrends = [...topG1, ...topG2, ...topG3];
-  console.log(`\n최종 필터링 통과 목록 (1그룹: ${topG1.length}개, 2그룹: ${topG2.length}개, 3그룹: ${topG3.length}개 선정, 총 ${topTrends.length}개)`);
+  
+  // ⚡ [중요] 링크(URL) 및 제목 기준 정밀 1차 중복 제거 (방금 수집된 기사 간 겹침 방지)
+  const uniqueTrendsMap = new Map();
+  for (const trend of topTrends) {
+    const key = (trend.link || trend.title).trim();
+    if (!uniqueTrendsMap.has(key)) {
+      uniqueTrendsMap.set(key, trend);
+    }
+  }
+  const finalUniqueTrends = Array.from(uniqueTrendsMap.values());
+
+  console.log(`\n최종 필터링 통과 목록 (1그룹: ${topG1.length}개, 2그룹: ${topG2.length}개, 3그룹: ${topG3.length}개 선정, 중복제거 후 실등록 대상 ${finalUniqueTrends.length}개)`);
 
   // --- 5. 선발된 15개 후보군에 대해 전체 본문 스크래핑 시도 ---
   console.log('\n--- 원본 전체 본문 스크래핑 시작 ---');
-  for (const trend of topTrends) {
-    if (trend.isAlreadyScraped) {
-      console.log(`  => [2그룹] 이미 본문 스크래핑 완료 상태 패스: "${trend.title}"`);
+  for (const trend of finalUniqueTrends) {
+    if (trend.isAlreadyScraped || trend.type === '구글 뉴스') {
+      console.log(`  => [구글 뉴스 / 수집 생략 대상] 원본 스크래핑 건너뜀 (요약본 유지): "${trend.title}"`);
       continue;
     }
     const fullText = await scrapeFullText(trend.link, trend.type);
@@ -669,6 +680,7 @@ async function run() {
     }
   }
   console.log('--- 원본 전체 본문 스크래핑 완료 ---\n');
+
 
   // 4. Fetch existing open issues in GitHub to avoid duplicates
   let existingIssueTitles = new Set();
@@ -695,8 +707,9 @@ async function run() {
   }
 
   // 5. Open GitHub Issues for new trends
-  for (const trend of topTrends) {
+  for (const trend of finalUniqueTrends) {
     const issueTitle = `[트렌드] ${trend.keyword}: ${trend.title}`;
+
     
     if (existingIssueTitles.has(issueTitle)) {
       console.log(`이미 등록된 트렌드입니다 (중복 패스): "${issueTitle}"`);
