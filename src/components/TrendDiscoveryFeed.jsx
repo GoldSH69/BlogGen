@@ -66,13 +66,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   // Helper to extract trend info from issue body
   const parseTrendBody = (body) => {
-    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사' };
+    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
 
     const scoreMatch = body.match(/클린 필터링 스코어:\s*`(\d+점)/);
     const channelMatch = body.match(/수집 채널:\s*`([\s\S]*?)`/);
     const bloggerMatch = body.match(/수집처\/작성자:\s*`([\s\S]*?)`/);
     const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([\s\S]*?)\)/);
     const groupMatch = body.match(/수집 그룹:\s*`([\s\S]*?)`/);
+    const pubDateMatch = body.match(/원글 발행 시간:\s*`([\s\S]*?)`/);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     return {
@@ -81,6 +82,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       score: scoreMatch ? scoreMatch[1] : 'N/A',
       link: linkMatch ? linkMatch[1] : '#',
       group: groupMatch ? groupMatch[1] : '내 관심사',
+      pubDate: pubDateMatch ? pubDateMatch[1] : '',
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -185,7 +187,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   <div style={metaRowStyle}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Calendar size={12} />
-                      {new Date(issue.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit' })}
+                      {parsed.pubDate || new Date(issue.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit' })}
                     </span>
                     <a href={parsed.link} target="_blank" rel="noopener noreferrer" style={originLinkStyle}>
                       원본 기사/블로그 링크 <ExternalLink size={12} />

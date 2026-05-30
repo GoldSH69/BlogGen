@@ -22,6 +22,29 @@ function cleanHtml(text) {
     .trim();
 }
 
+// 블로그 postdate (YYYYMMDD) 포맷팅 함수
+function formatPostdate(postdate) {
+  if (!postdate || postdate.length !== 8) return postdate || '';
+  return `${postdate.substring(0, 4)}-${postdate.substring(4, 6)}-${postdate.substring(6, 8)}`;
+}
+
+// RFC 822 pubDate 포맷팅 함수
+function formatPubDate(pubDateStr) {
+  if (!pubDateStr) return '';
+  try {
+    const d = new Date(pubDateStr);
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${day} ${h}:${min}`;
+    }
+  } catch (e) {}
+  return pubDateStr;
+}
+
 // Mobile Naver Blog URL Converter
 function convertToMobileBlogUrl(url) {
   if (!url) return '';
@@ -232,23 +255,29 @@ async function fetchNaverBlogHotTopics() {
       while ((match = itemPattern.exec(xml)) !== null && count < 5) {
         const itemContent = match[1];
         const linkMatch = itemContent.match(/<link>([\s\S]*?)<\/link>/i);
+        const pubDateMatch = itemContent.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+        
         if (linkMatch && linkMatch[1]) {
           // CDATA 태그 및 쿼리 파라미터 정밀 제거
           const rawUrl = linkMatch[1].replace(/<!\[CDATA\[/gi, '').replace(/\]\]>/gi, '').trim();
           const cleanUrl = cleanHtml(rawUrl).split('?')[0];
+          const rawPubDate = pubDateMatch ? pubDateMatch[1].replace(/<!\[CDATA\[/gi, '').replace(/\]\]>/gi, '').trim() : '';
           
-          if (cleanUrl && cleanUrl.includes('blog.naver.com') && !blogLinks.includes(cleanUrl)) {
+          if (cleanUrl && cleanUrl.includes('blog.naver.com') && !blogLinks.some(b => b.link === cleanUrl)) {
             // 메인 홈 링크(글 번호 없는 링크) 패스
             const postNoMatch = cleanUrl.match(/\/([0-9]{9,})/);
             if (postNoMatch) {
-              blogLinks.push(cleanUrl);
+              blogLinks.push({
+                link: cleanUrl,
+                pubDate: formatPubDate(rawPubDate)
+              });
               count++;
             }
           }
         }
       }
     }
-    console.log(`  => 네이버 공식 RSS에서 인기글 ${blogLinks.length}개 추출 완료:`, blogLinks);
+    console.log(`  => 네이버 공식 RSS에서 인기글 ${blogLinks.length}개 추출 완료:`, blogLinks.map(b => b.link));
   } catch (e) {
     console.error('  네이버 블로그 RSS 핫토픽 수집 실패:', e.message);
   }
@@ -384,7 +413,8 @@ async function run() {
                 bloggername: item.bloggername,
                 score,
                 reasons,
-                groupName: '내 관심사'
+                groupName: '내 관심사',
+                pubDate: formatPostdate(item.postdate)
               });
             }
           }
@@ -415,7 +445,8 @@ async function run() {
                 bloggername: '뉴스 기자',
                 score,
                 reasons,
-                groupName: '내 관심사'
+                groupName: '내 관심사',
+                pubDate: formatPubDate(item.pubDate)
               });
             }
           }
@@ -431,7 +462,8 @@ async function run() {
   console.log('[2그룹] 네이버 핫토픽 인기 포스팅 수집 시작...');
   console.log('=======================================');
   const hotTopicLinks = await fetchNaverBlogHotTopics();
-  for (const link of hotTopicLinks) {
+  for (const topic of hotTopicLinks) {
+    const link = topic.link;
     const fullText = await scrapeFullText(link, '네이버 블로그');
     if (fullText) {
       const idMatch = link.match(/blog\.naver\.com\/([a-zA-Z0-9_-]+)/);
@@ -450,7 +482,8 @@ async function run() {
         score: 100, 
         reasons: ['네이버 공인 실시간 주목받는 핫토픽 포스팅'],
         groupName: '네이버 핫토픽',
-        isAlreadyScraped: true 
+        isAlreadyScraped: true,
+        pubDate: topic.pubDate
       });
     }
   }
@@ -488,7 +521,8 @@ async function run() {
                 bloggername: item.bloggername,
                 score,
                 reasons,
-                groupName: '실시간 핫이슈'
+                groupName: '실시간 핫이슈',
+                pubDate: formatPostdate(item.postdate)
               });
             }
           }
@@ -519,7 +553,8 @@ async function run() {
                 bloggername: '뉴스 기자',
                 score,
                 reasons,
-                groupName: '실시간 핫이슈'
+                groupName: '실시간 핫이슈',
+                pubDate: formatPubDate(item.pubDate)
               });
             }
           }
@@ -598,6 +633,7 @@ async function run() {
 - **수집 채널**: \`${trend.type}\`
 - **트렌드 키워드**: \`${trend.keyword}\`
 - **수집 그룹**: \`${trend.groupName || '내 관심사'}\`
+- **원글 발행 시간**: \`${trend.pubDate || ''}\`
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
 - **클린 필터링 스코어**: \`${trend.score}점 / 100점\`
