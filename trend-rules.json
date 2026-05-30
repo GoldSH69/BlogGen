@@ -20,7 +20,7 @@
         "마켓",
         "추천인"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "naverHotTopic": {
@@ -42,7 +42,7 @@
         "협찬",
         "대여제외"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "realtimeHotIssue": {
@@ -65,7 +65,7 @@
         "협찬문의",
         "제공받아"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "scheduler": {
