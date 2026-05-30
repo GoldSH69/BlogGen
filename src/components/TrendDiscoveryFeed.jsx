@@ -1,11 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award } from 'lucide-react';
-import { getGithubConfig, fetchTrendIssuesFromGithub } from '../services/github';
+import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [triggerStatus, setTriggerStatus] = useState('');
+
+  const handleTriggerWorkflow = async () => {
+    setIsTriggering(true);
+    setTriggerStatus('서버 기동 신호 전송 중...');
+    setErrorMsg('');
+    try {
+      const { username, repo, pat } = getGithubConfig();
+      if (!username || !repo || !pat) {
+        setErrorMsg('GitHub 연동이 되어있지 않습니다. 상단 [API 설정]에서 먼저 계정을 연동해 주세요.');
+        setIsTriggering(false);
+        setTriggerStatus('');
+        return;
+      }
+      
+      await triggerTrendCrawlerWorkflow();
+      setTriggerStatus('수집 서버 가동 성공! (15초 후 자동 갱신)');
+      
+      // 15초 후 자동 새로고침 기동
+      setTimeout(() => {
+        loadTrends();
+        setTriggerStatus('');
+        setIsTriggering(false);
+      }, 15000);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || '크롤러 서버를 가동하지 못했습니다. API 토큰에 [workflow] 권한이 활성화되어 있는지 확인해 주세요.');
+      setIsTriggering(false);
+      setTriggerStatus('');
+    }
+  };
 
   const loadTrends = async () => {
     setIsLoading(true);
@@ -73,14 +105,26 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           </p>
         </div>
 
-        <button 
-          onClick={loadTrends} 
-          disabled={isLoading}
-          style={syncBtnStyle}
-        >
-          <RefreshCw size={14} style={{ animation: isLoading ? 'spin 1.5s linear infinite' : 'none' }} />
-          새로고침
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={handleTriggerWorkflow} 
+            disabled={isTriggering || isLoading}
+            style={triggerBtnStyle(isTriggering)}
+            title="깃허브 서버를 가동해 네이버 실시간 트렌드 기사/블로그를 강제 수집합니다."
+          >
+            <Sparkles size={13} style={{ color: '#c084fc', animation: isTriggering ? 'spin 1.5s linear infinite' : 'none' }} />
+            {isTriggering ? triggerStatus : "지금 트렌드 수집"}
+          </button>
+
+          <button 
+            onClick={loadTrends} 
+            disabled={isLoading || isTriggering}
+            style={syncBtnStyle}
+          >
+            <RefreshCw size={14} style={{ animation: isLoading ? 'spin 1.5s linear infinite' : 'none' }} />
+            새로고침
+          </button>
+        </div>
       </div>
 
       <div style={feedBodyStyle}>
@@ -196,6 +240,23 @@ const syncBtnStyle = {
   fontWeight: '600',
   transition: 'all var(--transition-fast)',
 };
+
+const triggerBtnStyle = (isTriggering) => ({
+  background: isTriggering ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.05)',
+  border: `1px solid ${isTriggering ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.25)'}`,
+  color: isTriggering ? '#f3e8ff' : '#e9d5ff',
+  padding: '8px 12px',
+  borderRadius: 'var(--radius-sm)',
+  fontSize: '0.78rem',
+  cursor: isTriggering ? 'default' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontWeight: '700',
+  transition: 'all var(--transition-fast)',
+  boxShadow: isTriggering ? '0 0 10px rgba(168, 85, 247, 0.2)' : 'none',
+  pointerEvents: isTriggering ? 'none' : 'auto'
+});
 
 const feedBodyStyle = {
   display: 'flex',

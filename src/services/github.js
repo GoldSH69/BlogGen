@@ -284,3 +284,38 @@ export async function fetchTrendIssuesFromGithub() {
   }
 }
 
+/**
+ * Trigger TCCG Trend Crawler GitHub Actions Workflow
+ */
+export async function triggerTrendCrawlerWorkflow() {
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    throw new Error('GitHub 연동 정보가 설정되어 있지 않습니다. API 설정에서 깃허브 계정을 등록해주세요.');
+  }
+
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/actions/workflows/trend-crawler.yml/dispatches`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ref: 'main' })
+    });
+
+    if (!response.ok) {
+      // 422 Unprocessable Entity happens if workflow file is not found or not active
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || '크롤러 서버 기동에 실패했습니다. API 설정의 토큰 권한(workflow 필수) 또는 파일명을 확인해주세요.');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('GitHub Trigger Workflow Error:', error);
+    throw error;
+  }
+}
+
