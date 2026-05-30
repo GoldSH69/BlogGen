@@ -149,6 +149,29 @@ export default function App() {
     }
   };
 
+  const handleSyncHistory = async () => {
+    const ghConfig = getGithubConfig();
+    if (!ghConfig.username || !ghConfig.repo || !ghConfig.pat) {
+      setErrorMessage('GitHub 연동 정보가 설정되어 있지 않습니다. 우측 상단 [API 설정]에서 입력해 주세요.');
+      return;
+    }
+
+    setIsHistoryLoading(true);
+    setErrorMessage('');
+    try {
+      const ghHistory = await fetchHistoryFromGithub();
+      if (ghHistory) {
+        setHistoryList(ghHistory);
+        localStorage.setItem('affiliwrite_history', JSON.stringify(ghHistory));
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('GitHub 클라우드 데이터를 가져오는데 실패했습니다. API 토큰을 다시 확인해주세요.');
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
   return (
     <div style={appWrapperStyle}>
       {/* Premium Navigation Header */}
@@ -187,15 +210,29 @@ export default function App() {
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', color: '#fff' }}>
                 <History size={16} style={{ color: 'var(--color-indigo)' }} />
                 최근 변환 내역
-                {isHistoryLoading && (
-                  <RefreshCw size={12} style={{ animation: 'spin 1.5s linear infinite', color: 'var(--color-cyan)', marginLeft: '4px' }} />
-                )}
               </h4>
-              {historyList.length > 0 && (
-                <button onClick={handleClearHistory} style={clearHistoryBtnStyle}>
-                  <Trash2 size={12} /> 비우기
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  onClick={handleSyncHistory} 
+                  disabled={isHistoryLoading}
+                  style={syncHistoryBtnStyle}
+                  title="GitHub 클라우드 동기화"
+                >
+                  <RefreshCw 
+                    size={12} 
+                    style={{ 
+                      animation: isHistoryLoading ? 'spin 1.5s linear infinite' : 'none',
+                      color: isHistoryLoading ? 'var(--color-cyan)' : 'inherit'
+                    }} 
+                  />
+                  {isHistoryLoading ? '동기화 중...' : '불러오기'}
                 </button>
-              )}
+                {historyList.length > 0 && (
+                  <button onClick={handleClearHistory} style={clearHistoryBtnStyle}>
+                    <Trash2 size={12} /> 비우기
+                  </button>
+                )}
+              </div>
             </div>
             
             <div style={historyBodyStyle}>
@@ -384,6 +421,17 @@ const clearHistoryBtnStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '3px',
+};
+
+const syncHistoryBtnStyle = {
+  background: 'none',
+  border: 'none',
+  color: 'var(--color-cyan)',
+  fontSize: '0.7rem',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
 };
 
 const historyBodyStyle = {
