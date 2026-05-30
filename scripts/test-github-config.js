@@ -31,7 +31,7 @@ async function testConnection() {
     const res = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'TCCG-Test-Agent'
       }
@@ -66,7 +66,7 @@ async function testConnection() {
     let sha = '';
     const getRes = await fetch(url, {
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'TCCG-Test-Agent'
       }
@@ -88,7 +88,7 @@ async function testConnection() {
     const putRes = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Content-Type': 'application/json',
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'TCCG-Test-Agent'

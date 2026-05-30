@@ -65,7 +65,7 @@ export async function fetchHistoryFromGithub() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'Cache-Control': 'no-cache'
       }
@@ -112,7 +112,7 @@ export async function saveHistoryToGithub(historyArray) {
     const getResponse = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'Cache-Control': 'no-cache'
       }
@@ -135,7 +135,7 @@ export async function saveHistoryToGithub(historyArray) {
     const putResponse = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Content-Type': 'application/json',
         'Accept': 'application/vnd.github.v3+json'
       },
@@ -174,7 +174,7 @@ export async function saveTrendConfigToGithub(configObj) {
     const getResponse = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'Cache-Control': 'no-cache'
       }
@@ -196,7 +196,7 @@ export async function saveTrendConfigToGithub(configObj) {
     const putResponse = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Content-Type': 'application/json',
         'Accept': 'application/vnd.github.v3+json'
       },
@@ -231,7 +231,7 @@ export async function fetchTrendConfigFromGithub() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'Cache-Control': 'no-cache'
       }
@@ -271,7 +271,7 @@ export async function fetchTrendIssuesFromGithub() {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${pat}`,
+        'Authorization': `Bearer ${pat}`,
         'Accept': 'application/vnd.github.v3+json',
         'Cache-Control': 'no-cache'
       }

@@ -204,7 +204,7 @@ async function run() {
     const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=all&per_page=100`;
     const res = await fetch(issuesUrl, {
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `Bearer ${githubToken}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'TCCG-Trend-Crawler-Agent'
       }
@@ -253,7 +253,7 @@ ${trend.description}
       const res = await fetch(createIssueUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `token ${githubToken}`,
+          'Authorization': `Bearer ${githubToken}`,
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
           'User-Agent': 'TCCG-Trend-Crawler-Agent'
