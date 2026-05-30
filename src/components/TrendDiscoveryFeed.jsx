@@ -66,12 +66,13 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   // Helper to extract trend info from issue body
   const parseTrendBody = (body) => {
-    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '' };
+    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사' };
 
     const scoreMatch = body.match(/클린 필터링 스코어:\s*`(\d+점)/);
     const channelMatch = body.match(/수집 채널:\s*`([\s\S]*?)`/);
     const bloggerMatch = body.match(/수집처\/작성자:\s*`([\s\S]*?)`/);
     const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([\s\S]*?)\)/);
+    const groupMatch = body.match(/수집 그룹:\s*`([\s\S]*?)`/);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     return {
@@ -79,6 +80,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       blogger: bloggerMatch ? bloggerMatch[1] : '작성자',
       score: scoreMatch ? scoreMatch[1] : 'N/A',
       link: linkMatch ? linkMatch[1] : '#',
+      group: groupMatch ? groupMatch[1] : '내 관심사',
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -158,7 +160,10 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                 <div key={issue.id} className="trend-card animate-slide-up" style={cardStyle}>
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
-                    <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <span style={groupBadgeStyle(parsed.group)}>{parsed.group}</span>
+                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
+                    </div>
                     <span style={scoreBadgeStyle(isHighClean)}>
                       <Award size={12} />
                       클린지수: {parsed.score}
@@ -239,6 +244,32 @@ const syncBtnStyle = {
   gap: '6px',
   fontWeight: '600',
   transition: 'all var(--transition-fast)',
+};
+
+const groupBadgeStyle = (group) => {
+  let color = '#93c5fd';
+  let bg = 'rgba(147, 197, 253, 0.08)';
+  let border = 'rgba(147, 197, 253, 0.2)';
+  
+  if (group.includes('핫토픽')) {
+    color = '#4ade80';
+    bg = 'rgba(74, 222, 128, 0.08)';
+    border = 'rgba(74, 222, 128, 0.2)';
+  } else if (group.includes('핫이슈') || group.includes('실시간')) {
+    color = '#c084fc';
+    bg = 'rgba(192, 132, 252, 0.08)';
+    border = 'rgba(192, 132, 252, 0.2)';
+  }
+  
+  return {
+    fontSize: '0.68rem',
+    padding: '3px 8px',
+    borderRadius: '4px',
+    fontWeight: '800',
+    color,
+    background: bg,
+    border: `1px solid ${border}`,
+  };
 };
 
 const triggerBtnStyle = (isTriggering) => ({
