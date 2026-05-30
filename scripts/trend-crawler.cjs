@@ -22,6 +22,123 @@ function cleanHtml(text) {
     .trim();
 }
 
+// Mobile Naver Blog URL Converter
+function convertToMobileBlogUrl(url) {
+  if (!url) return '';
+  
+  if (url.includes('m.blog.naver.com')) return url;
+  
+  // 1) https://blog.naver.com/userid/logno 포맷
+  const pathRegex = /https:\/\/blog\.naver\.com\/([a-zA-Z0-9_-]+)\/([0-9]+)/;
+  const pathMatch = url.match(pathRegex);
+  if (pathMatch) {
+    return `https://m.blog.naver.com/${pathMatch[1]}/${pathMatch[2]}`;
+  }
+  
+  // 2) https://blog.naver.com/Redirect.nhn?blogId=userid&logNo=logno 포맷
+  if (url.includes('blogId=') && url.includes('logNo=')) {
+    const blogIdMatch = url.match(/blogId=([a-zA-Z0-9_-]+)/);
+    const logNoMatch = url.match(/logNo=([0-9]+)/);
+    if (blogIdMatch && logNoMatch) {
+      return `https://m.blog.naver.com/${blogIdMatch[1]}/${logNoMatch[2]}`;
+    }
+  }
+  
+  return url;
+}
+
+// Full Text Scraper Engine (Zero-Dependency)
+async function scrapeFullText(link, type) {
+  let url = link;
+  if (type === '네이버 블로그') {
+    url = convertToMobileBlogUrl(link);
+  }
+  
+  console.log(`- 원본 본문 스크래핑 시도 (${type}): ${url}`);
+  
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+    
+    if (!res.ok) {
+      console.log(`  본문 스크래핑 실패 (HTTP ${res.status})`);
+      return null;
+    }
+    
+    const html = await res.text();
+    let bodyText = '';
+    
+    if (type === '네이버 블로그' || url.includes('blog.naver.com')) {
+      if (html.includes('se-main-container')) {
+        const parts = html.split('se-main-container');
+        if (parts.length > 1) {
+          let contentArea = parts[1];
+          // 푸터 및 댓글 등 불필요한 하단 영역 절단
+          const footerSigs = ['class="naver-footer"', 'class="aside"', 'class="post_btn"', 'class="post-btn"', 'class="reply"', 'class="comment"', 'class="post_comment"', 'id="post-btn-area"'];
+          for (const sig of footerSigs) {
+            if (contentArea.includes(sig)) {
+              contentArea = contentArea.split(sig)[0];
+            }
+          }
+          bodyText = cleanHtml(contentArea);
+        }
+      }
+    } else {
+      // 네이버 뉴스 또는 기타 기사
+      if (html.includes('id="dic_area"')) {
+        const chunk = html.split('id="dic_area"')[1];
+        const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</article>')[0];
+        bodyText = cleanHtml(rawContent);
+      } else if (html.includes('id="newsct_article"')) {
+        const chunk = html.split('id="newsct_article"')[1];
+        const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</div>')[0];
+        bodyText = cleanHtml(rawContent);
+      } else if (html.includes('id="articleBodyContents"')) {
+        const chunk = html.split('id="articleBodyContents"')[1];
+        const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</div>')[0];
+        bodyText = cleanHtml(rawContent);
+      }
+      
+      if (!bodyText) {
+        // 일반 뉴스 사이트 또는 fallback 기사 파싱
+        const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+        if (articleMatch) {
+          bodyText = cleanHtml(articleMatch[1]);
+        } else {
+          // 기사 본문으로 추정되는 긴 영역을 splitter로 시도
+          const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          if (bodyMatch) {
+            bodyText = cleanHtml(bodyMatch[1]);
+          }
+        }
+      }
+    }
+    
+    if (bodyText) {
+      // 가공 및 정제
+      bodyText = bodyText
+        .replace(/\r\n/g, '\n')
+        .replace(/\n\s*\n/g, '\n\n') // 연속 줄바꿈 방지
+        .trim();
+      
+      const limit = 4000;
+      if (bodyText.length > limit) {
+        bodyText = bodyText.substring(0, limit) + '\n\n... (이하 본문 생략 / 전체 원본 내용이 너무 길어 일부만 수집되었습니다. 원고 재작성에는 충분한 분량입니다) ...';
+      }
+      return bodyText;
+    }
+    
+    return null;
+  } catch (e) {
+    console.error(`  본문 스크래핑 예외 발생: ${e.message}`);
+    return null;
+  }
+}
+
 // 3-Stage Clean Filter Algorithm
 function calculateCleanScore(item, blacklistWords, checkAdRegex) {
   const title = cleanHtml(item.title);
@@ -197,6 +314,19 @@ async function run() {
   candidates.sort((a, b) => b.score - a.score);
   const topTrends = candidates.slice(0, 5);
   console.log(`\n최종 필터링 통과 목록 (${topTrends.length}개 선정):`);
+
+  // 3.5 [NEW] 선발된 상위 5개 후보에 한해 원본 전체 본문 스크래핑 시도
+  console.log('\n--- 원본 전체 본문 스크래핑 시작 ---');
+  for (const trend of topTrends) {
+    const fullText = await scrapeFullText(trend.link, trend.type);
+    if (fullText) {
+      console.log(`  => 본문 수집 성공 (${fullText.length}자)`);
+      trend.description = fullText; // 기존의 짧은 description을 전체 본문 텍스트로 대체
+    } else {
+      console.log('  => 본문 수집 실패 (기존 요약본 유지)');
+    }
+  }
+  console.log('--- 원본 전체 본문 스크래핑 완료 ---\n');
 
   // 4. Fetch existing open issues in GitHub to avoid duplicates
   let existingIssueTitles = new Set();
