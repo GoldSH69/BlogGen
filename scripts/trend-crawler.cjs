@@ -1,5 +1,5 @@
 /**
- * TCCG Trend Scraper & Clean Filter Engine
+ * TCCG Trend Scraper & Clean Filter Engine (CommonJS)
  * Runs inside GitHub Actions to crawl Naver Search APIs
  */
 
@@ -95,7 +95,7 @@ async function run() {
 
   // 1. Read configuration file
   let config = {
-    keywords: ["나혼자산다 핫템", "편스토랑 레시피", "최신 뉴스 핫템"],
+    keywords: ["나혼자산다 핫템", "편스토랑 레시피", "백종원 레시피", "연예인 패션"],
     sources: { naverBlog: true, naverNews: true, naverCafe: false, naverShopping: true },
     filtering: { minCleanScore: 75, customBlacklist: ["공구", "마켓", "추천인", "최저가링크"], checkAdRegex: true }
   };

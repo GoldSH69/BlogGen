@@ -1,7 +1,7 @@
 /**
- * Developer Testing Utility: test-github-config.js
+ * Developer Testing Utility: test-github-config.cjs (CommonJS)
  * Run this script to verify your GitHub PAT and Repository connection:
- * command: node scripts/test-github-config.js <GITHUB_PAT>
+ * command: node scripts/test-github-config.cjs <GITHUB_PAT>
  */
 
 const fs = require('fs');
@@ -13,7 +13,7 @@ async function testConnection() {
   const pat = process.argv[2];
   if (!pat) {
     console.error('오류: GitHub PAT(토큰)을 첫 번째 인자로 전달해 주세요.');
-    console.log('사용법: node scripts/test-github-config.js ghp_xxxxxxxxxxxxxxxxxxxxxx');
+    console.log('사용법: node scripts/test-github-config.cjs ghp_xxxxxxxxxxxxxxxxxxxxxx');
     process.exit(1);
   }
 
