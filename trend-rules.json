@@ -7,11 +7,13 @@
       "나혼자산다",
       "프리한19",
       "최지수",
-      "나혼산 핫템"
+      "나혼산 핫템",
+      "예능 꿀템",
+      "드라마 꿀템"
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": true,
+      "naverNews": false,
       "naverShopping": true
     },
     "filtering": {
@@ -30,12 +32,13 @@
       "코스트코 추천템",
       "가전 전자제품",
       "알리 추천템",
-      "쿠팡 추천템"
+      "쿠팡 추천템",
+      "예능 대란템"
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": true,
-      "naverShopping": true
+      "naverNews": false,
+      "naverShopping": false
     },
     "filtering": {
       "minCleanScore": 90,
@@ -49,13 +52,7 @@
     }
   },
   "realtimeHotIssue": {
-    "keywords": [
-      "AI 인공지능",
-      "신제품 출시",
-      "claude",
-      "chatgpt",
-      "gemini"
-    ],
+    "keywords": [],
     "sources": {
       "naverBlog": true,
       "naverNews": true,
