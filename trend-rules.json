@@ -3,23 +3,24 @@
     "keywords": [
       "건강 정보",
       "경제 재테크",
-      "IT 트렌드"
+      "IT 트렌드",
+      "나혼자산다",
+      "프리한19",
+      "최지수"
     ],
     "sources": {
       "naverBlog": true,
       "naverNews": true,
-      "naverShopping": false
+      "naverShopping": true
     },
     "filtering": {
       "minCleanScore": 80,
       "customBlacklist": [
         "공구",
         "마켓",
-        "추천인",
-        "최저가링크",
-        "파트너스"
+        "추천인"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "naverHotTopic": {
@@ -41,13 +42,16 @@
         "협찬",
         "대여제외"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "realtimeHotIssue": {
     "keywords": [
       "AI 인공지능",
-      "신제품 출시"
+      "신제품 출시",
+      "claude",
+      "chatgpt",
+      "gemini"
     ],
     "sources": {
       "naverBlog": true,
@@ -61,7 +65,7 @@
         "협찬문의",
         "제공받아"
       ],
-      "checkAdRegex": true
+      "checkAdRegex": false
     }
   },
   "scheduler": {
