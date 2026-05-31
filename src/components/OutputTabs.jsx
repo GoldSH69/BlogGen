@@ -588,6 +588,10 @@ if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = `
     /* 스마트 복사 코드박스 우측 스크롤바 상시 활성화 및 듀얼 테마 호환 고대비 스킨 */
+    .smart-codebox-body {
+      scrollbar-width: thin !important;
+      scrollbar-color: var(--scrollbar-thumb) var(--bg-base) !important;
+    }
     .smart-codebox-body::-webkit-scrollbar {
       width: 10px !important;
       display: block !important;
@@ -598,12 +602,12 @@ if (typeof document !== 'undefined') {
       border: 1px solid var(--border-color) !important;
     }
     .smart-codebox-body::-webkit-scrollbar-thumb {
-      background: var(--border-color) !important;
+      background: var(--scrollbar-thumb) !important;
       border-radius: 6px !important;
       border: 2px solid var(--bg-base) !important;
     }
     .smart-codebox-body::-webkit-scrollbar-thumb:hover {
-      background: var(--color-violet) !important;
+      background: var(--scrollbar-thumb-hover) !important;
     }
   `;
   document.head.appendChild(style);
