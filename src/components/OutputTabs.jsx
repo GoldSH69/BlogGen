@@ -587,22 +587,23 @@ const codeBoxBodyStyle = {
 if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = `
-    /* 스마트 복사 코드박스 우측 스크롤바 상시 활성화 및 보라색 반투명 커스텀 스킨 */
+    /* 스마트 복사 코드박스 우측 스크롤바 상시 활성화 및 듀얼 테마 호환 고대비 스킨 */
     .smart-codebox-body::-webkit-scrollbar {
-      width: 8px !important;
+      width: 10px !important;
       display: block !important;
     }
     .smart-codebox-body::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.03) !important;
-      border-radius: 4px !important;
+      background: var(--bg-base) !important;
+      border-radius: 6px !important;
+      border: 1px solid var(--border-color) !important;
     }
     .smart-codebox-body::-webkit-scrollbar-thumb {
-      background: rgba(139, 92, 246, 0.3) !important; /* 바이올렛 테마 반투명 스크롤 */
-      border-radius: 4px !important;
-      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      background: var(--border-color) !important;
+      border-radius: 6px !important;
+      border: 2px solid var(--bg-base) !important;
     }
     .smart-codebox-body::-webkit-scrollbar-thumb:hover {
-      background: rgba(139, 92, 246, 0.5) !important;
+      background: var(--color-violet) !important;
     }
   `;
   document.head.appendChild(style);
