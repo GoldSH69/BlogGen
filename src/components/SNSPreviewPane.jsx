@@ -86,7 +86,7 @@ export default function SNSPreviewPane({ platform, data }) {
           <div style={dividerStyle}></div>
           <div style={naverContentStyle}>
             {naverData.content ? (
-              naverData.content.split('\n').map((para, i) => {
+              naverData.content.replace(/<br\s*\/?>/gi, '\n').split('\n').map((para, i) => {
                 if (!para.trim()) return null;
                 // Highlight links
                 if (para.includes('http')) {
@@ -105,7 +105,9 @@ export default function SNSPreviewPane({ platform, data }) {
           {/* Tags */}
           <div style={naverTagsContainer}>
             {naverData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={naverTagStyle}>#{tag}</span>
+              <span key={idx} style={naverTagStyle}>
+                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+              </span>
             ))}
           </div>
         </div>
@@ -242,7 +244,7 @@ export default function SNSPreviewPane({ platform, data }) {
           <span style={{ fontWeight: '700', marginRight: '6px' }}>insta_influencer</span>
           <span style={{ color: 'var(--text-primary)' }}>
             {instaData.caption ? (
-              instaData.caption.split('\n').map((para, i) => (
+              instaData.caption.replace(/<br\s*\/?>/gi, '\n').split('\n').map((para, i) => (
                 <span key={i} style={{ display: 'block', marginBottom: '6px' }}>{para}</span>
               ))
             ) : (
@@ -252,7 +254,9 @@ export default function SNSPreviewPane({ platform, data }) {
           {/* Hashtags */}
           <div style={{ marginTop: '8px', color: '#38bdf8', fontSize: '0.78rem' }}>
             {instaData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={{ marginRight: '6px' }}>#{tag}</span>
+              <span key={idx} style={{ marginRight: '6px' }}>
+                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+              </span>
             ))}
           </div>
         </div>

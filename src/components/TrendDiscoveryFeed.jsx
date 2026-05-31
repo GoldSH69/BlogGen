@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2 } from 'lucide-react';
-import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub } from '../services/github';
+import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub, closeMultipleTrendIssuesOnGithub } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
@@ -22,6 +22,34 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || '이슈 제외 처리에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAllIssues = async () => {
+    if (filteredTrends.length === 0) return;
+    
+    const count = filteredTrends.length;
+    const tabName = 
+      activeGroupTab === 'all' ? '전체보기' :
+      activeGroupTab === 'my' ? '📌 내 관심사' :
+      activeGroupTab === 'naver' ? '🔥 네이버 핫토픽' :
+      '⚡ 실시간 핫이슈';
+
+    if (!window.confirm(`현재 [${tabName}] 탭에 표시된 총 ${count}개의 모든 트렌드 카드를 일괄 제외(삭제) 처리하시겠습니까?\n이 작업은 깃허브 저장소 이슈를 동시 닫기 처리하며 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const issueNumbers = filteredTrends.map(item => item.number);
+      await closeMultipleTrendIssuesOnGithub(issueNumbers);
+      setTrends(prev => prev.filter(item => !issueNumbers.includes(item.number)));
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || '이슈 일괄 제외 처리에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -170,6 +198,24 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
             <RefreshCw size={14} style={{ animation: isLoading ? 'spin 1.5s linear infinite' : 'none' }} />
             새로고침
           </button>
+
+          {filteredTrends.length > 0 && (
+            <button 
+              onClick={handleDeleteAllIssues} 
+              disabled={isLoading || isTriggering}
+              style={{
+                ...syncBtnStyle,
+                color: 'var(--color-rose)',
+                border: '1px solid rgba(244, 63, 94, 0.25)',
+                background: 'rgba(244, 63, 94, 0.05)',
+                boxShadow: 'none',
+              }}
+              title="현재 탭에 표시된 모든 트렌드 카드를 한꺼번에 제외(닫기) 처리합니다."
+            >
+              <Trash2 size={14} />
+              일괄 제외
+            </button>
+          )}
         </div>
       </div>
 

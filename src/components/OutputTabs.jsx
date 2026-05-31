@@ -80,20 +80,34 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     if (!platformData) return '';
 
     switch (activeTab) {
-      case 'naverBlog':
-        return `[제목 후보]\n${(platformData.titleProposals || []).join('\n')}\n\n[본문]\n${platformData.content}\n\n[태그]\n${(platformData.hashtags || []).map(t => `#${t}`).join(' ')}`;
+      case 'naverBlog': {
+        const cleanContent = platformData.content ? platformData.content.replace(/<br\s*\/?>/gi, '\n') : '';
+        const formattedTags = (platformData.hashtags || []).map(t => {
+          const trimmed = t.trim();
+          return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+        }).join(' ');
+        return `[제목 후보]\n${(platformData.titleProposals || []).join('\n')}\n\n[본문]\n${cleanContent}\n\n[태그]\n${formattedTags}`;
+      }
       case 'shorts': {
         const shortsScript = (platformData.script || []).map(s => `[${s.time}] 비주얼: ${s.visual}\n내레이션: ${s.audio}`).join('\n\n');
         return `[쇼츠 제목] ${platformData.title}\n\n[3초 오프닝 훅] ${platformData.hook}\n\n[상세 타임라인 스크립트]\n${shortsScript}\n\n[행동유도 CTA] ${platformData.cta}`;
       }
-      case 'instagram':
-        return `[피드 캡션]\n${platformData.caption}\n\n[태그]\n${(platformData.hashtags || []).map(t => `#${t}`).join(' ')}\n\n[카드뉴스 구성 가이드]\n${(platformData.cardNewsGuides || []).join('\n')}`;
+      case 'instagram': {
+        const cleanCaption = platformData.caption ? platformData.caption.replace(/<br\s*\/?>/gi, '\n') : '';
+        const formattedTags = (platformData.hashtags || []).map(t => {
+          const trimmed = t.trim();
+          return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+        }).join(' ');
+        return `[피드 캡션]\n${cleanCaption}\n\n[태그]\n${formattedTags}\n\n[카드뉴스 구성 가이드]\n${(platformData.cardNewsGuides || []).join('\n')}`;
+      }
       case 'tiktok': {
         const tiktokScript = (platformData.script || []).map(s => `[${s.time}] 비주얼: ${s.visual}\n자막: ${s.subtitle}\n내레이션: ${s.audio}`).join('\n\n');
         return `[틱톡 제목] ${platformData.title}\n\n[후킹 오프닝] ${platformData.hook}\n\n[타임라인 대본]\n${tiktokScript}\n\n[행동유도 CTA] ${platformData.cta}`;
       }
-      case 'mdx':
-        return `---\n${platformData.frontmatter}\n---\n\n${platformData.content}`;
+      case 'mdx': {
+        const cleanContent = platformData.content ? platformData.content.replace(/<br\s*\/?>/gi, '\n') : '';
+        return `---\n${platformData.frontmatter}\n---\n\n${cleanContent}`;
+      }
       default:
         return '';
     }
@@ -329,12 +343,14 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
           </div>
           <div style={dividerStyle}></div>
           <strong style={subLabelStyle}>✍️ 가공된 본문 원고:</strong>
-          <pre style={preBlockStyle}>{pData.content}</pre>
+          <pre style={preBlockStyle}>{pData.content ? pData.content.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
           <div style={dividerStyle}></div>
           <strong style={subLabelStyle}>🏷️ 해시태그 묶음:</strong>
           <p style={hashtagBlockStyle}>
             {pData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={{ marginRight: '8px' }}>#{tag}</span>
+              <span key={idx} style={{ marginRight: '8px' }}>
+                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+              </span>
             ))}
           </p>
         </div>
@@ -375,12 +391,14 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
       return (
         <div style={contentBlockStyle}>
           <strong style={subLabelStyle}>📸 피드 캡션:</strong>
-          <pre style={preBlockStyle}>{pData.caption}</pre>
+          <pre style={preBlockStyle}>{pData.caption ? pData.caption.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
           <div style={dividerStyle}></div>
           <strong style={subLabelStyle}>🏷️ 해시태그:</strong>
           <p style={hashtagBlockStyle}>
             {pData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={{ marginRight: '8px' }}>#{tag}</span>
+              <span key={idx} style={{ marginRight: '8px' }}>
+                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+              </span>
             ))}
           </p>
           <div style={dividerStyle}></div>
@@ -492,7 +510,7 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
           </pre>
           <div style={dividerStyle}></div>
           <strong style={subLabelStyle}>📝 MDX Markdown 본문:</strong>
-          <pre style={preBlockStyle}>{pData.content}</pre>
+          <pre style={preBlockStyle}>{pData.content ? pData.content.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
         </div>
       );
     }

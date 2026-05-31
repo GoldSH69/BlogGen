@@ -381,3 +381,41 @@ export async function closeTrendIssueOnGithub(issueNumber) {
   }
 }
 
+/**
+ * Close multiple trend issues on GitHub in parallel
+ * @param {Array<number>} issueNumbers - Array of issue numbers to close
+ */
+export async function closeMultipleTrendIssuesOnGithub(issueNumbers) {
+  if (!issueNumbers || issueNumbers.length === 0) return true;
+  
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    throw new Error('GitHub 연동 정보가 설정되어 있지 않습니다. API 설정에서 먼저 계정을 연동해 주세요.');
+  }
+
+  const promises = issueNumbers.map(issueNumber => {
+    const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/issues/${issueNumber}`;
+    return fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ state: 'closed' })
+    });
+  });
+
+  try {
+    const responses = await Promise.all(promises);
+    const failed = responses.filter(res => !res.ok);
+    if (failed.length > 0) {
+      throw new Error(`총 ${failed.length}개의 이슈 일괄 제외 처리에 실패하였습니다.`);
+    }
+    return true;
+  } catch (error) {
+    console.error('GitHub Batch Close Issues Error:', error);
+    throw error;
+  }
+}
+

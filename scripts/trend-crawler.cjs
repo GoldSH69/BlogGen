@@ -13,6 +13,8 @@ const CONFIG_PATH = path.join(__dirname, '../trend-rules.json');
 function cleanHtml(text) {
   if (!text) return '';
   return text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&lt;br\s*\/?&gt;/gi, '\n')
     .replace(/<\/?[^>]+(>|$)/g, '') // remove HTML tags like <b>, </b>
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
