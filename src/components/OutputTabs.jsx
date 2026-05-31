@@ -433,7 +433,11 @@ const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => 
       // filename이 누락되었을 경우(과거 히스토리 데이터 등)를 대비한 똑똑한 Dynamic Fallback 파일명 생성기
       let displayFilename = pData.filename;
       if (!displayFilename) {
-        let dateStr = new Date().toISOString().split('T')[0]; // 오늘 날짜 기본값
+        const kstParts = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+        const kstYear = kstParts.find(p => p.type === 'year').value;
+        const kstMonth = kstParts.find(p => p.type === 'month').value;
+        const kstDay = kstParts.find(p => p.type === 'day').value;
+        let dateStr = `${kstYear}-${kstMonth}-${kstDay}`; // KST 오늘 날짜 기본값
         let slugStr = 'untitled-post';
         
         if (pData.frontmatter) {

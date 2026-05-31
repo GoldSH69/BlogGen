@@ -22,6 +22,35 @@ function cleanHtml(text) {
     .trim();
 }
 
+// 현재의 한국 시간(KST, UTC+9) Date 객체를 반환하는 헬퍼 함수
+function getKSTDate() {
+  const curr = new Date();
+  const utc = curr.getTime() + (curr.getTimezoneOffset() * 60 * 1000);
+  const KR_TIME_DIFF = 9 * 60 * 60 * 1000;
+  return new Date(utc + KR_TIME_DIFF);
+}
+
+// 최근 발행된 신선한 글인지 날짜 검증 헬퍼 (기본: 최근 60일 이내)
+function isRecentPost(postdate, maxDays = 60) {
+  if (!postdate || postdate.length !== 8) return true; // 날짜 포맷 결함 시 안전을 위해 우선 허용
+  try {
+    const postYear = parseInt(postdate.substring(0, 4), 10);
+    const postMonth = parseInt(postdate.substring(4, 6), 10) - 1;
+    const postDay = parseInt(postdate.substring(6, 8), 10);
+    
+    const postDateObj = new Date(postYear, postMonth, postDay);
+    const currentDateObj = getKSTDate();
+    
+    // 시분초 영향을 배제하기 위해 두 Date 객체의 순수 날짜 타임스탬프 차이 계산
+    const diffTime = Math.abs(currentDateObj.getTime() - postDateObj.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays <= maxDays;
+  } catch (e) {
+    return true; // 예외 발생 시 안전을 위해 허용
+  }
+}
+
 // 블로그 postdate (YYYYMMDD) 포맷팅 함수
 function formatPostdate(postdate) {
   if (!postdate || postdate.length !== 8) return postdate || '';
@@ -434,7 +463,8 @@ async function run() {
           const items = data.items || [];
           for (const item of items) {
             const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
-            if (score >= myInterest.filtering.minCleanScore) {
+            const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
+            if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
               group1Candidates.push({
                 keyword,
                 type: '네이버 블로그',
@@ -508,7 +538,8 @@ async function run() {
         for (const item of items) {
           // 2그룹 핫토픽은 더욱 엄격한 스팸 배제를 위해 클린지수 90점 이상의 최고 품질 파워 포스팅만 선발!
           const { score, reasons } = calculateCleanScore(item, naverHotTopic.filtering.customBlacklist || [], naverHotTopic.filtering.checkAdRegex);
-          if (score >= naverHotTopic.filtering.minCleanScore) {
+          const maxAgeDays = naverHotTopic.filtering.maxAgeDays || 30;
+          if (score >= naverHotTopic.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
             group2Candidates.push({
               keyword: `${keyword} 핫토픽`,
               type: '네이버 블로그',
@@ -577,7 +608,8 @@ async function run() {
           const items = data.items || [];
           for (const item of items) {
             const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
-            if (score >= realtimeHotIssue.filtering.minCleanScore) {
+            const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
+            if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
               group3Candidates.push({
                 keyword,
                 type: '네이버 블로그',

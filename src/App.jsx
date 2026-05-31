@@ -103,7 +103,7 @@ export default function App() {
       // Save to local history
       const newHistoryItem = {
         id: Date.now(),
-        timestamp: new Date().toLocaleString(),
+        timestamp: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
         title: data.naverBlog?.titleProposals?.[0] || '가공 원고',
         data,
         affiliateLink: params.affiliateLink

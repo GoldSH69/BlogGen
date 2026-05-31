@@ -20,7 +20,8 @@
         "마켓",
         "추천인"
       ],
-      "checkAdRegex": false
+      "checkAdRegex": false,
+      "maxAgeDays": 60
     }
   },
   "naverHotTopic": {
@@ -42,7 +43,8 @@
         "협찬",
         "대여제외"
       ],
-      "checkAdRegex": false
+      "checkAdRegex": false,
+      "maxAgeDays": 30
     }
   },
   "realtimeHotIssue": {
@@ -65,7 +67,8 @@
         "협찬문의",
         "제공받아"
       ],
-      "checkAdRegex": false
+      "checkAdRegex": false,
+      "maxAgeDays": 14
     }
   },
   "scheduler": {

@@ -9,17 +9,17 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     myInterest: {
       keywords: [],
       sources: { naverBlog: true, naverNews: true, naverShopping: false },
-      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true }
+      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true, maxAgeDays: 60 }
     },
     naverHotTopic: {
       keywords: [],
       sources: { naverBlog: true, naverNews: false, naverShopping: false },
-      filtering: { minCleanScore: 90, customBlacklist: [], checkAdRegex: true }
+      filtering: { minCleanScore: 90, customBlacklist: [], checkAdRegex: true, maxAgeDays: 30 }
     },
     realtimeHotIssue: {
       keywords: [],
       sources: { naverBlog: true, naverNews: true, naverShopping: true },
-      filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true }
+      filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true, maxAgeDays: 14 }
     }
   });
 
@@ -55,7 +55,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               filtering: {
                 minCleanScore: cloudConfig.myInterest?.filtering?.minCleanScore ?? 80,
                 customBlacklist: cloudConfig.myInterest?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.myInterest?.filtering?.checkAdRegex ?? true
+                checkAdRegex: cloudConfig.myInterest?.filtering?.checkAdRegex ?? true,
+                maxAgeDays: cloudConfig.myInterest?.filtering?.maxAgeDays ?? 60
               }
             },
             naverHotTopic: {
@@ -64,7 +65,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               filtering: {
                 minCleanScore: cloudConfig.naverHotTopic?.filtering?.minCleanScore ?? 90,
                 customBlacklist: cloudConfig.naverHotTopic?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.naverHotTopic?.filtering?.checkAdRegex ?? true
+                checkAdRegex: cloudConfig.naverHotTopic?.filtering?.checkAdRegex ?? true,
+                maxAgeDays: cloudConfig.naverHotTopic?.filtering?.maxAgeDays ?? 30
               }
             },
             realtimeHotIssue: {
@@ -73,7 +75,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               filtering: {
                 minCleanScore: cloudConfig.realtimeHotIssue?.filtering?.minCleanScore ?? 75,
                 customBlacklist: cloudConfig.realtimeHotIssue?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.realtimeHotIssue?.filtering?.checkAdRegex ?? true
+                checkAdRegex: cloudConfig.realtimeHotIssue?.filtering?.checkAdRegex ?? true,
+                maxAgeDays: cloudConfig.realtimeHotIssue?.filtering?.maxAgeDays ?? 14
               }
             }
           });
@@ -84,17 +87,17 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
             myInterest: {
               keywords: ["건강 정보", "경제 재테크", "IT 트렌드"],
               sources: { naverBlog: true, naverNews: true, naverShopping: false },
-              filtering: { minCleanScore: 80, customBlacklist: ["공구", "마켓", "추천인", "최저가링크", "파트너스"], checkAdRegex: true }
+              filtering: { minCleanScore: 80, customBlacklist: ["공구", "마켓", "추천인", "최저가링크", "파트너스"], checkAdRegex: true, maxAgeDays: 60 }
             },
             naverHotTopic: {
               keywords: ["다이소 꿀템", "코스트코 추천템", "가전 전자제품"],
               sources: { naverBlog: true, naverNews: false, naverShopping: false },
-              filtering: { minCleanScore: 90, customBlacklist: ["홍보", "체험단", "협찬", "대여제외"], checkAdRegex: true }
+              filtering: { minCleanScore: 90, customBlacklist: ["홍보", "체험단", "협찬", "대여제외"], checkAdRegex: true, maxAgeDays: 30 }
             },
             realtimeHotIssue: {
               keywords: ["AI 인공지능", "신제품 출시"],
               sources: { naverBlog: true, naverNews: true, naverShopping: true },
-              filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true }
+              filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true, maxAgeDays: 14 }
             }
           });
           setIntervalHours(cloudConfig?.scheduler?.intervalHours || 6);
@@ -396,6 +399,38 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                     </span>
                   </label>
                 </div>
+
+                <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ ...formLabelStyle, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      📅 블로그 수집 제한 기간
+                    </span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '400' }}>
+                      최근 몇 일 이내에 작성된 블로그 포스팅만 수집할지 범위를 조정합니다.
+                    </span>
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={currentTabConfig.filtering.maxAgeDays || 60}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 1) {
+                          updateCurrentConfig({
+                            filtering: { ...currentTabConfig.filtering, maxAgeDays: val }
+                          });
+                        }
+                      }}
+                      disabled={!!errorMsg}
+                      className="input-field"
+                      style={{ width: '80px', textAlign: 'center', padding: '6px', fontSize: '0.82rem' }}
+                    />
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>일 이내 발행글만 수집</span>
+                  </div>
+                </div>
+
               </div>
 
               {/* 4. Custom Blacklist */}
