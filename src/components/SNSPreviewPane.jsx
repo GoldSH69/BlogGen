@@ -323,7 +323,7 @@ export default function SNSPreviewPane({ platform, data }) {
         {/* Frontmatter display in a code-block style */}
         <div style={mdxFrontmatterBox}>
           <span style={mdxBadge}>FRONTMATTER</span>
-          <pre style={{ margin: 0, fontSize: '0.72rem', fontFamily: 'monospace', color: '#a7f3d0' }}>
+          <pre style={{ margin: 0, fontSize: '0.72rem', fontFamily: 'monospace', color: 'var(--color-violet)' }}>
             {mdxData.frontmatter || '---\ntitle: 제목\n---'}
           </pre>
         </div>
@@ -377,7 +377,7 @@ export default function SNSPreviewPane({ platform, data }) {
         모바일 실시간 시각적 프리뷰
       </h4>
       <div style={phoneBezelStyle}>
-        <div style={phoneScreenStyle}>
+        <div className="preview-screen-scroll" style={phoneScreenStyle}>
           {renderPreview()}
         </div>
       </div>
@@ -423,7 +423,7 @@ const phoneScreenStyle = {
   height: '100%',
   background: 'var(--bg-base)',
   borderRadius: '24px',
-  overflowY: 'auto',
+  overflowY: 'scroll',
   overflowX: 'hidden',
   position: 'relative',
   border: '1px solid var(--border-color)',
@@ -815,3 +815,26 @@ const mdxBoxWarning = {
   color: 'var(--text-secondary)',
   marginBottom: '12px',
 };
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* 모바일 프리뷰 스크린 스크롤바 상시 강제 활성화 및 시안 반투명 커스텀 스크롤 */
+    .preview-screen-scroll::-webkit-scrollbar {
+      width: 6px !important;
+      display: block !important;
+    }
+    .preview-screen-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02) !important;
+      border-radius: 3px !important;
+    }
+    .preview-screen-scroll::-webkit-scrollbar-thumb {
+      background: rgba(6, 182, 212, 0.3) !important; /* 시안(cyan) 테마 스크롤바 */
+      border-radius: 3px !important;
+    }
+    .preview-screen-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(6, 182, 212, 0.5) !important;
+    }
+  `;
+  document.head.appendChild(style);
+}

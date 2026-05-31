@@ -244,7 +244,7 @@ const helpTextStyle = {
 };
 
 const promptBoxStyle = {
-  background: 'rgba(0,0,0,0.2)',
+  background: 'var(--bg-base)',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-sm)',
   padding: '12px',
@@ -283,8 +283,8 @@ const copyBtnStyle = (copied) => ({
 });
 
 const dropzoneStyle = (isDragOver) => ({
-  background: isDragOver ? 'rgba(6, 182, 212, 0.06)' : 'rgba(0,0,0,0.15)',
-  border: `2px dashed ${isDragOver ? 'var(--color-cyan)' : 'var(--border-color)'}`,
+  background: isDragOver ? 'var(--bg-surface-hover)' : 'var(--bg-base)',
+  border: `2px dashed ${isDragOver ? 'var(--color-violet)' : 'var(--border-color)'}`,
   borderRadius: 'var(--radius-sm)',
   height: '110px',
   display: 'flex',
@@ -294,7 +294,7 @@ const dropzoneStyle = (isDragOver) => ({
   transition: 'all var(--transition-fast)',
   overflow: 'hidden',
   position: 'relative',
-  boxShadow: isDragOver ? 'var(--shadow-neon-cyan)' : 'none',
+  boxShadow: isDragOver ? 'var(--shadow-neon)' : 'none',
 });
 
 const dropzoneContentStyle = {
