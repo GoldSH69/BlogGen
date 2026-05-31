@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award } from 'lucide-react';
-import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow } from '../services/github';
+import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2 } from 'lucide-react';
+import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
@@ -9,6 +9,23 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerStatus, setTriggerStatus] = useState('');
+
+  const handleDeleteIssue = async (e, issueNumber) => {
+    e.stopPropagation(); // Card selection click event propagation block
+    if (!window.confirm('이 트렌드 핫템을 피드 목록에서 제외(이슈 닫기)하시겠습니까?')) return;
+
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      await closeTrendIssueOnGithub(issueNumber);
+      setTrends(prev => prev.filter(item => item.number !== issueNumber));
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || '이슈 제외 처리에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleTriggerWorkflow = async () => {
     setIsTriggering(true);
@@ -227,10 +244,19 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                       <span style={groupBadgeStyle(parsed.group)}>{getGroupLabelWithEmoji(parsed.group)}</span>
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
                     </div>
-                    <span style={scoreBadgeStyle(isHighClean)}>
-                      <Award size={12} />
-                      클린지수: {parsed.score}
-                    </span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <span style={scoreBadgeStyle(isHighClean)}>
+                        <Award size={12} />
+                        클린지수: {parsed.score}
+                      </span>
+                      <button 
+                        onClick={(e) => handleDeleteIssue(e, issue.number)}
+                        style={deleteBtnStyle}
+                        title="이 트렌드 수집 제외"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Title */}
@@ -546,4 +572,29 @@ const errorContainerStyle = {
   lineHeight: '1.4',
   marginBottom: '20px',
 };
+
+const deleteBtnStyle = {
+  background: 'rgba(244, 63, 94, 0.08)',
+  border: '1px solid rgba(244, 63, 94, 0.2)',
+  color: 'var(--color-rose)',
+  padding: '4px 6px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all var(--transition-fast)',
+};
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    button[title="이 트렌드 수집 제외"]:hover {
+      background: rgba(244, 63, 94, 0.16) !important;
+      border-color: rgba(244, 63, 94, 0.4) !important;
+      box-shadow: 0 0 8px rgba(244, 63, 94, 0.25) !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 

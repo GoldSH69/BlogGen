@@ -217,7 +217,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
             </div>
           </div>
           
-          <div style={codeBoxBodyStyle}>
+          <div className="smart-codebox-body" style={codeBoxBodyStyle}>
             {renderTabContent(activeTab, data[activeTab], data.thumbnailPrompt, { filenameCopied, handleCopyFilename })}
           </div>
         </div>
@@ -581,8 +581,32 @@ const copyBtnStyle = (copied) => ({
 const codeBoxBodyStyle = {
   padding: '20px',
   maxHeight: '340px',
-  overflowY: 'auto',
+  overflowY: 'scroll',
 };
+
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* 스마트 복사 코드박스 우측 스크롤바 상시 활성화 및 보라색 반투명 커스텀 스킨 */
+    .smart-codebox-body::-webkit-scrollbar {
+      width: 8px !important;
+      display: block !important;
+    }
+    .smart-codebox-body::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03) !important;
+      border-radius: 4px !important;
+    }
+    .smart-codebox-body::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.3) !important; /* 바이올렛 테마 반투명 스크롤 */
+      border-radius: 4px !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+    .smart-codebox-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 92, 246, 0.5) !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 // Refine Adjust Panel Styles
 const adjustPanelStyle = {

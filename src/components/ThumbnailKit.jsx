@@ -83,7 +83,19 @@ export default function ThumbnailKit({ prompt }) {
     if (!previewUrl) return;
     const link = document.createElement('a');
     link.href = previewUrl;
-    link.download = `blog_thumbnail_${Date.now()}.webp`;
+    
+    let downloadName = `blog_thumbnail_${Date.now()}.webp`;
+    if (selectedFile && selectedFile.name) {
+      const originalName = selectedFile.name;
+      const lastDotIndex = originalName.lastIndexOf('.');
+      if (lastDotIndex !== -1) {
+        downloadName = originalName.substring(0, lastDotIndex) + '.webp';
+      } else {
+        downloadName = originalName + '.webp';
+      }
+    }
+    
+    link.download = downloadName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -179,9 +191,9 @@ export default function ThumbnailKit({ prompt }) {
 
 // Styles
 const kitContainerStyle = {
-  background: 'rgba(18, 18, 26, 0.55)',
-  border: '1px solid rgba(6, 182, 212, 0.15)',
-  boxShadow: 'var(--shadow-card), var(--shadow-neon-cyan)',
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  boxShadow: 'var(--shadow-card)',
   borderRadius: 'var(--radius-md)',
   padding: '20px',
   marginBottom: '20px',
@@ -196,8 +208,8 @@ const kitHeaderStyle = {
   gap: '8px',
   fontSize: '0.88rem',
   fontWeight: '800',
-  color: '#fff',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+  color: 'var(--text-primary)',
+  borderBottom: '1px solid var(--border-color)',
   paddingBottom: '10px',
 };
 
@@ -221,7 +233,7 @@ const kitColStyle = {
 const sectionLabelStyle = {
   fontSize: '0.8rem',
   fontWeight: '700',
-  color: '#fff',
+  color: 'var(--text-primary)',
   letterSpacing: '0.02em',
 };
 

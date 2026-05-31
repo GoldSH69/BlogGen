@@ -346,3 +346,38 @@ export async function triggerTrendCrawlerWorkflow() {
   }
 }
 
+/**
+ * Close (effectively delete) a specific trend issue on GitHub
+ * @param {number} issueNumber - The issue number to close
+ */
+export async function closeTrendIssueOnGithub(issueNumber) {
+  const { username, repo, pat } = getGithubConfig();
+  if (!username || !repo || !pat) {
+    throw new Error('GitHub 연동 정보가 설정되어 있지 않습니다. API 설정에서 먼저 계정을 연동해 주세요.');
+  }
+
+  const url = `${GITHUB_API_BASE}/repos/${username}/${repo}/issues/${issueNumber}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ state: 'closed' })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || '이슈 제외(닫기) 처리에 실패했습니다.');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('GitHub Close Issue Error:', error);
+    throw error;
+  }
+}
+
