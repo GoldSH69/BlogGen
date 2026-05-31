@@ -28,12 +28,14 @@
     "keywords": [
       "다이소 꿀템",
       "코스트코 추천템",
-      "가전 전자제품"
+      "가전 전자제품",
+      "알리 추천템",
+      "쿠팡 추천템"
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": false,
-      "naverShopping": false
+      "naverNews": true,
+      "naverShopping": true
     },
     "filtering": {
       "minCleanScore": 90,
