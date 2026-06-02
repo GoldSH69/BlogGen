@@ -2,7 +2,62 @@
  * Gemini API Service for AffiliWrite AI
  */
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash-lite'
+];
+
+async function postToGemini(model, apiKey, prompt, generationConfig) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }]
+        }
+      ],
+      generationConfig
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'API 호출에 실패했습니다.');
+  }
+
+  const data = await response.json();
+  const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!textResponse) {
+    throw new Error('AI의 응답 형식이 올바르지 않습니다.');
+  }
+
+  return JSON.parse(textResponse);
+}
+
+async function executeWithFallback(apiKey, prompt, generationConfig) {
+  let lastError = null;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      console.log(`[Gemini] Attempting to call model: ${model}`);
+      const result = await postToGemini(model, apiKey, prompt, generationConfig);
+      console.log(`[Gemini] Success using model: ${model}`);
+      return result;
+    } catch (error) {
+      console.warn(`[Gemini] Model ${model} failed:`, error.message);
+      lastError = new Error(`[${model}] ${error.message}`);
+    }
+  }
+
+  throw lastError || new Error('모든 Gemini 모델 호출에 실패했습니다.');
+}
 
 /**
  * Utility to get the API Key (reads from env or local storage fallback)
@@ -195,36 +250,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 `;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Gemini API 호출에 실패했습니다.');
-    }
-
-    const data = await response.json();
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!textResponse) {
-      throw new Error('AI의 응답 형식이 올바르지 않습니다.');
-    }
-
-    const parsed = JSON.parse(textResponse);
+    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json' });
     return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Generation Error:', error);
@@ -271,36 +297,7 @@ ${JSON.stringify(existingData, null, 2)}
 `;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Gemini API 조정에 실패했습니다.');
-    }
-
-    const data = await response.json();
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!textResponse) {
-      throw new Error('AI의 응답 형식이 올바르지 않습니다.');
-    }
-
-    const parsed = JSON.parse(textResponse);
+    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json' });
     return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Adjustment Error:', error);
