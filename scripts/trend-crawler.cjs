@@ -709,7 +709,9 @@ async function run() {
         const json = JSON.parse(cleanText);
         
         let posts = [];
-        if (json.result && Array.isArray(json.result.posts)) {
+        if (json.result && Array.isArray(json.result.postList)) {
+          posts = json.result.postList;
+        } else if (json.result && Array.isArray(json.result.posts)) {
           posts = json.result.posts;
         } else if (json.result && Array.isArray(json.result)) {
           posts = json.result;
@@ -721,7 +723,7 @@ async function run() {
         
         for (const post of posts) {
           const title = cleanHtml(post.title);
-          const desc = cleanHtml(post.contents || post.contentsSnippet || '');
+          const desc = cleanHtml(post.contents || post.contentsSnippet || post.briefContents || '');
           const link = post.postUrl || (post.blogId && post.logNo ? `https://blog.naver.com/${post.blogId}/${post.logNo}` : '');
           
           if (!link) continue;
@@ -731,7 +733,7 @@ async function run() {
           const comment = post.commentCount ?? post.commentCnt ?? 0;
           
           // 블로거 작성자 명칭 포맷터 탑재 (공감수/댓글수 정보 탑재)
-          const bloggername = `${post.authorName || '네이버 블로거'} (공감 ${sympathy} / 댓글 ${comment})`;
+          const bloggername = `${post.authorName || post.nickname || '네이버 블로거'} (공감 ${sympathy} / 댓글 ${comment})`;
           
           // Clean Filter 스코어 계산
           const cleanObj = calculateCleanScore(
