@@ -73,6 +73,22 @@
       "maxAgeDays": 14
     }
   },
+  "naverBlogRadar": {
+    "keywords": [
+      "네이버 블로그 상위"
+    ],
+    "sources": {
+      "naverBlog": true,
+      "naverNews": false,
+      "naverShopping": false
+    },
+    "filtering": {
+      "minCleanScore": 80,
+      "customBlacklist": [],
+      "checkAdRegex": true,
+      "maxAgeDays": 30
+    }
+  },
   "scheduler": {
     "intervalHours": 6
   }
