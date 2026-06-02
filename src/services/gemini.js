@@ -175,7 +175,17 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
   }` : `null`},
   "mdx": ${selectedPlatforms.includes('mdx') ? `{
     "filename": "${kstDateOnlyString}-영문슬러그.mdx 형태로 작성하되 영문 슬러그는 글 주제를 나타내는 2~4개 영단어를 하이픈으로 연결하여 소문자로만 생성하시오 (예: ${kstDateOnlyString}-dark-psychology-jade.mdx)",
-    "frontmatter": "title: \\"글 제목 (애드센스 SEO 최적화 직관적 제목)\\"\\ndescription: \\"글 전체를 명확히 요약해 주는 1~2문장의 핵심 설명\\"\\ndate: \\"${kstDateTimeString}\\"\\ncategory: \\"주제와 관련된 적절한 영문 소문자 카테고리 (예: mind, health, tech, study, life 등)\\"\\ntags: [\\"태그1\\", \\"태그2\\", \\"태그3\\", \\"태그4\\", \\"태그5\\"] (본문 내용과 밀접한 연관 핵심 태그 5개, 한글 단어 위주)\\nkeywords: \\"키워드1, 키워드2, 키워드3, 키워드4, 키워드5\\" (쉼표로 구분된 핵심 키워드 5개 나열)\\nthumbnail: \\"/images/blog/${randomNum}.webp\\"\\nauthor: \\"Insight Retreat\\"\\npublished: false (실제 발행 시에는 true로 변경)",
+    "frontmatter": {
+      "title": "글 제목 (애드센스 SEO 최적화 직관적 제목)",
+      "description": "글 전체를 명확히 요약해 주는 1~2문장의 핵심 설명",
+      "date": "${kstDateTimeString}",
+      "category": "주제와 관련된 적절한 영문 소문자 카테고리 (예: mind, health, tech, study, life 등)",
+      "tags": ["태그1", "태그2", "태그3", "태그4", "태그5"],
+      "keywords": "키워드1, 키워드2, 키워드3, 키워드4, 키워드5",
+      "thumbnail": "/images/blog/${randomNum}.webp",
+      "author": "Insight Retreat",
+      "published": false
+    },
     "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 완벽하게 구조화하여 최소 1,500자에서 2,000자 사이의 사람이 직접 쓴 듯 깊이 있는 정보글로 작성하시오. 하단 대가성 법적 고지 문구 및 무분별한 외부 링크는 구글 애드센스 감점을 피하기 위해 절대 포함하지 마십시오. ${disclaimerText ? `단, 본문 맨 마지막 라인에는 구글 E-E-A-T 신뢰도 확보를 위해 다음의 면책 고지 문구를 마크다운 인용구 형태로 반드시 포함해 주십시오. [문구: ${disclaimerText}]` : `별도의 면책 고지 문구는 본문에 포함하지 마십시오.`}"
   }` : `null`},
   "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 영문 이미지 생성 프롬프트. 만약 프롬프트에 인물(모델, 얼굴, 손, 전신 등)이 포함되는 경우 반드시 한국인 모델(Korean, East Asian style)로 묘사되도록 영문 키워드(예: Korean man, Korean woman, Korean couple 등)를 필수로 포함할 것. 텍스트 배제 지침(no text, without any letters)과 미드저니/Dall-E용 가로세로 비율 접미사(--ar 1200:514)를 반드시 포함한 photorealistic 혹은 vector illustration 묘사"` : `null`}
@@ -213,7 +223,8 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
       throw new Error('AI의 응답 형식이 올바르지 않습니다.');
     }
 
-    return JSON.parse(textResponse);
+    const parsed = JSON.parse(textResponse);
+    return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Generation Error:', error);
     throw error;
@@ -288,9 +299,31 @@ ${JSON.stringify(existingData, null, 2)}
       throw new Error('AI의 응답 형식이 올바르지 않습니다.');
     }
 
-    return JSON.parse(textResponse);
+    const parsed = JSON.parse(textResponse);
+    return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Adjustment Error:', error);
     throw error;
   }
+}
+
+/**
+ * Helper to dynamically format mdx.frontmatter object into valid YAML string if returned as object
+ */
+function processMdxFrontmatter(parsed) {
+  if (parsed && parsed.mdx && parsed.mdx.frontmatter && typeof parsed.mdx.frontmatter === 'object') {
+    const fm = parsed.mdx.frontmatter;
+    parsed.mdx.frontmatter = Object.entries(fm)
+      .map(([k, v]) => {
+        if (Array.isArray(v)) {
+          return `${k}: [${v.map(x => `"${x}"`).join(', ')}]`;
+        }
+        if (typeof v === 'boolean') {
+          return `${k}: ${v}`;
+        }
+        return `${k}: "${String(v).replace(/"/g, '\\"')}"`;
+      })
+      .join('\n');
+  }
+  return parsed;
 }
