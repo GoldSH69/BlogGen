@@ -35,7 +35,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       activeGroupTab === 'all' ? '전체보기' :
       activeGroupTab === 'my' ? '📌 내 관심사' :
       activeGroupTab === 'naver' ? '🔥 네이버 핫토픽' :
-      '⚡ 실시간 핫이슈';
+      activeGroupTab === 'google' ? '⚡ 실시간 핫이슈' :
+      '📡 네이버 블로그 레이더';
 
     if (!window.confirm(`현재 [${tabName}] 탭에 표시된 총 ${count}개의 모든 트렌드 카드를 일괄 제외(삭제) 처리하시겠습니까?\n이 작업은 깃허브 저장소 이슈를 동시 닫기 처리하며 되돌릴 수 없습니다.`)) {
       return;
@@ -114,6 +115,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     if (!group) return '📌 내 관심사';
     if (group.includes('핫토픽')) return '🔥 네이버 핫토픽';
     if (group.includes('핫이슈') || group.includes('실시간')) return '⚡ 실시간 핫이슈';
+    if (group.includes('레이더') || group.includes('Radar')) return '📡 네이버 블로그 레이더';
     return '📌 내 관심사';
   };
 
@@ -163,6 +165,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     if (activeGroupTab === 'my') return parsed.group === '내 관심사';
     if (activeGroupTab === 'naver') return parsed.group === '네이버 핫토픽';
     if (activeGroupTab === 'google') return parsed.group === '실시간 핫이슈';
+    if (activeGroupTab === 'radar') return parsed.group.includes('레이더') || parsed.group.includes('Radar');
     return true;
   });
 
@@ -244,6 +247,12 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           style={tabItemStyle(activeGroupTab === 'google', 'google')}
         >
           ⚡ 실시간 핫이슈
+        </button>
+        <button 
+          onClick={() => setActiveGroupTab('radar')}
+          style={tabItemStyle(activeGroupTab === 'radar', 'radar')}
+        >
+          📡 네이버 블로그 레이더
         </button>
       </div>
 
@@ -387,6 +396,9 @@ const tabItemStyle = (isActive, type) => {
   } else if (type === 'google') {
     activeColor = '#3b82f6';
     activeBg = 'rgba(59, 130, 246, 0.08)';
+  } else if (type === 'radar') {
+    activeColor = 'var(--color-cyan)';
+    activeBg = 'var(--color-cyan-glow)';
   }
 
   return {
@@ -433,6 +445,10 @@ const groupBadgeStyle = (group) => {
     color = '#3b82f6';
     bg = 'rgba(59, 130, 246, 0.08)';
     border = 'rgba(59, 130, 246, 0.2)';
+  } else if (group.includes('레이더') || group.includes('Radar')) {
+    color = 'var(--color-cyan)';
+    bg = 'rgba(6, 182, 212, 0.08)';
+    border = 'rgba(6, 182, 212, 0.2)';
   }
   
   return {

@@ -3,7 +3,7 @@ import { Settings, Plus, X, Save, Trash2, CheckCircle, Flame, ShieldAlert, Alert
 import { getGithubConfig, fetchTrendConfigFromGithub, saveTrendConfigToGithub } from '../services/github';
 
 export default function TrendSettingsPanel({ isOpen, onClose }) {
-  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue
+  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue, naverBlogRadar
 
   const [configs, setConfigs] = useState({
     myInterest: {
@@ -20,6 +20,11 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       keywords: [],
       sources: { naverBlog: true, naverNews: true, naverShopping: true },
       filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true, maxAgeDays: 14 }
+    },
+    naverBlogRadar: {
+      keywords: [],
+      sources: { naverBlog: true, naverNews: false, naverShopping: false },
+      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true, maxAgeDays: 30 }
     }
   });
 
@@ -47,7 +52,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
-        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue)) {
+        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue || cloudConfig.naverBlogRadar)) {
           setConfigs({
             myInterest: {
               keywords: cloudConfig.myInterest?.keywords || [],
@@ -78,6 +83,16 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 checkAdRegex: cloudConfig.realtimeHotIssue?.filtering?.checkAdRegex ?? true,
                 maxAgeDays: cloudConfig.realtimeHotIssue?.filtering?.maxAgeDays ?? 14
               }
+            },
+            naverBlogRadar: {
+              keywords: cloudConfig.naverBlogRadar?.keywords || [],
+              sources: cloudConfig.naverBlogRadar?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
+              filtering: {
+                minCleanScore: cloudConfig.naverBlogRadar?.filtering?.minCleanScore ?? 80,
+                customBlacklist: cloudConfig.naverBlogRadar?.filtering?.customBlacklist || [],
+                checkAdRegex: cloudConfig.naverBlogRadar?.filtering?.checkAdRegex ?? true,
+                maxAgeDays: cloudConfig.naverBlogRadar?.filtering?.maxAgeDays ?? 30
+              }
             }
           });
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
@@ -98,6 +113,11 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               keywords: ["AI 인공지능", "신제품 출시"],
               sources: { naverBlog: true, naverNews: true, naverShopping: true },
               filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true, maxAgeDays: 14 }
+            },
+            naverBlogRadar: {
+              keywords: ["네이버 상위노출", "마케팅 로직"],
+              sources: { naverBlog: true, naverNews: false, naverShopping: false },
+              filtering: { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
             }
           });
           setIntervalHours(cloudConfig?.scheduler?.intervalHours || 6);
@@ -183,6 +203,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       myInterest: configs.myInterest,
       naverHotTopic: configs.naverHotTopic,
       realtimeHotIssue: configs.realtimeHotIssue,
+      naverBlogRadar: configs.naverBlogRadar,
       scheduler: {
         intervalHours
       }
@@ -247,6 +268,15 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           >
             ⚡ 실시간 핫이슈
           </button>
+          <button
+            onClick={() => {
+              setActiveSubTab('naverBlogRadar');
+              setErrorMsg('');
+            }}
+            style={activeSubTab === 'naverBlogRadar' ? activeTabStyle : inactiveTabStyle}
+          >
+            📡 네이버 블로그 레이더
+          </button>
         </div>
 
         {/* Body */}
@@ -280,6 +310,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                     placeholder={
                       activeSubTab === 'myInterest' ? "예: 건강 정보, 경제 재테크" :
                       activeSubTab === 'naverHotTopic' ? "예: 다이소 꿀템, 코스트코 추천템" :
+                      activeSubTab === 'naverBlogRadar' ? "예: 네이버 상위노출, 마케팅 알고리즘" :
                       "예: AI 인공지능, 신제품 출시"
                     }
                     value={newKeyword}

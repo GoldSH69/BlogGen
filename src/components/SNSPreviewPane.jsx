@@ -69,8 +69,26 @@ export default function SNSPreviewPane({ platform, data }) {
       <div style={naverBlogContainer}>
         {/* Header */}
         <div style={naverBlogHeader}>
-          <span style={{ color: '#03C75A', fontWeight: '900', fontSize: '0.95rem' }}>N</span>
-          <span style={{ color: 'var(--text-primary)', fontSize: '0.8rem', marginLeft: '6px' }}>블로그 프리뷰</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ color: '#03C75A', fontWeight: '900', fontSize: '0.95rem' }}>N</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: '0.8rem', marginLeft: '6px' }}>블로그 프리뷰</span>
+            </div>
+            <span style={{
+              fontSize: '0.65rem',
+              color: '#10b981',
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              💚 네이버 필터 안전 등급: 최상
+            </span>
+          </div>
         </div>
         {/* Profile */}
         <div style={naverProfileRow}>
