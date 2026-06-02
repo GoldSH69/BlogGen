@@ -2,8 +2,63 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Plus, X, Save, Trash2, CheckCircle, Flame, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { getGithubConfig, fetchTrendConfigFromGithub, saveTrendConfigToGithub } from '../services/github';
 
+const NAVER_CATEGORIES = [
+  {
+    group: '엔터테인먼트·예술',
+    list: [
+      { seq: 5, name: '문학·책' },
+      { seq: 6, name: '영화' },
+      { seq: 8, name: '미술·디자인' },
+      { seq: 7, name: '공연·전시' },
+      { seq: 11, name: '음악' },
+      { seq: 9, name: '드라마' },
+      { seq: 12, name: '스타·연예인' },
+      { seq: 13, name: '만화·애니' },
+      { seq: 10, name: '방송' }
+    ]
+  },
+  {
+    group: '생활·노하우·쇼핑',
+    list: [
+      { seq: 14, name: '일상·생각' },
+      { seq: 15, name: '육아·결혼' },
+      { seq: 16, name: '반려동물' },
+      { seq: 17, name: '좋은글·이미지' },
+      { seq: 18, name: '패션·미용' },
+      { seq: 19, name: '인테리어·DIY' },
+      { seq: 20, name: '요리·레시피' },
+      { seq: 21, name: '상품리뷰' },
+      { seq: 36, name: '원예·재배' }
+    ]
+  },
+  {
+    group: '취미·여가·여행',
+    list: [
+      { seq: 22, name: '게임' },
+      { seq: 23, name: '스포츠' },
+      { seq: 24, name: '사진' },
+      { seq: 25, name: '자동차' },
+      { seq: 26, name: '취미' },
+      { seq: 27, name: '국내여행' },
+      { seq: 28, name: '세계여행' },
+      { seq: 29, name: '맛집' }
+    ]
+  },
+  {
+    group: '지식·동향',
+    list: [
+      { seq: 30, name: 'IT·컴퓨터' },
+      { seq: 31, name: '사회·정치' },
+      { seq: 32, name: '건강·의학' },
+      { seq: 33, name: '비즈니스·경제' },
+      { seq: 35, name: '어학·외국어' },
+      { seq: 34, name: '교육·학문' }
+    ]
+  }
+];
+
 export default function TrendSettingsPanel({ isOpen, onClose }) {
-  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue, naverBlogRadar
+  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue, naverCategoryPopular
 
   const [configs, setConfigs] = useState({
     myInterest: {
@@ -21,8 +76,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       sources: { naverBlog: true, naverNews: true, naverShopping: true },
       filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true, maxAgeDays: 14 }
     },
-    naverBlogRadar: {
-      keywords: [],
+    naverCategoryPopular: {
+      categories: [],
       sources: { naverBlog: true, naverNews: false, naverShopping: false },
       filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true, maxAgeDays: 30 }
     }
@@ -52,7 +107,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
-        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue || cloudConfig.naverBlogRadar)) {
+        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue || cloudConfig.naverCategoryPopular)) {
           setConfigs({
             myInterest: {
               keywords: cloudConfig.myInterest?.keywords || [],
@@ -84,14 +139,14 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 maxAgeDays: cloudConfig.realtimeHotIssue?.filtering?.maxAgeDays ?? 14
               }
             },
-            naverBlogRadar: {
-              keywords: cloudConfig.naverBlogRadar?.keywords || [],
-              sources: cloudConfig.naverBlogRadar?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
+            naverCategoryPopular: {
+              categories: cloudConfig.naverCategoryPopular?.categories || [],
+              sources: cloudConfig.naverCategoryPopular?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
               filtering: {
-                minCleanScore: cloudConfig.naverBlogRadar?.filtering?.minCleanScore ?? 80,
-                customBlacklist: cloudConfig.naverBlogRadar?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.naverBlogRadar?.filtering?.checkAdRegex ?? true,
-                maxAgeDays: cloudConfig.naverBlogRadar?.filtering?.maxAgeDays ?? 30
+                minCleanScore: cloudConfig.naverCategoryPopular?.filtering?.minCleanScore ?? 80,
+                customBlacklist: cloudConfig.naverCategoryPopular?.filtering?.customBlacklist || [],
+                checkAdRegex: cloudConfig.naverCategoryPopular?.filtering?.checkAdRegex ?? true,
+                maxAgeDays: cloudConfig.naverCategoryPopular?.filtering?.maxAgeDays ?? 30
               }
             }
           });
@@ -114,8 +169,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               sources: { naverBlog: true, naverNews: true, naverShopping: true },
               filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true, maxAgeDays: 14 }
             },
-            naverBlogRadar: {
-              keywords: ["네이버 상위노출", "마케팅 로직"],
+            naverCategoryPopular: {
+              categories: [30, 33, 29, 14],
               sources: { naverBlog: true, naverNews: false, naverShopping: false },
               filtering: { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
             }
@@ -185,6 +240,19 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     });
   };
 
+  const handleToggleCategory = (seq) => {
+    const currentCats = currentTabConfig.categories || [];
+    if (currentCats.includes(seq)) {
+      updateCurrentConfig({
+        categories: currentCats.filter(id => id !== seq)
+      });
+    } else {
+      updateCurrentConfig({
+        categories: [...currentCats, seq]
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (configs.myInterest.keywords.length === 0) {
       setErrorMsg('📌 내 관심사 수집 키워드를 최소 1개 이상 지정해 주세요.');
@@ -192,6 +260,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     }
     if (configs.naverHotTopic.keywords.length === 0) {
       setErrorMsg('🔥 네이버 핫토픽 수집 키워드를 최소 1개 이상 지정해 주세요.');
+      return;
+    }
+    if (activeSubTab === 'naverCategoryPopular' && configs.naverCategoryPopular.categories.length === 0) {
+      setErrorMsg('📈 카테고리 인기글에서 수집할 카테고리를 최소 1개 이상 선택해 주세요.');
       return;
     }
 
@@ -203,7 +275,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       myInterest: configs.myInterest,
       naverHotTopic: configs.naverHotTopic,
       realtimeHotIssue: configs.realtimeHotIssue,
-      naverBlogRadar: configs.naverBlogRadar,
+      naverCategoryPopular: configs.naverCategoryPopular,
       scheduler: {
         intervalHours
       }
@@ -270,12 +342,12 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           </button>
           <button
             onClick={() => {
-              setActiveSubTab('naverBlogRadar');
+              setActiveSubTab('naverCategoryPopular');
               setErrorMsg('');
             }}
-            style={activeSubTab === 'naverBlogRadar' ? activeTabStyle : inactiveTabStyle}
+            style={activeSubTab === 'naverCategoryPopular' ? activeTabStyle : inactiveTabStyle}
           >
-            📡 네이버 블로그 레이더
+            📈 카테고리 인기글
           </button>
         </div>
 
@@ -300,43 +372,116 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           ) : (
             <div style={scrollContainerStyle}>
               
-              {/* 1. Keywords Settings */}
+              {/* 1. Keywords or Categories Settings */}
               <div style={{ marginBottom: '22px' }}>
-                <h4 style={sectionTitleStyle}>1. 수집 타겟 키워드 관리</h4>
-                <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder={
-                      activeSubTab === 'myInterest' ? "예: 건강 정보, 경제 재테크" :
-                      activeSubTab === 'naverHotTopic' ? "예: 다이소 꿀템, 코스트코 추천템" :
-                      activeSubTab === 'naverBlogRadar' ? "예: 네이버 상위노출, 마케팅 알고리즘" :
-                      "예: AI 인공지능, 신제품 출시"
-                    }
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    disabled={!!errorMsg}
-                    style={{ flex: 1, fontSize: '0.82rem' }}
-                  />
-                  <button type="submit" className="btn-neon" disabled={!!errorMsg} style={{ padding: '8px 14px' }}>
-                    <Plus size={16} /> 추가
-                  </button>
-                </form>
+                {activeSubTab === 'naverCategoryPopular' ? (
+                  <>
+                    <h4 style={sectionTitleStyle}>1. 인기글 수집 카테고리 선택</h4>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      padding: '16px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-color)',
+                      maxHeight: '260px',
+                      overflowY: 'auto'
+                    }}>
+                      {NAVER_CATEGORIES.map((groupObj, gIdx) => (
+                        <div key={gIdx} style={{ marginBottom: '8px' }}>
+                          <div style={{
+                            fontSize: '0.78rem',
+                            fontWeight: '700',
+                            color: 'var(--color-violet)',
+                            marginBottom: '6px',
+                            borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                            paddingBottom: '4px'
+                          }}>
+                            {groupObj.group}
+                          </div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '6px'
+                          }}>
+                            {groupObj.list.map((cat) => {
+                              const isChecked = (currentTabConfig.categories || []).includes(cat.seq);
+                              return (
+                                <label
+                                  key={cat.seq}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '0.74rem',
+                                    color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    padding: '4px 6px',
+                                    borderRadius: '4px',
+                                    background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
+                                    border: isChecked ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid transparent',
+                                    transition: 'all var(--transition-fast)'
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleToggleCategory(cat.seq)}
+                                    style={{
+                                      accentColor: 'var(--color-violet)',
+                                      width: '14px',
+                                      height: '14px',
+                                      cursor: 'pointer'
+                                    }}
+                                  />
+                                  {cat.name}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h4 style={sectionTitleStyle}>1. 수집 타겟 키워드 관리</h4>
+                    <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        className="input-field"
+                        placeholder={
+                          activeSubTab === 'myInterest' ? "예: 건강 정보, 경제 재테크" :
+                          activeSubTab === 'naverHotTopic' ? "예: 다이소 꿀템, 코스트코 추천템" :
+                          "예: AI 인공지능, 신제품 출시"
+                        }
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        disabled={!!errorMsg}
+                        style={{ flex: 1, fontSize: '0.82rem' }}
+                      />
+                      <button type="submit" className="btn-neon" disabled={!!errorMsg} style={{ padding: '8px 14px' }}>
+                        <Plus size={16} /> 추가
+                      </button>
+                    </form>
 
-                <div style={tagWrapperStyle}>
-                  {currentTabConfig.keywords.length === 0 ? (
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 수집 키워드가 없습니다. 직접 추가해 주세요.</div>
-                  ) : (
-                    currentTabConfig.keywords.map((kw, i) => (
-                      <span key={i} style={tagStyle}>
-                        {kw}
-                        <button type="button" onClick={() => handleRemoveKeyword(kw)} style={tagRemoveStyle}>
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
+                    <div style={tagWrapperStyle}>
+                      {currentTabConfig.keywords.length === 0 ? (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 수집 키워드가 없습니다. 직접 추가해 주세요.</div>
+                      ) : (
+                        currentTabConfig.keywords.map((kw, i) => (
+                          <span key={i} style={tagStyle}>
+                            {kw}
+                            <button type="button" onClick={() => handleRemoveKeyword(kw)} style={tagRemoveStyle}>
+                              <X size={11} />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* 2. Sources Settings */}

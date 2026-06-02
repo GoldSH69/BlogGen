@@ -73,10 +73,8 @@
       "maxAgeDays": 14
     }
   },
-  "naverBlogRadar": {
-    "keywords": [
-      "네이버 블로그 상위"
-    ],
+  "naverCategoryPopular": {
+    "categories": [30, 33, 29, 14],
     "sources": {
       "naverBlog": true,
       "naverNews": false,
@@ -84,7 +82,10 @@
     },
     "filtering": {
       "minCleanScore": 80,
-      "customBlacklist": [],
+      "customBlacklist": [
+        "광고",
+        "체험단"
+      ],
       "checkAdRegex": true,
       "maxAgeDays": 30
     }

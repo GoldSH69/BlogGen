@@ -36,7 +36,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       activeGroupTab === 'my' ? '📌 내 관심사' :
       activeGroupTab === 'naver' ? '🔥 네이버 핫토픽' :
       activeGroupTab === 'google' ? '⚡ 실시간 핫이슈' :
-      '📡 네이버 블로그 레이더';
+      '📈 네이버 카테고리 인기글';
 
     if (!window.confirm(`현재 [${tabName}] 탭에 표시된 총 ${count}개의 모든 트렌드 카드를 일괄 제외(삭제) 처리하시겠습니까?\n이 작업은 깃허브 저장소 이슈를 동시 닫기 처리하며 되돌릴 수 없습니다.`)) {
       return;
@@ -115,13 +115,13 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     if (!group) return '📌 내 관심사';
     if (group.includes('핫토픽')) return '🔥 네이버 핫토픽';
     if (group.includes('핫이슈') || group.includes('실시간')) return '⚡ 실시간 핫이슈';
-    if (group.includes('레이더') || group.includes('Radar')) return '📡 네이버 블로그 레이더';
+    if (group.includes('레이더') || group.includes('Radar') || group.includes('카테고리') || group.includes('Category')) return '📈 네이버 카테고리 인기글';
     return '📌 내 관심사';
   };
 
   // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
   const parseTrendBody = (body) => {
-    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '' };
+    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '', sympathyCnt: 0, commentCnt: 0 };
 
     const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^\n\r]+)/i);
@@ -134,7 +134,20 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '내 관심사';
     const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '기타';
     const parsedScore = scoreMatch ? scoreMatch[1].replace(/[`*]/g, '').trim() : 'N/A';
-    const parsedBlogger = bloggerMatch ? bloggerMatch[1].replace(/[`*]/g, '').trim() : '작성자';
+    
+    let rawBlogger = bloggerMatch ? bloggerMatch[1].replace(/[`*]/g, '').trim() : '작성자';
+    let parsedBlogger = rawBlogger;
+    let sympathyCnt = 0;
+    let commentCnt = 0;
+
+    // Extract likes and comments count from blogger format: "BloggerName (공감 X개 / 댓글 Y개)" or "BloggerName (공감 X / 댓글 Y)"
+    const statsMatch = rawBlogger.match(/(.+?)\s*\(\s*공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?\s*\)/);
+    if (statsMatch) {
+      parsedBlogger = statsMatch[1].trim();
+      sympathyCnt = parseInt(statsMatch[2], 10);
+      commentCnt = parseInt(statsMatch[3], 10);
+    }
+
     const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
     const parsedPubDate = pubDateMatch ? pubDateMatch[1].replace(/[`*]/g, '').trim() : '';
 
@@ -145,6 +158,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       link: parsedLink,
       group: parsedGroup,
       pubDate: parsedPubDate,
+      sympathyCnt,
+      commentCnt,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -165,7 +180,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     if (activeGroupTab === 'my') return parsed.group === '내 관심사';
     if (activeGroupTab === 'naver') return parsed.group === '네이버 핫토픽';
     if (activeGroupTab === 'google') return parsed.group === '실시간 핫이슈';
-    if (activeGroupTab === 'radar') return parsed.group.includes('레이더') || parsed.group.includes('Radar');
+    if (activeGroupTab === 'radar') return parsed.group.includes('레이더') || parsed.group.includes('Radar') || parsed.group.includes('카테고리') || parsed.group.includes('Category');
     return true;
   });
 
@@ -252,7 +267,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           onClick={() => setActiveGroupTab('radar')}
           style={tabItemStyle(activeGroupTab === 'radar', 'radar')}
         >
-          📡 네이버 블로그 레이더
+          📈 카테고리 인기글
         </button>
       </div>
 
@@ -318,6 +333,25 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   <h4 style={cardTitleStyle} title={issue.title}>
                     {issue.title.replace(/^\[트렌드\]\s*/, '')}
                   </h4>
+
+                  {/* Blogger & Traffic Stats Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+                    <span style={{ fontWeight: '500' }}>✍️ {parsed.blogger}</span>
+                    {(parsed.sympathyCnt > 0 || parsed.commentCnt > 0) && (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {parsed.sympathyCnt > 0 && (
+                          <span style={{ color: 'var(--color-rose)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            ❤️ {parsed.sympathyCnt}
+                          </span>
+                        )}
+                        {parsed.commentCnt > 0 && (
+                          <span style={{ color: 'var(--color-cyan)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            💬 {parsed.commentCnt}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Snippet Description */}
                   <p style={snippetStyle}>

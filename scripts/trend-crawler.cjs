@@ -438,13 +438,21 @@ async function run() {
     filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true }
   };
 
+  // 4그룹 "네이버 카테고리 인기글" 설정 바인딩 & 폴백 프리셋
+  const naverCategoryPopular = config.naverCategoryPopular || {
+    categories: [30, 33, 29, 14],
+    sources: { naverBlog: true, naverNews: false, naverShopping: false },
+    filtering: { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
+  };
+
 
   // -------------------------------------------------------------
-  // [NEW] 3-Tier Content Mixing System 파이프라인
+  // [NEW] 4-Tier Content Mixing System 파이프라인
   // -------------------------------------------------------------
   let group1Candidates = []; // 1그룹: 내 관심사 (고정 키워드 검색 결과)
   let group2Candidates = []; // 2그룹: 네이버 핫토픽 (인기 블로그 포스팅 링크 다이렉트 긁기)
   let group3Candidates = []; // 3그룹: 실시간 핫이슈 (구글 RSS & 쇼핑 베스트 키워드 검색)
+  let group4Candidates = []; // 4그룹: 네이버 카테고리 인기글 (실시간 카테고리 트래픽 글 수집)
   
   // --- 1그룹 수집: 고정 관심사 검색 ---
   console.log('\n=======================================');
@@ -665,16 +673,139 @@ async function run() {
     }
   }
 
-  // --- 4. 정렬 및 각 그룹별 상위 5개 선발 (총 15개 카드 구성) ---
+  // --- 4그룹 수집: 네이버 카테고리 인기글 실시간 수집 ---
+  console.log('\n=======================================');
+  console.log('[4그룹] 네이버 카테고리 인기글 실시간 수집 시작...');
+  console.log('=======================================');
+  
+  // NAVER_CATEGORIES의 seq 이름 매핑용 딕셔너리
+  const categoryMap = {
+    5: '문학·책', 6: '영화', 8: '미술·디자인', 7: '공연·전시', 11: '음악', 9: '드라마', 12: '스타·연예인', 13: '만화·애니', 10: '방송',
+    14: '일상·생각', 15: '육아·결혼', 16: '반려동물', 17: '좋은글·이미지', 18: '패션·미용', 19: '인테리어·DIY', 20: '요리·레시피', 21: '상품리뷰', 36: '원예·재배',
+    22: '게임', 23: '스포츠', 24: '사진', 25: '자동차', 26: '취미', 27: '국내여행', 28: '세계여행', 29: '맛집',
+    30: 'IT·컴퓨터', 31: '사회·정치', 32: '건강·의학', 33: '비즈니스·경제', 35: '어학·외국어', 34: '교육·학문'
+  };
+
+  const selectedCategories = naverCategoryPopular.categories || [30, 33, 29, 14];
+  
+  for (const seq of selectedCategories) {
+    const catName = categoryMap[seq] || `카테고리 ${seq}`;
+    console.log(`\n카테고리 "${catName}" 실시간 인기글 수집 중 (seq: ${seq})...`);
+    
+    try {
+      const url = `https://section.blog.naver.com/ajax/DirectoryPostList.naver?directorySeq=${seq}&page=1`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+          'Referer': 'https://section.blog.naver.com/',
+          'Accept': 'application/json, text/plain, */*'
+        }
+      });
+      
+      if (res.ok) {
+        const rawText = await res.text();
+        // Remove anti-hijacking prefix
+        const cleanText = rawText.replace(/^\s*\)\]\}',\s*/, '');
+        const json = JSON.parse(cleanText);
+        
+        let posts = [];
+        if (json.result && Array.isArray(json.result.posts)) {
+          posts = json.result.posts;
+        } else if (json.result && Array.isArray(json.result)) {
+          posts = json.result;
+        } else if (Array.isArray(json.posts)) {
+          posts = json.posts;
+        }
+        
+        console.log(`  => 포스트 ${posts.length}개 탐지됨. 클린 필터링 및 최근 글 검증 적용...`);
+        
+        for (const post of posts) {
+          const title = cleanHtml(post.title);
+          const desc = cleanHtml(post.contents || post.contentsSnippet || '');
+          const link = post.postUrl || (post.blogId && post.logNo ? `https://blog.naver.com/${post.blogId}/${post.logNo}` : '');
+          
+          if (!link) continue;
+          
+          // 공감수 / 댓글수 추출
+          const sympathy = post.sympathyCount ?? post.sympathyCnt ?? 0;
+          const comment = post.commentCount ?? post.commentCnt ?? 0;
+          
+          // 블로거 작성자 명칭 포맷터 탑재 (공감수/댓글수 정보 탑재)
+          const bloggername = `${post.authorName || '네이버 블로거'} (공감 ${sympathy} / 댓글 ${comment})`;
+          
+          // Clean Filter 스코어 계산
+          const cleanObj = calculateCleanScore(
+            { title, description: desc },
+            naverCategoryPopular.filtering.customBlacklist || [],
+            naverCategoryPopular.filtering.checkAdRegex
+          );
+          
+          let score = cleanObj.score;
+          const reasons = cleanObj.reasons;
+          
+          // 4그룹 인기글은 트래픽이 높은 글이므로 가산점을 주어 우선 노출되도록 유도
+          score = Math.min(100, score + 10);
+          
+          // 날짜 파싱 (밀리초 타임스탬프)
+          let formattedDate = '';
+          if (post.addDate) {
+            try {
+              const d = new Date(post.addDate);
+              if (!isNaN(d.getTime())) {
+                const yyyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                formattedDate = `${yyyyy}-${mm}-${dd}`;
+              }
+            } catch (e) {}
+          }
+          
+          // 날짜 제한 검증 (KST 기준)
+          const maxAgeDays = naverCategoryPopular.filtering.maxAgeDays || 30;
+          let isRecent = true;
+          if (post.addDate) {
+            try {
+              const diffTime = Math.abs(getKSTDate().getTime() - post.addDate);
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              isRecent = diffDays <= maxAgeDays;
+            } catch (e) {}
+          }
+          
+          if (score >= naverCategoryPopular.filtering.minCleanScore && isRecent) {
+            group4Candidates.push({
+              keyword: catName,
+              type: '네이버 블로그',
+              title,
+              description: desc,
+              link,
+              bloggername,
+              score,
+              reasons: [...reasons, `네이버 블로그 실시간 카테고리 인기글 (실시간 조회수 상위 랭킹)`],
+              groupName: '네이버 카테고리 인기글',
+              pubDate: formattedDate
+            });
+          }
+        }
+      } else {
+        console.error(`  네이버 카테고리 인기글 API 요청 실패 (HTTP ${res.status})`);
+      }
+    } catch (e) {
+      console.error(`  카테고리 인기글 수집 중 예외 발생:`, e.message);
+    }
+  }
+
+  // --- 4. 정렬 및 각 그룹별 상위 5개 선발 (총 20개 카드 구성) ---
   group1Candidates.sort((a, b) => b.score - a.score);
   group2Candidates.sort((a, b) => b.score - a.score);
   group3Candidates.sort((a, b) => b.score - a.score);
+  group4Candidates.sort((a, b) => b.score - a.score);
 
   const topG1 = group1Candidates.slice(0, 5);
   const topG2 = group2Candidates.slice(0, 5);
   const topG3 = group3Candidates.slice(0, 5);
+  const topG4 = group4Candidates.slice(0, 5);
 
-  const topTrends = [...topG1, ...topG2, ...topG3];
+  const topTrends = [...topG1, ...topG2, ...topG3, ...topG4];
   
   // ⚡ [중요] 링크(URL) 및 제목 기준 정밀 1차 중복 제거 (방금 수집된 기사 간 겹침 방지)
   const uniqueTrendsMap = new Map();
@@ -686,7 +817,7 @@ async function run() {
   }
   const finalUniqueTrends = Array.from(uniqueTrendsMap.values());
 
-  console.log(`\n최종 필터링 통과 목록 (1그룹: ${topG1.length}개, 2그룹: ${topG2.length}개, 3그룹: ${topG3.length}개 선정, 중복제거 후 실등록 대상 ${finalUniqueTrends.length}개)`);
+  console.log(`\n최종 필터링 통과 목록 (1그룹: ${topG1.length}개, 2그룹: ${topG2.length}개, 3그룹: ${topG3.length}개, 4그룹: ${topG4.length}개 선정, 중복제거 후 실등록 대상 ${finalUniqueTrends.length}개)`);
 
   // --- 5. 선발된 15개 후보군에 대해 전체 본문 스크래핑 시도 ---
   console.log('\n--- 원본 전체 본문 스크래핑 시작 ---');
