@@ -15,7 +15,7 @@
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": false,
+      "naverNews": true,
       "naverShopping": true
     },
     "filtering": {
@@ -40,8 +40,8 @@
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": false,
-      "naverShopping": false
+      "naverNews": true,
+      "naverShopping": true
     },
     "filtering": {
       "minCleanScore": 90,
