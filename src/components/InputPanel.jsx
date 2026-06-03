@@ -31,10 +31,10 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   // Platform Checkboxes state
   const [platforms, setPlatforms] = useState({
     naverBlog: true,
-    shorts: true,
-    instagram: true,
-    tiktok: true,
-    mdx: true
+    shorts: false,
+    instagram: false,
+    tiktok: false,
+    mdx: false
   });
 
   const [validationError, setValidationError] = useState('');
