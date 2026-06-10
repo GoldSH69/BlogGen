@@ -31,9 +31,6 @@
   },
   "naverHotTopic": {
     "keywords": [
-      "다이소 꿀템",
-      "코스트코 추천템",
-      "가전 전자제품",
       "알리 추천템",
       "쿠팡 추천템",
       "예능 대란템"
@@ -56,7 +53,10 @@
     }
   },
   "realtimeHotIssue": {
-    "keywords": [],
+    "keywords": [
+      "월드컵",
+      "드라마"
+    ],
     "sources": {
       "naverBlog": true,
       "naverNews": true,
@@ -80,7 +80,9 @@
       32,
       9,
       10,
-      12
+      12,
+      14,
+      21
     ],
     "sources": {
       "naverBlog": true,
