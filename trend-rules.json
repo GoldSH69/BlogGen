@@ -26,7 +26,7 @@
         "추천인"
       ],
       "checkAdRegex": false,
-      "maxAgeDays": 60
+      "maxAgeDays": 7
     }
   },
   "naverHotTopic": {
@@ -51,14 +51,16 @@
         "대여제외"
       ],
       "checkAdRegex": false,
-      "maxAgeDays": 30
+      "maxAgeDays": 10
     }
   },
   "realtimeHotIssue": {
     "keywords": [
       "월드컵",
       "드라마",
-      "claude"
+      "claude",
+      "chatgpt",
+      "gemini"
     ],
     "sources": {
       "naverBlog": true,
@@ -73,7 +75,7 @@
         "제공받아"
       ],
       "checkAdRegex": false,
-      "maxAgeDays": 14
+      "maxAgeDays": 7
     }
   },
   "naverCategoryPopular": {
@@ -85,7 +87,8 @@
       10,
       12,
       14,
-      21
+      21,
+      6
     ],
     "sources": {
       "naverBlog": true,
@@ -99,7 +102,7 @@
         "체험단"
       ],
       "checkAdRegex": true,
-      "maxAgeDays": 30
+      "maxAgeDays": 10
     }
   },
   "scheduler": {
