@@ -33,7 +33,9 @@
     "keywords": [
       "알리 추천템",
       "쿠팡 추천템",
-      "예능 대란템"
+      "예능 대란템",
+      "알리익스프레스",
+      "네이버쇼핑"
     ],
     "sources": {
       "naverBlog": true,
@@ -55,7 +57,8 @@
   "realtimeHotIssue": {
     "keywords": [
       "월드컵",
-      "드라마"
+      "드라마",
+      "claude"
     ],
     "sources": {
       "naverBlog": true,
