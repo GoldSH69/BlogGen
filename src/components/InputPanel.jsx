@@ -56,6 +56,24 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
     }));
   };
 
+  // 이미지 0개 체크박스 핸들러
+  const handleImgZeroChange = (e) => {
+    if (e.target.checked) {
+      setImgCount(0);
+    } else {
+      setImgCount(5); // 기본값으로 복귀
+    }
+  };
+
+  // 동영상 0개 체크박스 핸들러
+  const handleVideoZeroChange = (e) => {
+    if (e.target.checked) {
+      setVideoCount(0);
+    } else {
+      setVideoCount(1); // 기본값으로 복귀
+    }
+  };
+
   const handleSuggestExperience = async () => {
     const topicText = sourceText.trim();
     if (!topicText) {
@@ -353,30 +371,54 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
                 <div style={mediaSliderRowStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '130px' }}>
                     <Image size={13} style={{ color: 'var(--color-cyan)' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>이미지 개수: {imgCount}장</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      이미지 개수: {imgCount === 0 ? '제외(0장)' : `${imgCount}장`}
+                    </span>
                   </div>
                   <input
                     type="range"
-                    min="3"
+                    min="1"
                     max="10"
-                    value={imgCount}
+                    value={imgCount === 0 ? 1 : imgCount}
+                    disabled={imgCount === 0}
                     onChange={(e) => setImgCount(parseInt(e.target.value))}
-                    style={rangeStyle}
+                    style={{ ...rangeStyle, opacity: imgCount === 0 ? 0.4 : 1 }}
                   />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input
+                      type="checkbox"
+                      checked={imgCount === 0}
+                      onChange={handleImgZeroChange}
+                      style={{ accentColor: 'var(--color-cyan)', cursor: 'pointer' }}
+                    />
+                    <span>0장(제외)</span>
+                  </label>
                 </div>
                 <div style={mediaSliderRowStyle}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '130px' }}>
                     <Video size={13} style={{ color: 'var(--color-violet)' }} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>동영상 개수: {videoCount}개</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      동영상 개수: {videoCount === 0 ? '제외(0개)' : `${videoCount}개`}
+                    </span>
                   </div>
                   <input
                     type="range"
                     min="1"
                     max="3"
-                    value={videoCount}
+                    value={videoCount === 0 ? 1 : videoCount}
+                    disabled={videoCount === 0}
                     onChange={(e) => setVideoCount(parseInt(e.target.value))}
-                    style={rangeStyle}
+                    style={{ ...rangeStyle, opacity: videoCount === 0 ? 0.4 : 1 }}
                   />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input
+                      type="checkbox"
+                      checked={videoCount === 0}
+                      onChange={handleVideoZeroChange}
+                      style={{ accentColor: 'var(--color-violet)', cursor: 'pointer' }}
+                    />
+                    <span>0개(제외)</span>
+                  </label>
                 </div>
               </div>
             )}

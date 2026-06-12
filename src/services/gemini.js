@@ -227,16 +227,32 @@ export async function generateContent({
 `;
 
   // Media instructions
-  const mediaInstruction = mediaExcluded
-    ? `
+  let mediaInstruction = '';
+  if (mediaExcluded || (imgCount === 0 && videoCount === 0)) {
+    mediaInstruction = `
 [미디어 제외 지침]:
 - 본문에는 이미지나 동영상을 위한 안내 가이드를 절대 포함하지 마십시오.
-`
-    : `
+- JSON 응답의 "imageGuides" 배열은 빈 배열([])로 반환하십시오.
+`;
+  } else if (imgCount > 0 && videoCount === 0) {
+    mediaInstruction = `
+[미디어(이미지) 배치 지침]:
+- 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])만 본문 중간중간에 적절히 삽입하시고, 동영상 위치 안내 표시는 절대 포함하지 마십시오.
+- JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오.
+`;
+  } else if (imgCount === 0 && videoCount > 0) {
+    mediaInstruction = `
+[미디어(동영상) 배치 지침]:
+- 본문 전체의 자연스러운 흐름을 고려하여 총 ${videoCount}개의 동영상 위치 안내 표시(예: [동영상 1: 보글보글 끓는 전골 찌개 생생한 영상])만 본문 중간중간에 적절히 삽입하시고, 이미지 위치 안내 표시는 절대 포함하지 마십시오.
+- 본문에 이미지가 들어가지 않으므로, JSON 응답의 "imageGuides" 배열은 빈 배열([])로 반환하십시오.
+`;
+  } else {
+    mediaInstruction = `
 [미디어(이미지 및 동영상) 배치 지침]:
 - 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])와 총 ${videoCount}개의 동영상 위치 안내 표시(예: [동영상 1: 보글보글 끓는 전골 찌개 생생한 영상])를 본문 중간중간에 적절히 삽입하십시오.
 - JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오.
 `;
+  }
 
   const prompt = `
 당신은 대한민국 최고의 제휴 마케팅 기획자이자 억대 연봉의 카피라이터이며, 특히 네이버 D.I.A.+ 알고리즘과 C-Rank 로직의 AI 자동 문서 탐지 시스템을 무력화하고 구글 애드센스 승인(애드고시)을 단번에 통과하기 위해 구글 유용성 콘텐츠 시스템(Helpful Content System)의 '독창적이고 가치 있는 콘텐츠' 기준을 완벽하게 마스터한 전문 SEO 카피라이터이자 블로그 운영 전문가입니다.
