@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Smartphone, Heart, MessageCircle, Share2, Compass, Play, Music, ArrowRight, User } from 'lucide-react';
+import { useState } from 'react';
+import { Smartphone, Heart, MessageCircle, Share2, Compass, Play, Music, User } from 'lucide-react';
 
 export default function SNSPreviewPane({ platform, data }) {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -61,6 +61,43 @@ export default function SNSPreviewPane({ platform, data }) {
     );
   };
 
+  // AEO AI Briefing Card simulation
+  const renderAiBriefingCard = (naverData) => {
+    if (!naverData.faq || naverData.faq.length === 0) return null;
+
+    const cleanContent = naverData.content
+      ? naverData.content.replace(/\[이미지 \d+:[^\]]*\]|\[동영상 \d+:[^\]]*\]/g, '').trim()
+      : '';
+    const sentences = cleanContent.split(/[.!?]/).filter(Boolean);
+    const summary = sentences.slice(0, 2).join('. ') + '.';
+
+    return (
+      <div style={aiBriefingCardStyle}>
+        <div style={aiBriefingHeaderStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={aiBriefingBadgeStyle}>AI</div>
+            <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#03C75A' }}>AI 브리핑 요약</span>
+          </div>
+          <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Naver Search Advisor</span>
+        </div>
+        
+        <p style={aiBriefingSummaryStyle}>
+          {summary}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px', borderTop: '1px solid rgba(3, 199, 90, 0.1)', paddingTop: '6px' }}>
+          <span style={{ fontSize: '0.66rem', fontWeight: '700', color: '#03C75A' }}>💡 주요 질문 & 답변</span>
+          {naverData.faq.slice(0, 2).map((item, i) => (
+            <div key={i} style={{ fontSize: '0.68rem', lineHeight: '1.4' }}>
+              <div style={{ fontWeight: '700', color: 'var(--text-primary)' }}>• Q. {item.q}</div>
+              <div style={{ color: 'var(--text-secondary)', paddingLeft: '8px' }}>A. {item.a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // 1. NAVER BLOG PREVIEW
   const renderNaverBlogPreview = (naverData) => {
     if (!naverData) return null;
@@ -90,6 +127,10 @@ export default function SNSPreviewPane({ platform, data }) {
             </span>
           </div>
         </div>
+
+        {/* AI Briefing area (if FAQ exists, indicating AEO mode) */}
+        {renderAiBriefingCard(naverData)}
+
         {/* Profile */}
         <div style={naverProfileRow}>
           <div style={profileCircleStyle}><User size={16} /></div>
@@ -105,16 +146,40 @@ export default function SNSPreviewPane({ platform, data }) {
           <div style={naverContentStyle}>
             {naverData.content ? (
               naverData.content.replace(/<br\s*\/?>/gi, '\n').split('\n').map((para, i) => {
-                if (!para.trim()) return null;
+                const cleanPara = para.trim();
+                if (!cleanPara) return null;
+
+                // Image guides
+                const imgMatch = /^\[이미지 (\d+):(.*)\]$/.exec(cleanPara);
+                if (imgMatch) {
+                  return (
+                    <div key={i} style={previewImagePlaceholderStyle}>
+                      <Smartphone size={16} style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>📷 [이미지 {imgMatch[1]}] {imgMatch[2]}</span>
+                    </div>
+                  );
+                }
+
+                // Video guides
+                const vidMatch = /^\[동영상 (\d+):(.*)\]$/.exec(cleanPara);
+                if (vidMatch) {
+                  return (
+                    <div key={i} style={previewVideoPlaceholderStyle}>
+                      <Play size={12} style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>🎥 [동영상 {vidMatch[1]}] {vidMatch[2]}</span>
+                    </div>
+                  );
+                }
+
                 // Highlight links
-                if (para.includes('http')) {
+                if (cleanPara.includes('http')) {
                   return (
                     <p key={i} style={naverLinkStyle}>
-                      🔗 {para}
+                      🔗 {cleanPara}
                     </p>
                   );
                 }
-                return <p key={i} style={{ marginBottom: '12px' }}>{para}</p>;
+                return <p key={i} style={{ marginBottom: '12px' }}>{cleanPara}</p>;
               })
             ) : (
               <p>본문 내용이 없습니다.</p>
@@ -145,7 +210,7 @@ export default function SNSPreviewPane({ platform, data }) {
           <span style={{ fontWeight: '700', fontSize: '0.8rem', color: '#fff', borderBottom: '2px solid #fff', paddingBottom: '4px', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>추천</span>
         </div>
 
-        {/* Video Simulation Center (visual cue / title) */}
+        {/* Video Simulation Center */}
         <div style={shortsVideoOverlay}>
           <div style={shortsPlayIndicator}>
             <Play size={28} fill="#fff" style={{ color: '#fff', marginLeft: '3px' }} />
@@ -184,7 +249,7 @@ export default function SNSPreviewPane({ platform, data }) {
           </div>
         </div>
 
-        {/* Subtitle Overlay (Hook or first line) */}
+        {/* Subtitle Overlay */}
         <div style={shortsSubtitleContainer}>
           <div style={shortsSubtitle}>
             💬 {shortsData.hook || firstAudio}
@@ -356,7 +421,6 @@ export default function SNSPreviewPane({ platform, data }) {
             {mdxData.frontmatter?.match(/title:\s*"(.*?)"/)?.[1] || 'MDX 포스팅'}
           </h1>
           
-          {/* Custom HighlightBox Simulators */}
           <div style={mdxBoxTip}>
             <span style={{ fontWeight: '700', fontSize: '0.78rem', color: '#34d399', display: 'block', marginBottom: '4px' }}>💡 TIP</span>
             이 글은 AI가 최적의 구조로 변환한 MDX 포스팅 예시입니다. 아래 원클릭 복사를 통해 개인 블로그나 노션에 완벽히 적용해보세요.
@@ -366,12 +430,10 @@ export default function SNSPreviewPane({ platform, data }) {
             {mdxData.content ? (
               mdxData.content.split('\n').map((para, i) => {
                 if (!para.trim()) return null;
-                // Header style checks
                 if (para.startsWith('# ')) return <h1 key={i} style={{ fontSize: '1.25rem', marginTop: '14px', color: 'var(--text-primary)' }}>{para.substring(2)}</h1>;
                 if (para.startsWith('## ')) return <h2 key={i} style={{ fontSize: '1.1rem', marginTop: '12px', color: 'var(--text-primary)' }}>{para.substring(3)}</h2>;
                 if (para.startsWith('### ')) return <h3 key={i} style={{ fontSize: '0.95rem', marginTop: '10px', color: 'var(--text-primary)' }}>{para.substring(4)}</h3>;
                 
-                // HighlightBox custom component parse
                 if (para.includes('<HighlightBox')) {
                   return (
                     <div key={i} style={mdxBoxWarning}>
@@ -407,7 +469,6 @@ export default function SNSPreviewPane({ platform, data }) {
   );
 }
 
-// Styling Objects for Mockups
 // Styling Objects for Mockups
 const containerStyle = {
   display: 'flex',
@@ -550,7 +611,7 @@ const naverTagStyle = {
   border: '1px solid rgba(3, 199, 90, 0.15)',
 };
 
-// 2. Shorts / TikTok Styles (YouTube/TikTok style forces dark theme natively)
+// 2. Shorts / TikTok Styles
 const shortsContainer = {
   height: '100%',
   background: '#09090e',
@@ -838,6 +899,69 @@ const mdxBoxWarning = {
   marginBottom: '12px',
 };
 
+// Custom styles for Naver AI Briefing search Advisor preview
+const aiBriefingCardStyle = {
+  background: 'rgba(3, 199, 90, 0.04)',
+  border: '1px solid rgba(3, 199, 90, 0.2)',
+  borderRadius: '10px',
+  padding: '12px',
+  margin: '12px 16px 4px',
+  boxShadow: '0 4px 12px rgba(3, 199, 90, 0.05)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+};
+
+const aiBriefingHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const aiBriefingBadgeStyle = {
+  background: '#03C75A',
+  color: '#fff',
+  fontSize: '0.58rem',
+  fontWeight: '900',
+  padding: '1px 4px',
+  borderRadius: '3px',
+};
+
+const aiBriefingSummaryStyle = {
+  fontSize: '0.72rem',
+  lineHeight: '1.5',
+  color: 'var(--text-primary)',
+  fontWeight: '500',
+  margin: 0,
+};
+
+const previewImagePlaceholderStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px dashed var(--border-color)',
+  borderRadius: '8px',
+  height: '100px',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '6px',
+  margin: '12px 0',
+  color: 'var(--text-secondary)',
+};
+
+const previewVideoPlaceholderStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px dashed var(--border-color)',
+  borderRadius: '8px',
+  height: '60px',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: '6px',
+  margin: '12px 0',
+  color: 'var(--text-secondary)',
+};
+
 if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = `
@@ -851,7 +975,7 @@ if (typeof document !== 'undefined') {
       border-radius: 3px !important;
     }
     .preview-screen-scroll::-webkit-scrollbar-thumb {
-      background: rgba(6, 182, 212, 0.3) !important; /* 시안(cyan) 테마 스크롤바 */
+      background: rgba(6, 182, 212, 0.3) !important;
       border-radius: 3px !important;
     }
     .preview-screen-scroll::-webkit-scrollbar-thumb:hover {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Copy, Check, FileText, Sparkles, AlertCircle, Send } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
 import ThumbnailKit from './ThumbnailKit';
@@ -18,6 +18,9 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
   const [customFeedback, setCustomFeedback] = useState('');
   const [adjustError, setAdjustError] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Individual copy feedback state
+  const [copiedBlockId, setCopiedBlockId] = useState(null);
 
   const handleCopyFilename = (filename) => {
     if (!filename) return;
@@ -122,6 +125,18 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyBlock = (text, blockId) => {
+    navigator.clipboard.writeText(text);
+    setCopiedBlockId(blockId);
+    setTimeout(() => setCopiedBlockId(null), 2000);
+  };
+
+  const handleCopyTitle = (titleText, index) => {
+    navigator.clipboard.writeText(titleText);
+    setCopiedBlockId(`title-${index}`);
+    setTimeout(() => setCopiedBlockId(null), 2000);
+  };
+
   const handleSendTelegram = async () => {
     const token = localStorage.getItem('affiliwrite_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
     const chatId = localStorage.getItem('affiliwrite_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID;
@@ -155,6 +170,414 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
       alert(`텔레그램 전송 중 오류 발생: ${err.message}`);
     } finally {
       setIsSendingTelegram(false);
+    }
+  };
+
+  // Helper parser for Naver Blog blocks
+  const parseNaverBlogBlocks = (pData) => {
+    const content = pData.content || '';
+    const regex = /(\[이미지 \d+:[^\]]*\]|\[동영상 \d+:[^\]]*\])/g;
+    const parts = content.split(regex);
+    
+    return parts.map((part, index) => {
+      const cleanPart = part.trim();
+      if (!cleanPart) return null;
+      
+      const imgMatch = /^\[이미지 (\d+):(.*)\]$/.exec(cleanPart);
+      const vidMatch = /^\[동영상 (\d+):(.*)\]$/.exec(cleanPart);
+      
+      if (imgMatch) {
+        const num = parseInt(imgMatch[1]);
+        const desc = imgMatch[2].trim();
+        const guides = pData.imageGuides || [];
+        const guide = guides[num - 1] || guides.find(g => g.pos && g.pos.includes(String(num)));
+        return {
+          type: 'image',
+          id: `img-${num}-${index}`,
+          num,
+          desc,
+          prompt: guide ? guide.prompt : ''
+        };
+      } else if (vidMatch) {
+        const num = parseInt(vidMatch[1]);
+        const desc = vidMatch[2].trim();
+        return {
+          type: 'video',
+          id: `vid-${num}-${index}`,
+          num,
+          desc
+        };
+      } else {
+        return {
+          type: 'text',
+          id: `text-${index}`,
+          text: part
+        };
+      }
+    }).filter(Boolean);
+  };
+
+  const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => {
+    if (!pData || Object.keys(pData).length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
+          <AlertCircle size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+          <h5 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>생성 대상으로 선택되지 않은 플랫폼입니다</h5>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+            왼쪽 패널의 [생성할 소셜 플랫폼 선택] 항목에서 체크박스를 활성화하고 다시 생성하시면 해당 채널 맞춤형 원고를 만듭니다.
+          </p>
+        </div>
+      );
+    }
+
+    switch (platform) {
+      case 'naverBlog': {
+        const blocks = parseNaverBlogBlocks(pData);
+        return (
+          <div style={contentBlockStyle}>
+            <ThumbnailKit prompt={thumbnailPrompt} />
+
+            {/* SEO Report Card */}
+            {pData.seoReport && (
+              <div style={seoReportContainerStyle}>
+                <div style={seoReportHeaderStyle}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📊 네이버 블로그 SEO 분석 보고서
+                  </span>
+                  <span style={seoScoreBadgeStyle(pData.seoReport.score)}>
+                    {pData.seoReport.score}점
+                  </span>
+                </div>
+                
+                <div style={{ height: '6px', background: 'var(--border-color)', borderRadius: '3px', position: 'relative', overflow: 'hidden', width: '100%' }}>
+                  <div style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    height: '100%',
+                    width: `${pData.seoReport.score}%`,
+                    background: pData.seoReport.score >= 90 ? '#10b981' : pData.seoReport.score >= 75 ? '#fbbf24' : '#ef4444',
+                    borderRadius: '3px',
+                  }}></div>
+                </div>
+
+                <div style={seoChecklistStyle}>
+                  {pData.seoReport.checklist?.map((check, index) => (
+                    <div key={index} style={seoCheckItemStyle}>
+                      <span style={seoCheckStatusStyle(check.status)}>
+                        {check.status === 'PASS' ? 'PASS' : 'FAIL'}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ fontSize: '0.78rem', display: 'block', color: 'var(--text-primary)' }}>{check.item}</strong>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{check.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Title proposals */}
+            <div style={titleListStyle}>
+              <strong style={subLabelStyle}>💡 추천 블로그 제목 (클릭하여 복사):</strong>
+              {pData.titleProposals?.map((t, i) => {
+                const titleId = `title-${i}`;
+                return (
+                  <div 
+                    key={i} 
+                    onClick={() => handleCopyTitle(t, i)}
+                    style={{ 
+                      ...titleItemStyle, 
+                      cursor: 'pointer', 
+                      border: copiedBlockId === titleId ? '1px solid var(--color-violet)' : '1px solid var(--border-color)', 
+                      background: copiedBlockId === titleId ? 'var(--color-violet-glow)' : 'var(--bg-surface-solid)' 
+                    }}
+                  >
+                    <span style={numBadgeStyle}>{i + 1}</span> 
+                    <span style={{ flex: 1 }}>{t}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
+                      {copiedBlockId === titleId ? '복사 완료! ✅' : '클릭 시 복사 📋'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={dividerStyle}></div>
+
+            {/* Segmented Smart Copy Helper */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <strong style={subLabelStyle}>📋 스마트에디터 원고 붙여넣기 도우미 (순서대로 복사하여 에디터에 붙여넣으세요):</strong>
+              {blocks.map((block) => {
+                if (block.type === 'image') {
+                  return (
+                    <div key={block.id} style={segmentedImageBlockStyle}>
+                      <div style={segmentedBlockHeaderStyle}>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--color-cyan)', fontWeight: '700' }}>📷 권장 이미지 {block.num} 삽입 위치</span>
+                        {block.prompt && (
+                          <button 
+                            onClick={() => handleCopyBlock(block.prompt, block.id)}
+                            style={segmentedCopyBtnStyle(copiedBlockId === block.id)}
+                          >
+                            {copiedBlockId === block.id ? '프롬프트 복사 완료! ✅' : 'DALL-E 프롬프트 복사 🔮'}
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div><strong>가이드:</strong> {block.desc}</div>
+                        {block.prompt && (
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', background: 'var(--bg-base)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', fontFamily: 'monospace', wordBreak: 'break-all', marginTop: '4px' }}>
+                            {block.prompt}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (block.type === 'video') {
+                  return (
+                    <div key={block.id} style={segmentedVideoBlockStyle}>
+                      <div style={segmentedBlockHeaderStyle}>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--color-violet)', fontWeight: '700' }}>🎥 권장 동영상 {block.num} 삽입 위치</span>
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-primary)' }}>
+                        <strong>가이드:</strong> {block.desc}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Text block
+                return (
+                  <div key={block.id} style={segmentedBlockStyle}>
+                    <div style={segmentedBlockHeaderStyle}>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: '700' }}>✍&nbsp; 본문 텍스트 단락</span>
+                      <button 
+                        onClick={() => handleCopyBlock(block.text.trim(), block.id)}
+                        style={segmentedCopyBtnStyle(copiedBlockId === block.id)}
+                      >
+                        {copiedBlockId === block.id ? '복사 완료! ✅' : '단락 복사 📋'}
+                      </button>
+                    </div>
+                    <pre style={segmentedPreStyle}>{block.text.trim()}</pre>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* FAQ block copy */}
+            {pData.faq && pData.faq.length > 0 && (
+              <>
+                <div style={dividerStyle}></div>
+                <div style={faqSectionStyle}>
+                  <strong style={subLabelStyle}>🙋‍♂️ 자주 묻는 질문 (FAQ - AEO 노출용):</strong>
+                  {pData.faq.map((item, idx) => {
+                    const faqId = `faq-${idx}`;
+                    const fullFaqText = `Q: ${item.q}\nA: ${item.a}`;
+                    return (
+                      <div key={idx} style={faqItemStyle}>
+                        <div style={segmentedBlockHeaderStyle}>
+                          <span style={{ fontSize: '0.76rem', fontWeight: '700', color: 'var(--text-primary)' }}>Q. {item.q}</span>
+                          <button 
+                            onClick={() => handleCopyBlock(fullFaqText, faqId)}
+                            style={segmentedCopyBtnStyle(copiedBlockId === faqId)}
+                          >
+                            {copiedBlockId === faqId ? 'FAQ 복사 완료! ✅' : 'FAQ 복사 📋'}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', margin: '6px 0 0', lineHeight: '1.4' }}>A. {item.a}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Tags section */}
+            <div style={dividerStyle}></div>
+            <div style={tagsSectionStyle}>
+              <div style={segmentedBlockHeaderStyle}>
+                <strong style={subLabelStyle}>🏷️ 해시태그 묶음:</strong>
+                <button 
+                  onClick={() => {
+                    const formattedTags = (pData.hashtags || []).map(t => t.trim().startsWith('#') ? t.trim() : `#${t.trim()}`).join(' ');
+                    handleCopyBlock(formattedTags, 'tags');
+                  }}
+                  style={segmentedCopyBtnStyle(copiedBlockId === 'tags')}
+                >
+                  {copiedBlockId === 'tags' ? '태그 복사 완료! ✅' : '해시태그 일괄 복사 📋'}
+                </button>
+              </div>
+              <p style={hashtagBlockStyle}>
+                {(pData.hashtags || []).map((tag, idx) => (
+                  <span key={idx} style={{ marginRight: '8px' }}>
+                    {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+                  </span>
+                ))}
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      case 'shorts':
+        return (
+          <div style={contentBlockStyle}>
+            <div style={shortsMetaRowStyle}>
+              <div><strong>쇼츠 제목:</strong> {pData.title}</div>
+              <div><strong>오프닝 훅 (Hook):</strong> <span style={{ color: '#fcd34d' }}>{pData.hook}</span></div>
+            </div>
+            <div style={dividerStyle}></div>
+            <strong style={subLabelStyle}>🎬 시나리오 타임라인 및 내레이션:</strong>
+            <div style={timelineListStyle}>
+              {pData.script?.map((item, idx) => (
+                <div key={idx} style={timelineItemStyle}>
+                  <div style={timeBadgeStyle}>{item.time}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginBottom: '3px' }}>
+                      🎥 비주얼 연출: {item.visual}
+                    </div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
+                      🎤 내레이션: "{item.audio}"
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={dividerStyle}></div>
+            <div>
+              <strong>마무리 행동 유도 (CTA):</strong> <span style={{ color: 'var(--color-cyan)', fontWeight: '600' }}>{pData.cta}</span>
+            </div>
+          </div>
+        );
+
+      case 'instagram':
+        return (
+          <div style={contentBlockStyle}>
+            <strong style={subLabelStyle}>📸 피드 캡션:</strong>
+            <pre style={preBlockStyle}>{pData.caption ? pData.caption.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
+            <div style={dividerStyle}></div>
+            <strong style={subLabelStyle}>🏷️ 해시태그:</strong>
+            <p style={hashtagBlockStyle}>
+              {pData.hashtags?.map((tag, idx) => (
+                <span key={idx} style={{ marginRight: '8px' }}>
+                  {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
+                </span>
+              ))}
+            </p>
+            <div style={dividerStyle}></div>
+            <strong style={subLabelStyle}>🗂️ 카드뉴스 추천 구성 안:</strong>
+            <ol style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {pData.cardNewsGuides?.map((guide, idx) => (
+                <li key={idx} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{guide}</li>
+              ))}
+            </ol>
+          </div>
+        );
+
+      case 'tiktok':
+        return (
+          <div style={contentBlockStyle}>
+            <div style={shortsMetaRowStyle}>
+              <div><strong>틱톡 타이틀:</strong> {pData.title}</div>
+              <div><strong>틱톡 전용 훅:</strong> <span style={{ color: 'var(--color-cyan)' }}>{pData.hook}</span></div>
+            </div>
+            <div style={dividerStyle}></div>
+            <strong style={subLabelStyle}>🎬 트렌디 대본 스크립트:</strong>
+            <div style={timelineListStyle}>
+              {pData.script?.map((item, idx) => (
+                <div key={idx} style={timelineItemStyle}>
+                  <div style={{ ...timeBadgeStyle, background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee', border: '1px solid rgba(6, 182, 212, 0.3)' }}>{item.time}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginBottom: '2px' }}>
+                      🎬 비주얼: {item.visual}
+                    </div>
+                    <div style={{ color: '#22d3ee', fontSize: '0.74rem', marginBottom: '3px', fontStyle: 'italic' }}>
+                      💬 자막 싱크: "{item.subtitle}"
+                    </div>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
+                      🎤 내레이션: "{item.audio}"
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={dividerStyle}></div>
+            <div>
+              <strong>행동 유도 CTA:</strong> <span style={{ color: 'var(--color-cyan)', fontWeight: '600' }}>{pData.cta}</span>
+            </div>
+          </div>
+        );
+
+      case 'mdx': {
+        const { filenameCopied, handleCopyFilename } = mdxHelpers;
+        
+        let displayFilename = pData.filename;
+        if (!displayFilename) {
+          const kstParts = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+          const kstYear = kstParts.find(p => p.type === 'year').value;
+          const kstMonth = kstParts.find(p => p.type === 'month').value;
+          const kstDay = kstParts.find(p => p.type === 'day').value;
+          let dateStr = `${kstYear}-${kstMonth}-${kstDay}`;
+          let slugStr = 'untitled-post';
+          
+          if (pData.frontmatter) {
+            const dateMatch = pData.frontmatter.match(/date:\s*"(.*?)"/);
+            if (dateMatch) {
+              dateStr = dateMatch[1].split(' ')[0];
+            }
+            
+            const catMatch = pData.frontmatter.match(/category:\s*"(.*?)"/);
+            const categoryVal = catMatch ? catMatch[1] : 'mind';
+            
+            const titleMatch = pData.frontmatter.match(/title:\s*"(.*?)"/);
+            if (titleMatch) {
+              const titleVal = titleMatch[1];
+              const engWords = titleVal.replace(/[^a-zA-Z0-9 ]/g, '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+              if (engWords.length > 0) {
+                slugStr = engWords.slice(0, 4).join('-');
+              } else {
+                slugStr = `${categoryVal}-mind-wellness`;
+              }
+            } else {
+              slugStr = `${categoryVal}-post`;
+            }
+          }
+          displayFilename = `${dateStr}-${slugStr}.mdx`;
+        }
+
+        return (
+          <div style={contentBlockStyle}>
+            <ThumbnailKit prompt={thumbnailPrompt} />
+            
+            <div style={filenameContainerStyle}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <strong style={subLabelStyle}>📁 추천 파일명 (클릭하여 복사):</strong>
+                <code style={filenameCodeStyle}>{displayFilename}</code>
+              </div>
+              <button 
+                onClick={() => handleCopyFilename(displayFilename)}
+                style={filenameCopyBtnStyle(filenameCopied)}
+              >
+                {filenameCopied ? <Check size={14} /> : <Copy size={14} />}
+                {filenameCopied ? '복사됨' : '복사'}
+              </button>
+            </div>
+
+            <strong style={subLabelStyle}>⚙️ MDX Frontmatter (YAML):</strong>
+            <pre style={frontmatterBlockStyle}>
+              {`---\n${pData.frontmatter}\n---`}
+            </pre>
+            <div style={dividerStyle}></div>
+            <strong style={subLabelStyle}>📝 MDX Markdown 본문:</strong>
+            <pre style={preBlockStyle}>{pData.content ? pData.content.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
+          </div>
+        );
+      }
+
+      default:
+        return null;
     }
   };
 
@@ -236,7 +659,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
           </div>
         </div>
 
-        {/* Adjust Controls Panel (조절기능) */}
+        {/* Adjust Controls Panel */}
         <div className="glass-card" style={adjustPanelStyle}>
           <h5 style={adjustTitleStyle}>
             <Sparkles size={15} style={{ color: 'var(--color-violet)' }} />
@@ -313,212 +736,6 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     </div>
   );
 }
-
-// Internal Helper to render styled contents inside codebox
-const renderTabContent = (platform, pData, thumbnailPrompt, mdxHelpers = {}) => {
-  if (!pData || Object.keys(pData).length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--text-secondary)' }}>
-        <AlertCircle size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
-        <h5 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>생성 대상으로 선택되지 않은 플랫폼입니다</h5>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-          왼쪽 패널의 [생성할 소셜 플랫폼 선택] 항목에서 체크박스를 활성화하고 다시 생성하시면 해당 채널 맞춤형 원고를 만듭니다.
-        </p>
-      </div>
-    );
-  }
-
-  switch (platform) {
-    case 'naverBlog':
-      return (
-        <div style={contentBlockStyle}>
-          <ThumbnailKit prompt={thumbnailPrompt} />
-          <div style={titleListStyle}>
-            <strong style={subLabelStyle}>💡 추천 블로그 제목 (마음에 드는 것을 선택해 복사하세요):</strong>
-            {pData.titleProposals?.map((t, i) => (
-              <div key={i} style={titleItemStyle}>
-                <span style={numBadgeStyle}>{i + 1}</span> {t}
-              </div>
-            ))}
-          </div>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>✍️ 가공된 본문 원고:</strong>
-          <pre style={preBlockStyle}>{pData.content ? pData.content.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>🏷️ 해시태그 묶음:</strong>
-          <p style={hashtagBlockStyle}>
-            {pData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={{ marginRight: '8px' }}>
-                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
-              </span>
-            ))}
-          </p>
-        </div>
-      );
-
-    case 'shorts':
-      return (
-        <div style={contentBlockStyle}>
-          <div style={shortsMetaRowStyle}>
-            <div><strong>쇼츠 제목:</strong> {pData.title}</div>
-            <div><strong>오프닝 훅 (Hook):</strong> <span style={{ color: '#fcd34d' }}>{pData.hook}</span></div>
-          </div>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>🎬 시나리오 타임라인 및 내레이션:</strong>
-          <div style={timelineListStyle}>
-            {pData.script?.map((item, idx) => (
-              <div key={idx} style={timelineItemStyle}>
-                <div style={timeBadgeStyle}>{item.time}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginBottom: '3px' }}>
-                    🎥 비주얼 연출: {item.visual}
-                  </div>
-                  <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
-                    🎤 내레이션: "{item.audio}"
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={dividerStyle}></div>
-          <div>
-            <strong>마무리 행동 유도 (CTA):</strong> <span style={{ color: 'var(--color-cyan)', fontWeight: '600' }}>{pData.cta}</span>
-          </div>
-        </div>
-      );
-
-    case 'instagram':
-      return (
-        <div style={contentBlockStyle}>
-          <strong style={subLabelStyle}>📸 피드 캡션:</strong>
-          <pre style={preBlockStyle}>{pData.caption ? pData.caption.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>🏷️ 해시태그:</strong>
-          <p style={hashtagBlockStyle}>
-            {pData.hashtags?.map((tag, idx) => (
-              <span key={idx} style={{ marginRight: '8px' }}>
-                {tag.trim().startsWith('#') ? tag.trim() : `#${tag.trim()}`}
-              </span>
-            ))}
-          </p>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>🗂️ 카드뉴스 추천 구성 안:</strong>
-          <ol style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {pData.cardNewsGuides?.map((guide, idx) => (
-              <li key={idx} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{guide}</li>
-            ))}
-          </ol>
-        </div>
-      );
-
-    case 'tiktok':
-      return (
-        <div style={contentBlockStyle}>
-          <div style={shortsMetaRowStyle}>
-            <div><strong>틱톡 타이틀:</strong> {pData.title}</div>
-            <div><strong>틱톡 전용 훅:</strong> <span style={{ color: 'var(--color-cyan)' }}>{pData.hook}</span></div>
-          </div>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>🎬 트렌디 대본 스크립트:</strong>
-          <div style={timelineListStyle}>
-            {pData.script?.map((item, idx) => (
-              <div key={idx} style={timelineItemStyle}>
-                <div style={{ ...timeBadgeStyle, background: 'rgba(6, 182, 212, 0.15)', color: '#22d3ee', border: '1px solid rgba(6, 182, 212, 0.3)' }}>{item.time}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginBottom: '2px' }}>
-                    🎬 비주얼: {item.visual}
-                  </div>
-                  <div style={{ color: '#22d3ee', fontSize: '0.74rem', marginBottom: '3px', fontStyle: 'italic' }}>
-                    💬 자막 싱크: "{item.subtitle}"
-                  </div>
-                  <div style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: '500' }}>
-                    🎤 내레이션: "{item.audio}"
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={dividerStyle}></div>
-          <div>
-            <strong>행동 유도 CTA:</strong> <span style={{ color: 'var(--color-cyan)', fontWeight: '600' }}>{pData.cta}</span>
-          </div>
-        </div>
-      );
-
-    case 'mdx': {
-      const { filenameCopied, handleCopyFilename } = mdxHelpers;
-      
-      // filename이 누락되었을 경우(과거 히스토리 데이터 등)를 대비한 똑똑한 Dynamic Fallback 파일명 생성기
-      let displayFilename = pData.filename;
-      if (!displayFilename) {
-        const kstParts = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-        const kstYear = kstParts.find(p => p.type === 'year').value;
-        const kstMonth = kstParts.find(p => p.type === 'month').value;
-        const kstDay = kstParts.find(p => p.type === 'day').value;
-        let dateStr = `${kstYear}-${kstMonth}-${kstDay}`; // KST 오늘 날짜 기본값
-        let slugStr = 'untitled-post';
-        
-        if (pData.frontmatter) {
-          // date 추출
-          const dateMatch = pData.frontmatter.match(/date:\s*"(.*?)"/);
-          if (dateMatch) {
-            dateStr = dateMatch[1].split(' ')[0]; // YYYY-MM-DD
-          }
-          
-          // title 혹은 category를 이용해 영문 슬러그 생성
-          const catMatch = pData.frontmatter.match(/category:\s*"(.*?)"/);
-          const categoryVal = catMatch ? catMatch[1] : 'mind';
-          
-          // 만약 title에 영어 텍스트가 섞여있다면 슬러그로 활용, 아니면 카테고리 활용
-          const titleMatch = pData.frontmatter.match(/title:\s*"(.*?)"/);
-          if (titleMatch) {
-            const titleVal = titleMatch[1];
-            const engWords = titleVal.replace(/[^a-zA-Z0-9 ]/g, '').toLowerCase().trim().split(/\s+/).filter(Boolean);
-            if (engWords.length > 0) {
-              slugStr = engWords.slice(0, 4).join('-');
-            } else {
-              slugStr = `${categoryVal}-mind-wellness`;
-            }
-          } else {
-            slugStr = `${categoryVal}-post`;
-          }
-        }
-        displayFilename = `${dateStr}-${slugStr}.mdx`;
-      }
-
-      return (
-        <div style={contentBlockStyle}>
-          <ThumbnailKit prompt={thumbnailPrompt} />
-          
-          <div style={filenameContainerStyle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <strong style={subLabelStyle}>📁 추천 파일명 (클릭하여 복사):</strong>
-              <code style={filenameCodeStyle}>{displayFilename}</code>
-            </div>
-            <button 
-              onClick={() => handleCopyFilename(displayFilename)}
-              style={filenameCopyBtnStyle(filenameCopied)}
-            >
-              {filenameCopied ? <Check size={14} /> : <Copy size={14} />}
-              {filenameCopied ? '복사됨' : '복사'}
-            </button>
-          </div>
-
-          <strong style={subLabelStyle}>⚙️ MDX Frontmatter (YAML):</strong>
-          <pre style={frontmatterBlockStyle}>
-            {`---\n${pData.frontmatter}\n---`}
-          </pre>
-          <div style={dividerStyle}></div>
-          <strong style={subLabelStyle}>📝 MDX Markdown 본문:</strong>
-          <pre style={preBlockStyle}>{pData.content ? pData.content.replace(/<br\s*\/?>/gi, '\n') : ''}</pre>
-        </div>
-      );
-    }
-
-    default:
-      return null;
-  }
-};
 
 // Styles
 const containerStyle = {
@@ -602,38 +819,9 @@ const copyBtnStyle = (copied) => ({
 
 const codeBoxBodyStyle = {
   padding: '20px',
-  maxHeight: '340px',
+  maxHeight: '400px',
   overflowY: 'scroll',
 };
-
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* 스마트 복사 코드박스 우측 스크롤바 상시 활성화 및 듀얼 테마 호환 고대비 스킨 */
-    .smart-codebox-body {
-      scrollbar-width: thin !important;
-      scrollbar-color: var(--scrollbar-thumb) var(--bg-base) !important;
-    }
-    .smart-codebox-body::-webkit-scrollbar {
-      width: 10px !important;
-      display: block !important;
-    }
-    .smart-codebox-body::-webkit-scrollbar-track {
-      background: var(--bg-base) !important;
-      border-radius: 6px !important;
-      border: 1px solid var(--border-color) !important;
-    }
-    .smart-codebox-body::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb) !important;
-      border-radius: 6px !important;
-      border: 2px solid var(--bg-base) !important;
-    }
-    .smart-codebox-body::-webkit-scrollbar-thumb:hover {
-      background: var(--scrollbar-thumb-hover) !important;
-    }
-  `;
-  document.head.appendChild(style);
-}
 
 // Refine Adjust Panel Styles
 const adjustPanelStyle = {
@@ -872,10 +1060,154 @@ const filenameCopyBtnStyle = (copied) => ({
   borderStyle: 'solid',
 });
 
+// Custom styles for Naver SEO report and copy helper
+const seoReportContainerStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '8px',
+  padding: '16px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+  boxShadow: 'var(--shadow-card)',
+};
+
+const seoReportHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const seoScoreBadgeStyle = (score) => ({
+  fontSize: '0.82rem',
+  fontWeight: '800',
+  color: score >= 90 ? '#34d399' : score >= 75 ? '#fcd34d' : '#f87171',
+  background: score >= 90 ? 'rgba(52, 211, 153, 0.1)' : score >= 75 ? 'rgba(252, 211, 77, 0.1)' : 'rgba(248, 113, 113, 0.1)',
+  padding: '4px 10px',
+  borderRadius: '20px',
+  border: `1px solid ${score >= 90 ? 'rgba(52, 211, 153, 0.2)' : score >= 75 ? 'rgba(252, 211, 77, 0.2)' : 'rgba(248, 113, 113, 0.2)'}`,
+});
+
+const seoChecklistStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+  marginTop: '4px',
+};
+
+const seoCheckItemStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  background: 'var(--bg-base)',
+  padding: '10px 14px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-color)',
+};
+
+const seoCheckStatusStyle = (status) => ({
+  fontSize: '0.68rem',
+  fontWeight: '800',
+  color: status === 'PASS' ? '#10b981' : '#ef4444',
+  background: status === 'PASS' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+  border: `1px solid ${status === 'PASS' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+  padding: '2px 8px',
+  borderRadius: '4px',
+  minWidth: '52px',
+  textAlign: 'center',
+});
+
+// Segmented Copy Styles
+const segmentedBlockStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '8px',
+  padding: '14px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+};
+
+const segmentedBlockHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const segmentedCopyBtnStyle = (copied) => ({
+  background: copied ? 'rgba(16, 185, 129, 0.15)' : 'rgba(139, 92, 246, 0.15)',
+  color: copied ? '#34d399' : 'var(--color-violet)',
+  border: `1px solid ${copied ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-color-hover)'}`,
+  borderRadius: '4px',
+  padding: '4px 10px',
+  fontSize: '0.72rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+});
+
+const segmentedPreStyle = {
+  fontFamily: 'inherit',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-all',
+  fontSize: '0.8rem',
+  lineHeight: '1.65',
+  color: 'var(--text-primary)',
+  background: 'var(--bg-base)',
+  padding: '12px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-color)',
+  margin: 0,
+};
+
+const segmentedImageBlockStyle = {
+  background: 'rgba(6, 182, 212, 0.03)',
+  border: '1px dashed rgba(6, 182, 212, 0.3)',
+  borderRadius: '8px',
+  padding: '14px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+};
+
+const segmentedVideoBlockStyle = {
+  background: 'rgba(139, 92, 246, 0.03)',
+  border: '1px dashed rgba(139, 92, 246, 0.3)',
+  borderRadius: '8px',
+  padding: '12px 14px',
+};
+
+const faqSectionStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  marginTop: '6px',
+};
+
+const faqItemStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '8px',
+  padding: '12px 14px',
+};
+
+const tagsSectionStyle = {
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  borderRadius: '8px',
+  padding: '14px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+};
+
 // -------------------------------------------------------------
 // Morning 테마 기반 고해상도 블로그 실시간 프리뷰 모달
 // -------------------------------------------------------------
-function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
+function BlogPreviewModal({ isOpen, onClose, pData }) {
   if (!isOpen || !pData) return null;
 
   // Frontmatter 파서
@@ -901,7 +1233,7 @@ function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
     if (tagMatch) {
       tags = tagMatch[1].split(',').map(t => t.trim().replace(/^["']|["']$/g, ''));
     }
-  } catch (e) {
+  } catch {
     tags = [];
   }
 
@@ -947,7 +1279,6 @@ function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
 
   return (
     <div style={modalOverlayStyle}>
-      {/* 프리텐다드 웹폰트 실시간 로드 및 모닝테마 전용 스타일 스코프 강제 */}
       <style dangerouslySetInnerHTML={{ __html: `
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
         .morning-preview-window * {
@@ -997,9 +1328,7 @@ function BlogPreviewModal({ isOpen, onClose, pData, thumbnailPrompt }) {
   );
 }
 
-// -------------------------------------------------------------
 // Morning 테마 시뮬레이터 전용 CSS Styles
-// -------------------------------------------------------------
 const modalOverlayStyle = {
   position: 'fixed',
   top: 0, left: 0, right: 0, bottom: 0,
@@ -1016,9 +1345,9 @@ const modalWindowStyle = {
   width: '100%',
   maxWidth: '820px',
   height: '85vh',
-  background: '#F9F8F6', // morning 테마 --color-bg
+  background: '#F9F8F6',
   borderRadius: '16px',
-  border: '1px solid #ceb695', // morning 테마 --color-border
+  border: '1px solid #ceb695',
   boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
   display: 'flex',
   flexDirection: 'column',
@@ -1030,14 +1359,14 @@ const modalHeaderStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '14px 24px',
-  background: '#F1F0EE', // morning 테마 --color-bg-secondary
-  borderBottom: '1px solid #ceb695', // morning 테마 --color-border
+  background: '#F1F0EE',
+  borderBottom: '1px solid #ceb695',
 };
 
 const modalCloseBtnStyle = {
   background: 'none',
   border: 'none',
-  color: '#5B5248', // morning 테마 --color-sub
+  color: '#5B5248',
   fontSize: '0.84rem',
   fontWeight: '600',
   cursor: 'pointer',
@@ -1067,14 +1396,14 @@ const blogHeroStyle = {
 const blogCategoryStyle = {
   fontSize: '0.76rem',
   fontWeight: '800',
-  color: '#8B6B3D', // morning 테마 --color-point
+  color: '#8B6B3D',
   letterSpacing: '0.08em',
 };
 
 const blogTitleStyle = {
   fontSize: '1.85rem',
   fontWeight: '800',
-  color: '#1F2933', // morning 테마 --color-text
+  color: '#1F2933',
   lineHeight: '1.35',
   margin: 0,
 };
@@ -1083,7 +1412,7 @@ const blogMetaStyle = {
   display: 'flex',
   gap: '12px',
   fontSize: '0.78rem',
-  color: '#5B5248', // morning 테마 --color-sub
+  color: '#5B5248',
   fontWeight: '500',
 };
 
@@ -1097,15 +1426,15 @@ const blogTagsRowStyle = {
 const blogTagStyle = {
   fontSize: '0.74rem',
   fontWeight: '600',
-  color: '#B08952', // morning 테마 --color-sub-point
-  background: '#F1F0EE', // morning 테마 --color-bg-secondary
+  color: '#B08952',
+  background: '#F1F0EE',
   padding: '4px 10px',
   borderRadius: '6px',
 };
 
 const blogDividerStyle = {
   height: '1px',
-  background: '#ceb695', // morning 테마 --color-border
+  background: '#ceb695',
   margin: '10px 0',
   opacity: 0.7,
 };
@@ -1119,8 +1448,8 @@ const blogContentContainerStyle = {
 const modalH2Style = {
   fontSize: '1.3rem',
   fontWeight: '800',
-  color: '#1F2933', // morning 테마 --color-text
-  borderBottom: '2px solid #ceb695', // morning 테마 --color-border
+  color: '#1F2933',
+  borderBottom: '2px solid #ceb695',
   paddingBottom: '8px',
   marginTop: '24px',
   marginBottom: '6px',
@@ -1129,19 +1458,19 @@ const modalH2Style = {
 const modalH3Style = {
   fontSize: '1.05rem',
   fontWeight: '700',
-  color: '#1F2933', // morning 테마 --color-text
+  color: '#1F2933',
   marginTop: '16px',
   marginBottom: '4px',
 };
 
 const modalHighlightBoxStyle = {
-  background: '#FFFDF9', // morning 테마 --color-card
-  borderLeft: '4px solid #B08952', // morning 테마 --color-sub-point
+  background: '#FFFDF9',
+  borderLeft: '4px solid #B08952',
   padding: '16px 20px',
   borderRadius: '0 8px 8px 0',
   fontSize: '0.84rem',
   lineHeight: '1.6',
-  color: '#5B5248', // morning 테마 --color-sub
+  color: '#5B5248',
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)',
   margin: '12px 0',
 };
@@ -1149,22 +1478,20 @@ const modalHighlightBoxStyle = {
 const modalParaStyle = {
   fontSize: '0.88rem',
   lineHeight: '1.75',
-  color: '#1F2933', // morning 테마 --color-text
+  color: '#1F2933',
   margin: 0,
   textAlign: 'justify',
 };
 
 const modalBlockquoteStyle = {
-  background: '#F1F0EE', // morning 테마 --color-bg-secondary
-  borderLeft: '4px solid #8B6B3D', // morning 테마 --color-point
+  background: '#F1F0EE',
+  borderLeft: '4px solid #8B6B3D',
   padding: '16px 20px',
   margin: '18px 0',
   borderRadius: '0 8px 8px 0',
   fontSize: '0.82rem',
   lineHeight: '1.65',
-  color: '#5B5248', // morning 테마 --color-sub
+  color: '#5B5248',
   fontStyle: 'italic',
   textAlign: 'justify',
 };
-
-

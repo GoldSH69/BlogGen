@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare, Shield } from 'lucide-react';
+import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare, Shield, Image, Video } from 'lucide-react';
+import { suggestExperience } from '../services/gemini';
 
 const AUDIENCE_PRESETS = [
   { id: 'all', label: '전체 연령대' },
@@ -21,6 +22,15 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
   const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
   const [disclaimerType, setDisclaimerType] = useState('general');
+
+  // Naver Blog specific states
+  const [naverSeoType, setNaverSeoType] = useState('c-rank');
+  const [humanPersonaEnabled, setHumanPersonaEnabled] = useState(false);
+  const [humanPersonaExperience, setHumanPersonaExperience] = useState('');
+  const [imgCount, setImgCount] = useState(5);
+  const [videoCount, setVideoCount] = useState(1);
+  const [mediaExcluded, setMediaExcluded] = useState(false);
+  const [isSuggestingExperience, setIsSuggestingExperience] = useState(false);
 
   useEffect(() => {
     if (prefilledData && prefilledData.content) {
@@ -44,6 +54,25 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  const handleSuggestExperience = async () => {
+    const topicText = sourceText.trim();
+    if (!topicText) {
+      alert('AI 경험담 제안을 받으려면 먼저 위의 [기사 원문 / 상품 정보 텍스트]를 입력해 주세요.');
+      return;
+    }
+
+    setIsSuggestingExperience(true);
+    try {
+      const keywords = targetAudience || '';
+      const suggestion = await suggestExperience(topicText.substring(0, 300), keywords);
+      setHumanPersonaExperience(suggestion);
+    } catch (err) {
+      alert(`경험담 제안 실패: ${err.message}`);
+    } finally {
+      setIsSuggestingExperience(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -96,7 +125,13 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
       targetAudience,
       tone,
       selectedPlatforms: selectedList,
-      disclaimerType
+      disclaimerType,
+      naverSeoType,
+      humanPersonaEnabled,
+      humanPersonaExperience,
+      imgCount,
+      videoCount,
+      mediaExcluded
     });
   };
 
@@ -198,6 +233,156 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
           </label>
         </div>
       </div>
+
+      {/* Naver Blog Specific Sub-Panel */}
+      {platforms.naverBlog && (
+        <div style={naverBlogSubPanelStyle}>
+          <h4 style={naverBlogSubHeaderStyle}>
+            <Sparkles size={15} style={{ color: '#03C75A' }} />
+            💚 네이버 블로그 SEO 세부 설정
+          </h4>
+
+          {/* SEO Type Selection */}
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>
+              <span>SEO 최적화 전략 로직 선택</span>
+            </label>
+            <select
+              className="input-field"
+              value={naverSeoType}
+              onChange={(e) => setNaverSeoType(e.target.value)}
+              style={selectFieldStyle}
+            >
+              <option value="c-rank">C-Rank & D.I.A.+ 기본 방식 (전통적 품질 & 전문성)</option>
+              <option value="alcon">ALCON 최신 방식 (다각화 검색의도 H2 구획화)</option>
+              <option value="aeo">AI 브리핑 노출 AEO 방식 (요약 + 비교표 + FAQ)</option>
+              <option value="home-plate">네이버 홈판 추천 Home-Plate 방식 (감성/스토리텔링/CTA)</option>
+              <option value="insight-edge">인사이트 엣지 방식 (독창적 관점 & 결핍 해결)</option>
+            </select>
+            <p style={helpTextStyle}>
+              {naverSeoType === 'c-rank' && '📌 리빙/일상/IT 전문 블로그에 권장하며, 표/인용구를 풍부히 활용해 신뢰감을 줍니다.'}
+              {naverSeoType === 'alcon' && '📌 키워드 하나에 숨은 다양한 연령/상황별 검색의도를 H2 단락으로 쪼개 체류시간을 극대화합니다.'}
+              {naverSeoType === 'aeo' && '📌 AI 검색(AI 브리핑)이 본문을 바로 요약 인용할 수 있도록 두괄식 답변, 비교표, FAQ를 구성합니다.'}
+              {naverSeoType === 'home-plate' && '📌 검색 유입을 넘어 네이버 앱 홈피드 추천에 뜨기 좋은 감성적 스토리와 댓글 유도 CTA를 가미합니다.'}
+              {naverSeoType === 'insight-edge' && '📌 일반적인 정보 나열 대신 독창적인 시각과 깊이 있는 독자 결핍 해결책을 강조합니다.'}
+            </p>
+          </div>
+
+          {/* Humanized Persona Experience */}
+          <div style={formGroupStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>
+                <span>인간화 페르소나 설정 (경험담 주입)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={humanPersonaEnabled}
+                  onChange={(e) => setHumanPersonaEnabled(e.target.checked)}
+                  style={{ accentColor: 'var(--color-violet)' }}
+                />
+                <span>활성화</span>
+              </label>
+            </div>
+
+            {humanPersonaEnabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                  <textarea
+                    className="input-field textarea-field"
+                    placeholder="예: 얼마 전에 이 제품을 사용해봤는데 정말 가볍고 튼튼하더라고요. 이전 모델은 너무 무거워서 불편했었는데..."
+                    value={humanPersonaExperience}
+                    onChange={(e) => setHumanPersonaExperience(e.target.value)}
+                    style={{ flex: 1, minHeight: '60px', fontSize: '0.8rem', padding: '10px 12px' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleSuggestExperience}
+                    disabled={isSuggestingExperience}
+                    style={{ 
+                      alignSelf: 'stretch', 
+                      fontSize: '0.72rem', 
+                      width: '90px', 
+                      padding: '4px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'var(--bg-surface-solid)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isSuggestingExperience ? (
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>제안 중...</span>
+                    ) : (
+                      <>
+                        <Sparkles size={14} style={{ color: 'var(--color-violet)' }} />
+                        <span>AI 경험담 제안</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <span style={helpTextStyle}>💡 실제/가상 경험담을 적으면 DIA+ E-E-A-T 로직 및 AI 탐지 우회 점수를 높일 수 있습니다.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Multimedia Guide Settings */}
+          <div style={formGroupStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>
+                <span>본문 내 이미지 / 동영상 배치 가이드</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <input
+                  type="checkbox"
+                  checked={mediaExcluded}
+                  onChange={(e) => setMediaExcluded(e.target.checked)}
+                  style={{ accentColor: 'var(--color-cyan)' }}
+                />
+                <span>미디어 제외</span>
+              </label>
+            </div>
+
+            {!mediaExcluded && (
+              <div style={mediaSettingsWrapperStyle}>
+                <div style={mediaSliderRowStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '130px' }}>
+                    <Image size={13} style={{ color: 'var(--color-cyan)' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>이미지 개수: {imgCount}장</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="3"
+                    max="10"
+                    value={imgCount}
+                    onChange={(e) => setImgCount(parseInt(e.target.value))}
+                    style={rangeStyle}
+                  />
+                </div>
+                <div style={mediaSliderRowStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '130px' }}>
+                    <Video size={13} style={{ color: 'var(--color-violet)' }} />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>동영상 개수: {videoCount}개</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    value={videoCount}
+                    onChange={(e) => setVideoCount(parseInt(e.target.value))}
+                    style={rangeStyle}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Target Audience Preset */}
       <div style={formGroupStyle}>
@@ -449,14 +634,69 @@ const spinnerStyle = {
   marginRight: '8px',
 };
 
-// Add raw CSS for spinner keyframe in document header if not exists
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
-}
+// Custom Naver Blog setting styles
+const naverBlogSubPanelStyle = {
+  background: 'rgba(3, 199, 90, 0.03)',
+  border: '1px dashed rgba(3, 199, 90, 0.3)',
+  borderRadius: 'var(--radius-sm)',
+  padding: '16px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '14px',
+  marginTop: '4px',
+};
+
+const naverBlogSubHeaderStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontSize: '0.88rem',
+  fontWeight: '700',
+  color: '#03C75A',
+  borderBottom: '1px solid rgba(3, 199, 90, 0.15)',
+  paddingBottom: '8px',
+  marginBottom: '2px',
+};
+
+const selectFieldStyle = {
+  width: '100%', 
+  background: 'var(--bg-base)', 
+  color: 'var(--text-primary)', 
+  border: '1px solid var(--border-color)',
+  padding: '8px 10px',
+  borderRadius: 'var(--radius-sm)',
+  cursor: 'pointer',
+  outline: 'none',
+  fontSize: '0.8rem',
+};
+
+const helpTextStyle = {
+  fontSize: '0.7rem',
+  color: 'var(--text-secondary)',
+  lineHeight: '1.4',
+  marginTop: '2px',
+};
+
+const mediaSettingsWrapperStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  background: 'var(--bg-surface-solid)',
+  padding: '10px 12px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-color)',
+  marginTop: '4px',
+};
+
+const mediaSliderRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+};
+
+const rangeStyle = {
+  flex: 1,
+  accentColor: 'var(--color-cyan)',
+  cursor: 'pointer',
+};
