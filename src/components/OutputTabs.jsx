@@ -1222,10 +1222,28 @@ function BlogPreviewModal({ isOpen, onClose, pData }) {
     }
   });
 
+  // KST 오늘 날짜 구하기
+  const kstFormatter = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const parts = kstFormatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+  const defaultDateStr = `${year}-${month}-${day} ${hour}:${minute}`;
+
   const title = frontmatterObj.title || '나를 지키는 대처법, JADE 심리 대처법';
   const category = frontmatterObj.category || 'mind';
   const author = frontmatterObj.author || 'Insight Retreat';
-  const date = frontmatterObj.date || '2026-05-29 10:00';
+  const date = frontmatterObj.date || defaultDateStr;
   
   let tags = [];
   try {
