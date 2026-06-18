@@ -1,6 +1,200 @@
 import { useState } from 'react';
 import { Smartphone, Heart, MessageCircle, Share2, Compass, Play, Music, User } from 'lucide-react';
 
+// Markdown Table Helpers
+const isTableLine = (line) => {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 1;
+};
+
+const isSeparatorLine = (line) => {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && /^\|([ \t]*:?-+:?[ \t]*\|)+$/.test(trimmed);
+};
+
+const parseTextAndTables = (text) => {
+  const lines = text.split('\n');
+  const segments = [];
+  let currentTextLines = [];
+  let currentTableLines = [];
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (isTableLine(line)) {
+      if (!inTable) {
+        const nextLine = lines[i + 1];
+        if (nextLine && isSeparatorLine(nextLine)) {
+          if (currentTextLines.length > 0) {
+            segments.push({ type: 'text', content: currentTextLines.join('\n') });
+            currentTextLines = [];
+          }
+          inTable = true;
+          currentTableLines.push(line);
+        } else {
+          currentTextLines.push(line);
+        }
+      } else {
+        currentTableLines.push(line);
+      }
+    } else {
+      if (inTable) {
+        segments.push({ type: 'table', content: currentTableLines.join('\n') });
+        currentTableLines = [];
+        inTable = false;
+      }
+      currentTextLines.push(line);
+    }
+  }
+
+  if (inTable && currentTableLines.length > 0) {
+    segments.push({ type: 'table', content: currentTableLines.join('\n') });
+  } else if (currentTextLines.length > 0) {
+    segments.push({ type: 'text', content: currentTextLines.join('\n') });
+  }
+
+  return segments;
+};
+
+const parseNaverContent = (content) => {
+  const cleanContent = content ? content.replace(/<br\s*\/?>/gi, '\n') : '';
+  const lines = cleanContent.split('\n');
+  const blocks = [];
+  
+  let currentTableLines = [];
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      if (inTable) {
+        blocks.push({ type: 'table', content: currentTableLines.join('\n') });
+        currentTableLines = [];
+        inTable = false;
+      }
+      blocks.push({ type: 'empty' });
+      continue;
+    }
+
+    if (isTableLine(line)) {
+      if (!inTable) {
+        const nextLine = lines[i + 1];
+        if (nextLine && isSeparatorLine(nextLine)) {
+          inTable = true;
+          currentTableLines.push(line);
+        } else {
+          blocks.push({ type: 'text', content: line });
+        }
+      } else {
+        currentTableLines.push(line);
+      }
+      continue;
+    }
+
+    if (inTable) {
+      blocks.push({ type: 'table', content: currentTableLines.join('\n') });
+      currentTableLines = [];
+      inTable = false;
+    }
+
+    const imgMatch = /^\[이미지 (\d+):(.*)\]$/.exec(trimmed);
+    const vidMatch = /^\[동영상 (\d+):(.*)\]$/.exec(trimmed);
+
+    if (imgMatch) {
+      blocks.push({ type: 'image', num: imgMatch[1], desc: imgMatch[2].trim() });
+    } else if (vidMatch) {
+      blocks.push({ type: 'video', num: vidMatch[1], desc: vidMatch[2].trim() });
+    } else if (trimmed.includes('http')) {
+      blocks.push({ type: 'link', content: trimmed });
+    } else {
+      blocks.push({ type: 'text', content: trimmed });
+    }
+  }
+
+  if (inTable && currentTableLines.length > 0) {
+    blocks.push({ type: 'table', content: currentTableLines.join('\n') });
+  }
+
+  return blocks;
+};
+
+const RenderedTable = ({ markdownTable }) => {
+  const lines = markdownTable.trim().split('\n');
+  if (lines.length < 2) return null;
+
+  const parseRow = (line) => {
+    const trimmed = line.trim();
+    const cells = trimmed.slice(1, -1).split('|');
+    return cells.map(cell => cell.trim());
+  };
+
+  const headers = parseRow(lines[0]);
+  const separators = parseRow(lines[1]);
+  const alignments = separators.map(sep => {
+    const left = sep.startsWith(':');
+    const right = sep.endsWith(':');
+    if (left && right) return 'center';
+    if (right) return 'right';
+    return 'left';
+  });
+
+  const rows = lines.slice(2).map(line => parseRow(line));
+
+  return (
+    <div style={{ overflowX: 'auto', margin: '12px 0', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left', background: 'var(--bg-surface-solid)' }}>
+        <thead>
+          <tr style={{ background: 'var(--bg-base)', borderBottom: '2px solid var(--border-color)' }}>
+            {headers.map((header, idx) => (
+              <th 
+                key={idx} 
+                style={{ 
+                  padding: '8px 10px', 
+                  fontWeight: '700', 
+                  borderRight: '1px solid var(--border-color)', 
+                  textAlign: alignments[idx] || 'left',
+                  color: 'var(--text-primary)'
+                }}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIdx) => (
+            <tr 
+              key={rowIdx} 
+              style={{ 
+                borderBottom: '1px solid var(--border-color)',
+                background: rowIdx % 2 === 1 ? 'rgba(0, 0, 0, 0.02)' : 'transparent'
+              }}
+            >
+              {headers.map((_, idx) => (
+                <td 
+                  key={idx} 
+                  style={{ 
+                    padding: '8px 10px', 
+                    borderRight: '1px solid var(--border-color)', 
+                    textAlign: alignments[idx] || 'left',
+                    color: 'var(--text-secondary)',
+                    whiteSpace: 'normal'
+                  }}
+                >
+                  {row[idx] || ''}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export default function SNSPreviewPane({ platform, data }) {
   const [activeCardIndex, setActiveCardIndex] = useState(0);
 
@@ -145,41 +339,38 @@ export default function SNSPreviewPane({ platform, data }) {
           <div style={dividerStyle}></div>
           <div style={naverContentStyle}>
             {naverData.content ? (
-              naverData.content.replace(/<br\s*\/?>/gi, '\n').split('\n').map((para, i) => {
-                const cleanPara = para.trim();
-                if (!cleanPara) return null;
-
-                // Image guides
-                const imgMatch = /^\[이미지 (\d+):(.*)\]$/.exec(cleanPara);
-                if (imgMatch) {
+              parseNaverContent(naverData.content).map((block, i) => {
+                if (block.type === 'empty') {
+                  return <div key={i} style={{ height: '8px' }} />;
+                }
+                if (block.type === 'image') {
                   return (
                     <div key={i} style={previewImagePlaceholderStyle}>
                       <Smartphone size={16} style={{ color: 'var(--text-muted)' }} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>📷 [이미지 {imgMatch[1]}] {imgMatch[2]}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>📷 [이미지 {block.num}] {block.desc}</span>
                     </div>
                   );
                 }
-
-                // Video guides
-                const vidMatch = /^\[동영상 (\d+):(.*)\]$/.exec(cleanPara);
-                if (vidMatch) {
+                if (block.type === 'video') {
                   return (
                     <div key={i} style={previewVideoPlaceholderStyle}>
                       <Play size={12} style={{ color: 'var(--text-muted)' }} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>🎥 [동영상 {vidMatch[1]}] {vidMatch[2]}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '600' }}>🎥 [동영상 {block.num}] {block.desc}</span>
                     </div>
                   );
                 }
-
-                // Highlight links
-                if (cleanPara.includes('http')) {
+                if (block.type === 'link') {
                   return (
                     <p key={i} style={naverLinkStyle}>
-                      🔗 {cleanPara}
+                      🔗 {block.content}
                     </p>
                   );
                 }
-                return <p key={i} style={{ marginBottom: '12px' }}>{cleanPara}</p>;
+                if (block.type === 'table') {
+                  return <RenderedTable key={i} markdownTable={block.content} />;
+                }
+                // Text block
+                return <p key={i} style={{ marginBottom: '12px', lineHeight: '1.6' }}>{block.content}</p>;
               })
             ) : (
               <p>본문 내용이 없습니다.</p>
@@ -428,22 +619,28 @@ export default function SNSPreviewPane({ platform, data }) {
 
           <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {mdxData.content ? (
-              mdxData.content.split('\n').map((para, i) => {
-                if (!para.trim()) return null;
-                if (para.startsWith('# ')) return <h1 key={i} style={{ fontSize: '1.25rem', marginTop: '14px', color: 'var(--text-primary)' }}>{para.substring(2)}</h1>;
-                if (para.startsWith('## ')) return <h2 key={i} style={{ fontSize: '1.1rem', marginTop: '12px', color: 'var(--text-primary)' }}>{para.substring(3)}</h2>;
-                if (para.startsWith('### ')) return <h3 key={i} style={{ fontSize: '0.95rem', marginTop: '10px', color: 'var(--text-primary)' }}>{para.substring(4)}</h3>;
-                
-                if (para.includes('<HighlightBox')) {
-                  return (
-                    <div key={i} style={mdxBoxWarning}>
-                      <span style={{ fontWeight: '700', fontSize: '0.78rem', color: '#fb7185', display: 'block', marginBottom: '4px' }}>⚠️ ALERT</span>
-                      {para.replace(/<HighlightBox.*?>|<\/HighlightBox>/g, '')}
-                    </div>
-                  );
+              parseTextAndTables(mdxData.content).map((seg, segIdx) => {
+                if (seg.type === 'table') {
+                  return <RenderedTable key={`table-${segIdx}`} markdownTable={seg.content} />;
                 }
+                
+                return seg.content.split('\n').map((para, i) => {
+                  if (!para.trim()) return null;
+                  if (para.startsWith('# ')) return <h1 key={`h1-${segIdx}-${i}`} style={{ fontSize: '1.25rem', marginTop: '14px', color: 'var(--text-primary)' }}>{para.substring(2)}</h1>;
+                  if (para.startsWith('## ')) return <h2 key={`h2-${segIdx}-${i}`} style={{ fontSize: '1.1rem', marginTop: '12px', color: 'var(--text-primary)' }}>{para.substring(3)}</h2>;
+                  if (para.startsWith('### ')) return <h3 key={`h3-${segIdx}-${i}`} style={{ fontSize: '0.95rem', marginTop: '10px', color: 'var(--text-primary)' }}>{para.substring(4)}</h3>;
+                  
+                  if (para.includes('<HighlightBox')) {
+                    return (
+                      <div key={`box-${segIdx}-${i}`} style={mdxBoxWarning}>
+                        <span style={{ fontWeight: '700', fontSize: '0.78rem', color: '#fb7185', display: 'block', marginBottom: '4px' }}>⚠️ ALERT</span>
+                        {para.replace(/<HighlightBox.*?>|<\/HighlightBox>/g, '')}
+                      </div>
+                    );
+                  }
 
-                return <p key={i} style={{ lineHeight: '1.5' }}>{para}</p>;
+                  return <p key={`p-${segIdx}-${i}`} style={{ lineHeight: '1.5' }}>{para}</p>;
+                });
               })
             ) : (
               <p>MDX 본문 내용이 비어있습니다.</p>

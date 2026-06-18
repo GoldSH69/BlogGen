@@ -11,6 +11,256 @@ const PLATFORM_LABELS = {
   mdx: '📝 개인 블로그 (MDX)'
 };
 
+// Markdown Table Helpers
+const isTableLine = (line) => {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 1;
+};
+
+const isSeparatorLine = (line) => {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && /^\|([ \t]*:?-+:?[ \t]*\|)+$/.test(trimmed);
+};
+
+const parseTextAndTables = (text) => {
+  const lines = text.split('\n');
+  const segments = [];
+  let currentTextLines = [];
+  let currentTableLines = [];
+  let inTable = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (isTableLine(line)) {
+      if (!inTable) {
+        const nextLine = lines[i + 1];
+        if (nextLine && isSeparatorLine(nextLine)) {
+          if (currentTextLines.length > 0) {
+            segments.push({ type: 'text', content: currentTextLines.join('\n') });
+            currentTextLines = [];
+          }
+          inTable = true;
+          currentTableLines.push(line);
+        } else {
+          currentTextLines.push(line);
+        }
+      } else {
+        currentTableLines.push(line);
+      }
+    } else {
+      if (inTable) {
+        segments.push({ type: 'table', content: currentTableLines.join('\n') });
+        currentTableLines = [];
+        inTable = false;
+      }
+      currentTextLines.push(line);
+    }
+  }
+
+  if (inTable && currentTableLines.length > 0) {
+    segments.push({ type: 'table', content: currentTableLines.join('\n') });
+  } else if (currentTextLines.length > 0) {
+    segments.push({ type: 'text', content: currentTextLines.join('\n') });
+  }
+
+  return segments;
+};
+
+const renderMarkdownTableToHtml = (markdownTable) => {
+  const lines = markdownTable.trim().split('\n');
+  if (lines.length < 2) return '';
+
+  const parseRow = (line) => {
+    const trimmed = line.trim();
+    const cells = trimmed.slice(1, -1).split('|');
+    return cells.map(cell => cell.trim());
+  };
+
+  const headers = parseRow(lines[0]);
+  const separators = parseRow(lines[1]);
+  const alignments = separators.map(sep => {
+    const left = sep.startsWith(':');
+    const right = sep.endsWith(':');
+    if (left && right) return 'center';
+    if (right) return 'right';
+    return 'left';
+  });
+
+  const rows = lines.slice(2).map(line => parseRow(line));
+
+  let html = `<table style="border-collapse: collapse; width: 100%; border: 1px solid #ddd; font-family: sans-serif; font-size: 14px; margin: 16px 0;">`;
+  
+  html += `<thead><tr style="background-color: #f2f2f2; border-bottom: 2px solid #ddd;">`;
+  headers.forEach((header, idx) => {
+    const align = alignments[idx] || 'left';
+    html += `<th style="border: 1px solid #ddd; padding: 10px 12px; text-align: ${align}; font-weight: bold;">${header}</th>`;
+  });
+  html += `</tr></thead>`;
+
+  html += `<tbody>`;
+  rows.forEach((row, rowIdx) => {
+    const bg = rowIdx % 2 === 1 ? 'background-color: #f9f9f9;' : '';
+    html += `<tr style="${bg} border-bottom: 1px solid #ddd;">`;
+    for (let idx = 0; idx < headers.length; idx++) {
+      const cellValue = row[idx] || '';
+      const align = alignments[idx] || 'left';
+      html += `<td style="border: 1px solid #ddd; padding: 10px 12px; text-align: ${align};">${cellValue}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+
+  return html;
+};
+
+const RenderedTable = ({ markdownTable }) => {
+  const lines = markdownTable.trim().split('\n');
+  if (lines.length < 2) return null;
+
+  const parseRow = (line) => {
+    const trimmed = line.trim();
+    const cells = trimmed.slice(1, -1).split('|');
+    return cells.map(cell => cell.trim());
+  };
+
+  const headers = parseRow(lines[0]);
+  const separators = parseRow(lines[1]);
+  const alignments = separators.map(sep => {
+    const left = sep.startsWith(':');
+    const right = sep.endsWith(':');
+    if (left && right) return 'center';
+    if (right) return 'right';
+    return 'left';
+  });
+
+  const rows = lines.slice(2).map(line => parseRow(line));
+
+  return (
+    <div style={{ overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left', background: 'var(--bg-surface-solid)' }}>
+        <thead>
+          <tr style={{ background: 'var(--bg-base)', borderBottom: '2px solid var(--border-color)' }}>
+            {headers.map((header, idx) => (
+              <th 
+                key={idx} 
+                style={{ 
+                  padding: '10px 14px', 
+                  fontWeight: '700', 
+                  borderRight: '1px solid var(--border-color)', 
+                  textAlign: alignments[idx] || 'left',
+                  color: 'var(--text-primary)'
+                }}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIdx) => (
+            <tr 
+              key={rowIdx} 
+              style={{ 
+                borderBottom: '1px solid var(--border-color)',
+                background: rowIdx % 2 === 1 ? 'rgba(0, 0, 0, 0.02)' : 'transparent'
+              }}
+            >
+              {headers.map((_, idx) => (
+                <td 
+                  key={idx} 
+                  style={{ 
+                    padding: '10px 14px', 
+                    borderRight: '1px solid var(--border-color)', 
+                    textAlign: alignments[idx] || 'left',
+                    color: 'var(--text-secondary)',
+                    whiteSpace: 'normal'
+                  }}
+                >
+                  {row[idx] || ''}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const renderSegmentedText = (text) => {
+  const segments = parseTextAndTables(text);
+  
+  return segments.map((seg, idx) => {
+    if (seg.type === 'table') {
+      return <RenderedTable key={idx} markdownTable={seg.content} />;
+    }
+    if (seg.type === 'text' && !seg.content.trim()) {
+      return null;
+    }
+    return (
+      <div 
+        key={idx} 
+        style={{ 
+          whiteSpace: 'pre-wrap', 
+          fontFamily: 'inherit', 
+          lineHeight: '1.65', 
+          color: 'var(--text-primary)',
+          fontSize: '0.8rem',
+          margin: '8px 0'
+        }}
+      >
+        {seg.content}
+      </div>
+    );
+  });
+};
+
+const convertNaverBlogToHtml = (platformData) => {
+  let html = '';
+  
+  if (platformData.titleProposals && platformData.titleProposals.length > 0) {
+    html += `<h3>[제목 후보]</h3>`;
+    platformData.titleProposals.forEach(title => {
+      html += `<p>${title}</p>`;
+    });
+    html += `<br/>`;
+  }
+  
+  if (platformData.content) {
+    html += `<h3>[본문]</h3>`;
+    const cleanContent = platformData.content.replace(/<br\s*\/?>/gi, '\n');
+    const segments = parseTextAndTables(cleanContent);
+    segments.forEach(seg => {
+      if (seg.type === 'table') {
+        html += renderMarkdownTableToHtml(seg.content);
+      } else {
+        const lines = seg.content.split('\n');
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            html += `<p>${trimmed}</p>`;
+          } else {
+            html += `<br/>`;
+          }
+        });
+      }
+    });
+    html += `<br/>`;
+  }
+  
+  if (platformData.hashtags && platformData.hashtags.length > 0) {
+    html += `<h3>[태그]</h3>`;
+    const formattedTags = platformData.hashtags.map(t => {
+      const trimmed = t.trim();
+      return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+    }).join(' ');
+    html += `<p>${formattedTags}</p>`;
+  }
+
+  return html;
+};
+
 export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink, activeTab, setActiveTab }) {
   const [copied, setCopied] = useState(false);
   const [filenameCopied, setFilenameCopied] = useState(false);
@@ -116,16 +366,74 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     }
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const textToCopy = getClipboardText();
     if (!textToCopy) return;
+
+    if (activeTab === 'naverBlog') {
+      const platformData = data.naverBlog;
+      if (platformData) {
+        const htmlToCopy = convertNaverBlogToHtml(platformData);
+        if (typeof window.ClipboardItem !== 'undefined') {
+          try {
+            const blobHtml = new Blob([htmlToCopy], { type: 'text/html' });
+            const blobText = new Blob([textToCopy], { type: 'text/plain' });
+            const clipboardItem = new ClipboardItem({
+              'text/html': blobHtml,
+              'text/plain': blobText
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+            return;
+          } catch (err) {
+            console.error('Failed to copy full Naver Blog as HTML, fallback to plain text:', err);
+          }
+        }
+      }
+    }
 
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCopyBlock = (text, blockId) => {
+  const handleCopyBlock = async (text, blockId) => {
+    const segments = parseTextAndTables(text);
+    const hasTable = segments.some(s => s.type === 'table');
+
+    if (hasTable && typeof window.ClipboardItem !== 'undefined') {
+      let htmlContent = '';
+      segments.forEach(seg => {
+        if (seg.type === 'table') {
+          htmlContent += renderMarkdownTableToHtml(seg.content);
+        } else {
+          const paras = seg.content.split('\n\n');
+          paras.forEach(p => {
+            const cleanP = p.trim().replace(/\n/g, '<br />');
+            if (cleanP) {
+              htmlContent += `<p>${cleanP}</p>`;
+            }
+          });
+        }
+      });
+
+      try {
+        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+        const blobText = new Blob([text], { type: 'text/plain' });
+        const clipboardItem = new ClipboardItem({
+          'text/html': blobHtml,
+          'text/plain': blobText
+        });
+        await navigator.clipboard.write([clipboardItem]);
+        setCopiedBlockId(blockId);
+        setTimeout(() => setCopiedBlockId(null), 2000);
+        return;
+      } catch (err) {
+        console.error('Failed to copy block as HTML, falling back to text copy', err);
+      }
+    }
+
     navigator.clipboard.writeText(text);
     setCopiedBlockId(blockId);
     setTimeout(() => setCopiedBlockId(null), 2000);
@@ -360,7 +668,9 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                         {copiedBlockId === block.id ? '복사 완료! ✅' : '단락 복사 📋'}
                       </button>
                     </div>
-                    <pre style={segmentedPreStyle}>{block.text.trim()}</pre>
+                    <div style={segmentedPreStyle}>
+                      {renderSegmentedText(block.text.trim())}
+                    </div>
                   </div>
                 );
               })}
