@@ -249,6 +249,15 @@ const convertNaverBlogToHtml = (platformData) => {
     html += `<br/>`;
   }
   
+  if (platformData.faq && platformData.faq.length > 0) {
+    html += `<h3>[자주 묻는 질문 (FAQ)]</h3>`;
+    platformData.faq.forEach(item => {
+      html += `<p><b>Q. ${item.q}</b></p>`;
+      html += `<p>A. ${item.a}</p>`;
+      html += `<br/>`;
+    });
+  }
+
   if (platformData.hashtags && platformData.hashtags.length > 0) {
     html += `<h3>[태그]</h3>`;
     const formattedTags = platformData.hashtags.map(t => {
@@ -335,11 +344,14 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     switch (activeTab) {
       case 'naverBlog': {
         const cleanContent = platformData.content ? platformData.content.replace(/<br\s*\/?>/gi, '\n') : '';
+        const formattedFaq = (platformData.faq && platformData.faq.length > 0)
+          ? `\n\n[자주 묻는 질문 (FAQ)]\n${platformData.faq.map(item => `Q: ${item.q}\nA: ${item.a}`).join('\n\n')}`
+          : '';
         const formattedTags = (platformData.hashtags || []).map(t => {
           const trimmed = t.trim();
           return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
         }).join(' ');
-        return `[제목 후보]\n${(platformData.titleProposals || []).join('\n')}\n\n[본문]\n${cleanContent}\n\n[태그]\n${formattedTags}`;
+        return `[제목 후보]\n${(platformData.titleProposals || []).join('\n')}\n\n[본문]\n${cleanContent}${formattedFaq}\n\n[태그]\n${formattedTags}`;
       }
       case 'shorts': {
         const shortsScript = (platformData.script || []).map(s => `[${s.time}] 비주얼: ${s.visual}\n내레이션: ${s.audio}`).join('\n\n');
