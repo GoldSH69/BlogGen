@@ -34,18 +34,26 @@ function getKSTDate() {
 
 // 최근 발행된 신선한 글인지 날짜 검증 헬퍼 (기본: 최근 60일 이내)
 function isRecentPost(postdate, maxDays = 60) {
-  if (!postdate || postdate.length !== 8) return true; // 날짜 포맷 결함 시 안전을 위해 우선 허용
+  if (!postdate) return true;
   try {
-    const postYear = parseInt(postdate.substring(0, 4), 10);
-    const postMonth = parseInt(postdate.substring(4, 6), 10) - 1;
-    const postDay = parseInt(postdate.substring(6, 8), 10);
+    let postDateObj;
+    if (typeof postdate === 'string' && /^\d{8}$/.test(postdate)) {
+      const postYear = parseInt(postdate.substring(0, 4), 10);
+      const postMonth = postdate.substring(4, 6);
+      const postDay = postdate.substring(6, 8);
+      postDateObj = new Date(`${postYear}-${postMonth}-${postDay}T00:00:00+09:00`);
+    } else {
+      postDateObj = new Date(postdate);
+      if (isNaN(postDateObj.getTime())) {
+        if (typeof postdate === 'string') {
+          postDateObj = new Date(postdate.replace(/-/g, '/'));
+        }
+      }
+      if (isNaN(postDateObj.getTime())) return true; // 파싱 실패 시 우선 허용
+    }
     
-    const postDateObj = new Date(postYear, postMonth, postDay);
-    const currentDateObj = getKSTDate();
-    
-    // 시분초 영향을 배제하기 위해 두 Date 객체의 순수 날짜 타임스탬프 차이 계산
-    const diffTime = Math.abs(currentDateObj.getTime() - postDateObj.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = Date.now() - postDateObj.getTime();
+    const diffDays = diffTime < 0 ? 0 : Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays <= maxDays;
   } catch (e) {
@@ -464,29 +472,38 @@ async function run() {
 
     if (myInterest.sources.naverBlog) {
       try {
-        const blogUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=10&sort=sim`;
-        const res = await fetch(blogUrl, {
-          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
-          for (const item of items) {
-            const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
-            const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
-            if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-              group1Candidates.push({
-                keyword,
-                type: '네이버 블로그',
-                title: cleanHtml(item.title),
-                description: cleanHtml(item.description),
-                link: item.link,
-                bloggername: item.bloggername,
-                score,
-                reasons,
-                groupName: '내 관심사',
-                pubDate: formatPostdate(item.postdate)
-              });
+        const displayCount = 10;
+        const urls = [
+          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
+          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
+        ];
+        const processedLinks = new Set();
+        for (const url of urls) {
+          const res = await fetch(url, {
+            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.items || [];
+            for (const item of items) {
+              if (processedLinks.has(item.link)) continue;
+              processedLinks.add(item.link);
+              const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
+              const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
+              if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
+                group1Candidates.push({
+                  keyword,
+                  type: '네이버 블로그',
+                  title: cleanHtml(item.title),
+                  description: cleanHtml(item.description),
+                  link: item.link,
+                  bloggername: item.bloggername,
+                  score,
+                  reasons,
+                  groupName: '내 관심사',
+                  pubDate: formatPostdate(item.postdate)
+                });
+              }
             }
           }
         }
@@ -497,28 +514,38 @@ async function run() {
 
     if (myInterest.sources.naverNews) {
       try {
-        const newsUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=10&sort=sim`;
-        const res = await fetch(newsUrl, {
-          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
-          for (const item of items) {
-            const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
-            if (score >= myInterest.filtering.minCleanScore) {
-              group1Candidates.push({
-                keyword,
-                type: '네이버 뉴스',
-                title: cleanHtml(item.title),
-                description: cleanHtml(item.description),
-                link: item.link,
-                bloggername: '뉴스 기자',
-                score,
-                reasons,
-                groupName: '내 관심사',
-                pubDate: formatPubDate(item.pubDate)
-              });
+        const displayCount = 10;
+        const urls = [
+          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
+          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
+        ];
+        const processedLinks = new Set();
+        for (const url of urls) {
+          const res = await fetch(url, {
+            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.items || [];
+            for (const item of items) {
+              if (processedLinks.has(item.link)) continue;
+              processedLinks.add(item.link);
+              const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
+              const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
+              if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.pubDate, maxAgeDays)) {
+                group1Candidates.push({
+                  keyword,
+                  type: '네이버 뉴스',
+                  title: cleanHtml(item.title),
+                  description: cleanHtml(item.description),
+                  link: item.link,
+                  bloggername: '뉴스 기자',
+                  score,
+                  reasons,
+                  groupName: '내 관심사',
+                  pubDate: formatPubDate(item.pubDate)
+                });
+              }
             }
           }
         }
@@ -538,30 +565,39 @@ async function run() {
     console.log(`핫토픽 검색 중: "${keyword}"`);
     const encodedKeyword = encodeURIComponent(keyword);
     try {
-      const blogUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=8&sort=sim`;
-      const res = await fetch(blogUrl, {
-        headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const items = data.items || [];
-        for (const item of items) {
-          // 2그룹 핫토픽은 더욱 엄격한 스팸 배제를 위해 클린지수 90점 이상의 최고 품질 파워 포스팅만 선발!
-          const { score, reasons } = calculateCleanScore(item, naverHotTopic.filtering.customBlacklist || [], naverHotTopic.filtering.checkAdRegex);
-          const maxAgeDays = naverHotTopic.filtering.maxAgeDays || 30;
-          if (score >= naverHotTopic.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-            group2Candidates.push({
-              keyword: `${keyword} 핫토픽`,
-              type: '네이버 블로그',
-              title: cleanHtml(item.title),
-              description: cleanHtml(item.description), 
-              link: item.link,
-              bloggername: item.bloggername || '네이버 파워블로거',
-              score,
-              reasons: [...reasons, '네이버 통합뷰 1페이지 상위 랭킹(조회수 보장 우수 포스팅)'],
-              groupName: '네이버 핫토픽',
-              pubDate: formatPostdate(item.postdate)
-            });
+      const displayCount = 8;
+      const urls = [
+        `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
+        `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
+      ];
+      const processedLinks = new Set();
+      for (const url of urls) {
+        const res = await fetch(url, {
+          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.items || [];
+          for (const item of items) {
+            if (processedLinks.has(item.link)) continue;
+            processedLinks.add(item.link);
+            // 2그룹 핫토픽은 더욱 엄격한 스팸 배제를 위해 클린지수 90점 이상의 최고 품질 파워 포스팅만 선발!
+            const { score, reasons } = calculateCleanScore(item, naverHotTopic.filtering.customBlacklist || [], naverHotTopic.filtering.checkAdRegex);
+            const maxAgeDays = naverHotTopic.filtering.maxAgeDays || 30;
+            if (score >= naverHotTopic.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
+              group2Candidates.push({
+                keyword: `${keyword} 핫토픽`,
+                type: '네이버 블로그',
+                title: cleanHtml(item.title),
+                description: cleanHtml(item.description), 
+                link: item.link,
+                bloggername: item.bloggername || '네이버 파워블로거',
+                score,
+                reasons: [...reasons, '네이버 통합뷰 1페이지 상위 랭킹(조회수 보장 우수 포스팅)'],
+                groupName: '네이버 핫토픽',
+                pubDate: formatPostdate(item.postdate)
+              });
+            }
           }
         }
       }
@@ -586,6 +622,7 @@ async function run() {
     try {
       const googleNewsItems = await fetchGoogleNewsResults(keyword);
       if (googleNewsItems && googleNewsItems.length > 0) {
+        const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
         const filteredGoogleNews = googleNewsItems.map(news => {
           const { score, reasons } = calculateCleanScore(
             { title: news.title, description: news.description },
@@ -597,7 +634,7 @@ async function run() {
             score,
             reasons: [...reasons, '구글 실시간 뉴스 기사 검증 통과']
           };
-        }).filter(news => news.score >= realtimeHotIssue.filtering.minCleanScore);
+        }).filter(news => news.score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(news.pubDate, maxAgeDays));
         
         group3Candidates.push(...filteredGoogleNews);
       }
@@ -609,29 +646,38 @@ async function run() {
 
     if (realtimeHotIssue.sources.naverBlog) {
       try {
-        const blogUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=10&sort=sim`;
-        const res = await fetch(blogUrl, {
-          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
-          for (const item of items) {
-            const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
-            const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
-            if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-              group3Candidates.push({
-                keyword,
-                type: '네이버 블로그',
-                title: cleanHtml(item.title),
-                description: cleanHtml(item.description),
-                link: item.link,
-                bloggername: item.bloggername,
-                score,
-                reasons,
-                groupName: '실시간 핫이슈',
-                pubDate: formatPostdate(item.postdate)
-              });
+        const displayCount = 10;
+        const urls = [
+          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
+          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
+        ];
+        const processedLinks = new Set();
+        for (const url of urls) {
+          const res = await fetch(url, {
+            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.items || [];
+            for (const item of items) {
+              if (processedLinks.has(item.link)) continue;
+              processedLinks.add(item.link);
+              const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
+              const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
+              if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
+                group3Candidates.push({
+                  keyword,
+                  type: '네이버 블로그',
+                  title: cleanHtml(item.title),
+                  description: cleanHtml(item.description),
+                  link: item.link,
+                  bloggername: item.bloggername,
+                  score,
+                  reasons,
+                  groupName: '실시간 핫이슈',
+                  pubDate: formatPostdate(item.postdate)
+                });
+              }
             }
           }
         }
@@ -642,28 +688,38 @@ async function run() {
 
     if (realtimeHotIssue.sources.naverNews) {
       try {
-        const newsUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=10&sort=sim`;
-        const res = await fetch(newsUrl, {
-          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
-          for (const item of items) {
-            const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
-            if (score >= realtimeHotIssue.filtering.minCleanScore) {
-              group3Candidates.push({
-                keyword,
-                type: '네이버 뉴스',
-                title: cleanHtml(item.title),
-                description: cleanHtml(item.description),
-                link: item.link,
-                bloggername: '뉴스 기자',
-                score,
-                reasons,
-                groupName: '실시간 핫이슈',
-                pubDate: formatPubDate(item.pubDate)
-              });
+        const displayCount = 10;
+        const urls = [
+          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
+          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
+        ];
+        const processedLinks = new Set();
+        for (const url of urls) {
+          const res = await fetch(url, {
+            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.items || [];
+            for (const item of items) {
+              if (processedLinks.has(item.link)) continue;
+              processedLinks.add(item.link);
+              const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
+              const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
+              if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.pubDate, maxAgeDays)) {
+                group3Candidates.push({
+                  keyword,
+                  type: '네이버 뉴스',
+                  title: cleanHtml(item.title),
+                  description: cleanHtml(item.description),
+                  link: item.link,
+                  bloggername: '뉴스 기자',
+                  score,
+                  reasons,
+                  groupName: '실시간 핫이슈',
+                  pubDate: formatPubDate(item.pubDate)
+                });
+              }
             }
           }
         }
