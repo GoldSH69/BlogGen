@@ -25,7 +25,8 @@ const parseTextAndTables = (text) => {
     if (isTableLine(line)) {
       if (!inTable) {
         const nextLine = lines[i + 1];
-        if (nextLine && isSeparatorLine(nextLine)) {
+        const isNextTableOrSeparator = nextLine && (isTableLine(nextLine) || isSeparatorLine(nextLine));
+        if (isNextTableOrSeparator) {
           if (currentTextLines.length > 0) {
             segments.push({ type: 'text', content: currentTextLines.join('\n') });
             currentTextLines = [];
@@ -82,7 +83,8 @@ const parseNaverContent = (content) => {
     if (isTableLine(line)) {
       if (!inTable) {
         const nextLine = lines[i + 1];
-        if (nextLine && isSeparatorLine(nextLine)) {
+        const isNextTableOrSeparator = nextLine && (isTableLine(nextLine) || isSeparatorLine(nextLine));
+        if (isNextTableOrSeparator) {
           inTable = true;
           currentTableLines.push(line);
         } else {
@@ -132,20 +134,21 @@ const RenderedTable = ({ markdownTable }) => {
   };
 
   const headers = parseRow(lines[0]);
-  const separators = parseRow(lines[1]);
+  const hasSeparator = lines[1] && isSeparatorLine(lines[1]);
+  const separators = hasSeparator ? parseRow(lines[1]) : [];
   const alignments = separators.map(sep => {
     const left = sep.startsWith(':');
     const right = sep.endsWith(':');
     if (left && right) return 'center';
     if (right) return 'right';
-    return 'left';
+    return 'center';
   });
 
-  const rows = lines.slice(2).map(line => parseRow(line));
+  const rows = lines.slice(hasSeparator ? 2 : 1).map(line => parseRow(line));
 
   return (
     <div style={{ overflowX: 'auto', margin: '12px 0', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left', background: 'var(--bg-surface-solid)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'center', background: 'var(--bg-surface-solid)' }}>
         <thead>
           <tr style={{ background: 'var(--bg-base)', borderBottom: '2px solid var(--border-color)' }}>
             {headers.map((header, idx) => (
@@ -155,7 +158,7 @@ const RenderedTable = ({ markdownTable }) => {
                   padding: '8px 10px', 
                   fontWeight: '700', 
                   borderRight: '1px solid var(--border-color)', 
-                  textAlign: alignments[idx] || 'left',
+                  textAlign: alignments[idx] || 'center',
                   color: 'var(--text-primary)'
                 }}
               >
@@ -179,7 +182,7 @@ const RenderedTable = ({ markdownTable }) => {
                   style={{ 
                     padding: '8px 10px', 
                     borderRight: '1px solid var(--border-color)', 
-                    textAlign: alignments[idx] || 'left',
+                    textAlign: alignments[idx] || 'center',
                     color: 'var(--text-secondary)',
                     whiteSpace: 'normal'
                   }}

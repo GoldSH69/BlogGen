@@ -35,7 +35,8 @@ const parseTextAndTables = (text) => {
     if (isTableLine(line)) {
       if (!inTable) {
         const nextLine = lines[i + 1];
-        if (nextLine && isSeparatorLine(nextLine)) {
+        const isNextTableOrSeparator = nextLine && (isTableLine(nextLine) || isSeparatorLine(nextLine));
+        if (isNextTableOrSeparator) {
           if (currentTextLines.length > 0) {
             segments.push({ type: 'text', content: currentTextLines.join('\n') });
             currentTextLines = [];
@@ -78,22 +79,23 @@ const renderMarkdownTableToHtml = (markdownTable) => {
   };
 
   const headers = parseRow(lines[0]);
-  const separators = parseRow(lines[1]);
+  const hasSeparator = lines[1] && isSeparatorLine(lines[1]);
+  const separators = hasSeparator ? parseRow(lines[1]) : [];
   const alignments = separators.map(sep => {
     const left = sep.startsWith(':');
     const right = sep.endsWith(':');
     if (left && right) return 'center';
     if (right) return 'right';
-    return 'left';
+    return 'center';
   });
 
-  const rows = lines.slice(2).map(line => parseRow(line));
+  const rows = lines.slice(hasSeparator ? 2 : 1).map(line => parseRow(line));
 
   let html = `<table style="border-collapse: collapse; width: 100%; border: 1px solid #ddd; font-family: sans-serif; font-size: 14px; margin: 16px 0;">`;
   
   html += `<thead><tr style="background-color: #f2f2f2; border-bottom: 2px solid #ddd;">`;
   headers.forEach((header, idx) => {
-    const align = alignments[idx] || 'left';
+    const align = alignments[idx] || 'center';
     html += `<th style="border: 1px solid #ddd; padding: 10px 12px; text-align: ${align}; font-weight: bold;">${header}</th>`;
   });
   html += `</tr></thead>`;
@@ -104,7 +106,7 @@ const renderMarkdownTableToHtml = (markdownTable) => {
     html += `<tr style="${bg} border-bottom: 1px solid #ddd;">`;
     for (let idx = 0; idx < headers.length; idx++) {
       const cellValue = row[idx] || '';
-      const align = alignments[idx] || 'left';
+      const align = alignments[idx] || 'center';
       html += `<td style="border: 1px solid #ddd; padding: 10px 12px; text-align: ${align};">${cellValue}</td>`;
     }
     html += `</tr>`;
@@ -125,20 +127,21 @@ const RenderedTable = ({ markdownTable }) => {
   };
 
   const headers = parseRow(lines[0]);
-  const separators = parseRow(lines[1]);
+  const hasSeparator = lines[1] && isSeparatorLine(lines[1]);
+  const separators = hasSeparator ? parseRow(lines[1]) : [];
   const alignments = separators.map(sep => {
     const left = sep.startsWith(':');
     const right = sep.endsWith(':');
     if (left && right) return 'center';
     if (right) return 'right';
-    return 'left';
+    return 'center';
   });
 
-  const rows = lines.slice(2).map(line => parseRow(line));
+  const rows = lines.slice(hasSeparator ? 2 : 1).map(line => parseRow(line));
 
   return (
     <div style={{ overflowX: 'auto', margin: '16px 0', borderRadius: '8px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left', background: 'var(--bg-surface-solid)' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'center', background: 'var(--bg-surface-solid)' }}>
         <thead>
           <tr style={{ background: 'var(--bg-base)', borderBottom: '2px solid var(--border-color)' }}>
             {headers.map((header, idx) => (
@@ -148,7 +151,7 @@ const RenderedTable = ({ markdownTable }) => {
                   padding: '10px 14px', 
                   fontWeight: '700', 
                   borderRight: '1px solid var(--border-color)', 
-                  textAlign: alignments[idx] || 'left',
+                  textAlign: alignments[idx] || 'center',
                   color: 'var(--text-primary)'
                 }}
               >
@@ -172,7 +175,7 @@ const RenderedTable = ({ markdownTable }) => {
                   style={{ 
                     padding: '10px 14px', 
                     borderRight: '1px solid var(--border-color)', 
-                    textAlign: alignments[idx] || 'left',
+                    textAlign: alignments[idx] || 'center',
                     color: 'var(--text-secondary)',
                     whiteSpace: 'normal'
                   }}
