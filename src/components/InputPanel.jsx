@@ -277,13 +277,39 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
               <option value="home-plate">네이버 홈판 추천 Home-Plate 방식 (감성/스토리텔링/CTA)</option>
               <option value="insight-edge">인사이트 엣지 방식 (독창적 관점 & 결핍 해결)</option>
             </select>
-            <p style={helpTextStyle}>
-              {naverSeoType === 'c-rank' && '📌 리빙/일상/IT 전문 블로그에 권장하며, 표/인용구를 풍부히 활용해 신뢰감을 줍니다.'}
-              {naverSeoType === 'alcon' && '📌 키워드 하나에 숨은 다양한 연령/상황별 검색의도를 H2 단락으로 쪼개 체류시간을 극대화합니다.'}
-              {naverSeoType === 'aeo' && '📌 AI 검색(AI 브리핑)이 본문을 바로 요약 인용할 수 있도록 두괄식 답변, 비교표, FAQ를 구성합니다.'}
-              {naverSeoType === 'home-plate' && '📌 검색 유입을 넘어 네이버 앱 홈피드 추천에 뜨기 좋은 감성적 스토리와 댓글 유도 CTA를 가미합니다.'}
-              {naverSeoType === 'insight-edge' && '📌 일반적인 정보 나열 대신 독창적인 시각과 깊이 있는 독자 결핍 해결책을 강조합니다.'}
-            </p>
+            {/* SEO Strategy Detailed Guide */}
+            <div style={seoDetailCardStyle}>
+              <div style={seoDetailRowStyle}>
+                <span style={seoDetailLabelStyle}>장점 / 추천 대상</span>
+                <span style={seoDetailValueStyle}>
+                  {naverSeoType === 'c-rank' && '정보성·전문성 글에 최적(리빙/IT/건강). 표·인용구로 신뢰감 형성. 가장 무난, 승인 안정형.'}
+                  {naverSeoType === 'alcon' && '키워드 하나에 숨은 여러 검색의도(비용/후기/꿀팁)를 H2로 쪼개 체류시간 극대화. 모바일 최적.'}
+                  {naverSeoType === 'aeo' && 'AI 브리핑/검색이 본문을 바로 인용 요약하게 만듦. 두괄식+비교표+FAQ. 트래픽 새 통로.'}
+                  {naverSeoType === 'home-plate' && '네이버 앱 홈피드 추천에 뜨기 좋음. 감성·댓글 유도. 조회수 폭발형.'}
+                  {naverSeoType === 'insight-edge' && '뻔한 정보 배제하고 독창적 관점으로 차별화. 경쟁 적은 니치에서 강함.'}
+                </span>
+              </div>
+              <div style={seoDetailRowStyle}>
+                <span style={seoDetailLabelStyle}>단점 / 리스크</span>
+                <span style={seoDetailValueStyle}>
+                  {naverSeoType === 'c-rank' && '약간 밋밋할 수 있음. 트래픽 폭발보단 안정 추구.'}
+                  {naverSeoType === 'alcon' && '구조가 복잡해져 글이 길어짐. 초보자는 가이드대로 구조 잡기 어려움.'}
+                  {naverSeoType === 'aeo' && 'AI 브리핑 노출이 보장되진 않음. 표 위주라 감성 부족.'}
+                  {naverSeoType === 'home-plate' && '자극적 톤이 애드센스 전문성 심사에 불리할 수 있음. 스팸성으로 오해받을 위험.'}
+                  {naverSeoType === 'insight-edge' && '쓰기 가장 어려움. AI가 억지 인사이트 만들면 오히려 부자연스러워짐.'}
+                </span>
+              </div>
+              <div style={seoDetailRowStyle}>
+                <span style={seoDetailLabelStyle}>구글 애드센스 승인</span>
+                <span style={seoDetailValueStyle}>
+                  {naverSeoType === 'c-rank' && '🟢 매우 유리 (높은 전문성 위주의 서술로 승인 안정성이 높음)'}
+                  {naverSeoType === 'alcon' && '🟡 유리 (체류 시간이 극대화되어 광고 수익성 향상에 도움)'}
+                  {naverSeoType === 'aeo' && '🟡 유리 (구조화된 FAQ와 표 형식으로 구글 SEO/Helpful Content 기준 충족)'}
+                  {naverSeoType === 'home-plate' && '🔴 불리 (감성/스토리 위주 및 자극적 톤앤매너로 전문성 심사에 부적합할 수 있음)'}
+                  {naverSeoType === 'insight-edge' && '🟢 매우 유리 (독창적 시각과 결핍 해결로 구글이 권장하는 고유한 가치 보유)'}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Humanized Persona Experience */}
@@ -741,4 +767,34 @@ const rangeStyle = {
   flex: 1,
   accentColor: 'var(--color-cyan)',
   cursor: 'pointer',
+};
+
+const seoDetailCardStyle = {
+  marginTop: '10px',
+  padding: '12px',
+  background: 'var(--bg-surface-solid)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-sm)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+};
+
+const seoDetailRowStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3px',
+};
+
+const seoDetailLabelStyle = {
+  fontSize: '0.72rem',
+  fontWeight: '700',
+  color: 'var(--text-secondary)',
+  opacity: 0.85,
+};
+
+const seoDetailValueStyle = {
+  fontSize: '0.78rem',
+  color: 'var(--text-primary)',
+  lineHeight: '1.4',
 };
