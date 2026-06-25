@@ -269,7 +269,8 @@ export async function generateContent({
 ---
 ### 작성 지침:
 1. **기사 비틀기 (Stealth Copywriting) 및 제목 최적화**:
-   - 기사의 핵심적 정보(Fact)는 그대로 살리되, 문장 구조와 단어를 완전히 재배열하고 흥미진진한 스토리텔링 형식으로 비틀어 작성하세요. 절대로 단순 기사 요약처럼 느껴지지 않게 하세요.
+   - **원본 정보(Fact)의 엄격한 보존**: 제공된 [기사 원문/상품 정보/주제]에 포함된 객관적인 수치, 핵심 사실, 제품 스펙 등은 절대 왜곡하거나 없는 내용을 허위로 지어내지 마십시오(환각 절대 금지).
+   - **문장 구조 및 표현의 완전한 재구성**: 사실 관계(Fact)는 철저히 유지하되, 문장 구조, 어휘, 조사 및 서술 흐름은 원본과 완전히 다르게 변형하여 새로 작성하십시오. 원본 단락을 통째로 복사하거나 3단어 이상 연속으로 동일하게 기술하는 행위는 절대로 금지됩니다. 완전히 독창적인 어투로 패러프레이징하십시오.
    - **제목(H1) 최적화**: 클릭 욕구를 강하게 자극하는 카피(예: 의문형, 반전, 해결책 제시)를 사용하되, 구체적인 숫자(예: '3가지 비결', '연봉 2배 올린 방법')를 적절히 활용하고 스마트폰 화면에서의 가독성을 위해 30자 내외로 구성해 제안하십시오.
    - **핵심 키워드 설계**: 본문의 주제를 관통하는 메인 키워드 1개와 이를 뒷받침하는 연관/맥락 키워드 5~8개를 사전에 설계하여 본문 전체에 걸쳐 기계적으로 중복 도배되지 않도록 자연스러운 어순과 문맥으로 골고루 분포시켜 자연스럽게 배치하십시오.
 2. **자연스러운 제휴 링크 삽입**: ${hasLink ? `글의 맥락상 가장 적절하고 궁금증이 극대화되는 시점에 제휴 링크(${affiliateLink})를 자연스러운 앵커 텍스트('제가 직접 써본 실리콘 찜기는 여기서...', '자세한 상품 스펙 확인은...')와 함께 삽입하세요.` : '제휴 링크가 지정되지 않았으므로 본문에 구매 링크나 상품 추천 링크를 일체 삽입하지 마시고, 독자의 유입과 공감을 이끄는 순수 유용 정보로 매끄럽게 마무리해 주세요.'}
@@ -408,7 +409,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 `;
 
   try {
-    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json' });
+    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json', temperature: 0.7 });
     return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Generation Error:', error);
@@ -455,7 +456,7 @@ ${JSON.stringify(existingData, null, 2)}
 `;
 
   try {
-    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json' });
+    const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json', temperature: 0.7 });
     return processMdxFrontmatter(parsed);
   } catch (error) {
     console.error('Gemini Adjustment Error:', error);
