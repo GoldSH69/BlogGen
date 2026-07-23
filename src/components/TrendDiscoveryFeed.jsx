@@ -243,7 +243,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           onClick={() => setActiveGroupTab('all')}
           style={tabItemStyle(activeGroupTab === 'all', 'all')}
         >
-          🌐 전체보기
+          🔥 전체 무키워드 반응도 TOP (공감+댓글)
         </button>
         <button 
           onClick={() => setActiveGroupTab('my')}

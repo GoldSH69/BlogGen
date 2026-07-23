@@ -1,118 +1,28 @@
 {
-  "myInterest": {
-    "keywords": [
-      "건강 정보",
-      "경제 재테크",
-      "IT 트렌드",
-      "나혼자산다",
-      "프리한19",
-      "최지수",
-      "나혼산 핫템",
-      "예능 꿀템",
-      "드라마 꿀템",
-      "영양제",
-      "약들약",
-      "알리",
-      "테무",
-      "쿠팡"
+  "unifiedTrend": {
+    "enableKeywordFreeDump": true,
+    "categories": [
+      30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25
     ],
     "sources": {
       "naverBlog": true,
-      "naverNews": true,
-      "naverShopping": true
+      "googleNews": true
+    },
+    "engagementRules": {
+      "sympathyWeight": 1.0,
+      "commentWeight": 2.0,
+      "minEngagementScore": 1
     },
     "filtering": {
       "minCleanScore": 80,
       "customBlacklist": [
+        "광고",
+        "체험단",
+        "협찬문의",
+        "제공받아",
         "공구",
-        "마켓",
         "추천인"
       ],
-      "checkAdRegex": false,
-      "maxAgeDays": 7
-    }
-  },
-  "naverHotTopic": {
-    "keywords": [
-      "알리 추천템",
-      "쿠팡 추천템",
-      "예능 대란템",
-      "알리익스프레스",
-      "네이버쇼핑",
-      "테무 추천템"
-    ],
-    "sources": {
-      "naverBlog": true,
-      "naverNews": true,
-      "naverShopping": true
-    },
-    "filtering": {
-      "minCleanScore": 90,
-      "customBlacklist": [
-        "홍보",
-        "체험단",
-        "협찬",
-        "대여제외"
-      ],
-      "checkAdRegex": false,
-      "maxAgeDays": 10
-    }
-  },
-  "realtimeHotIssue": {
-    "keywords": [
-      "월드컵",
-      "드라마",
-      "claude",
-      "chatgpt",
-      "gemini",
-      "인공지능",
-      "김부장"
-    ],
-    "sources": {
-      "naverBlog": true,
-      "naverNews": true,
-      "naverShopping": true
-    },
-    "filtering": {
-      "minCleanScore": 75,
-      "customBlacklist": [
-        "광고",
-        "협찬문의",
-        "제공받아"
-      ],
-      "checkAdRegex": false,
-      "maxAgeDays": 7
-    }
-  },
-  "naverCategoryPopular": {
-    "categories": [
-      30,
-      33,
-      32,
-      9,
-      10,
-      12,
-      14,
-      21,
-      6,
-      5,
-      28,
-      27,
-      29,
-      26
-    ],
-    "sources": {
-      "naverBlog": true,
-      "naverNews": false,
-      "naverShopping": false
-    },
-    "filtering": {
-      "minCleanScore": 80,
-      "customBlacklist": [
-        "광고",
-        "체험단"
-      ],
-      "checkAdRegex": true,
       "maxAgeDays": 10
     }
   },
