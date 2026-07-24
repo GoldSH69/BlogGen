@@ -57,10 +57,10 @@ const NAVER_CATEGORIES = [
   }
 ];
 
+const ALL_CAT_SEQS = NAVER_CATEGORIES.flatMap(g => g.list.map(c => c.seq));
+
 export default function TrendSettingsPanel({ isOpen, onClose }) {
-  const [categories, setCategories] = useState([
-    30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25
-  ]);
+  const [categories, setCategories] = useState(ALL_CAT_SEQS);
   const [sympathyWeight, setSympathyWeight] = useState(1.0);
   const [commentWeight, setCommentWeight] = useState(2.0);
   const [minCleanScore, setMinCleanScore] = useState(80);
@@ -224,7 +224,25 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               
               {/* 1. Category Selection */}
               <div>
-                <h4 style={sectionTitleStyle}>1. 실시간 핫글 수집 네이버 카테고리 선택</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>
+                    1. 네이버 핫글 수집 카테고리 ({categories.length}/{ALL_CAT_SEQS.length}개 선택됨)
+                  </h4>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      if (categories.length === ALL_CAT_SEQS.length) {
+                        setCategories([]);
+                      } else {
+                        setCategories(ALL_CAT_SEQS);
+                      }
+                    }}
+                    className="btn-secondary"
+                    style={{ padding: '3px 10px', fontSize: '0.72rem', fontWeight: '600' }}
+                  >
+                    {categories.length === ALL_CAT_SEQS.length ? '전체 해제' : '전체 선택'}
+                  </button>
+                </div>
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',

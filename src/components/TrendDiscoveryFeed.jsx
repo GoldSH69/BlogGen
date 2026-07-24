@@ -189,24 +189,39 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
   };
 
-  // Sort trends: Naver Blog FIRST (ordered by engagementScore descending), Google News SECOND
+  const isNewsPost = (parsed, issue) => {
+    if (!parsed) return false;
+    const type = (parsed.type || '').toLowerCase();
+    const group = (parsed.group || '').toLowerCase();
+    const blogger = (parsed.blogger || '').toLowerCase();
+    const title = (issue?.title || '').toLowerCase();
+    const body = (issue?.body || '').toLowerCase();
+
+    return (
+      type.includes('뉴스') || type.includes('news') ||
+      group.includes('뉴스') || group.includes('news') || group.includes('핫이슈') ||
+      blogger.includes('뉴스') || blogger.includes('news') || blogger.includes('구글') ||
+      title.includes('뉴스') || title.includes('속보') || title.includes('기자') ||
+      body.includes('google news') || body.includes('구글 뉴스')
+    );
+  };
+
+  // Sort trends: Naver Blog FIRST (ordered strictly by engagementScore descending), Realtime News LAST (bottom)
   const filteredTrends = [...trends].sort((a, b) => {
     const parsedA = parseTrendBody(a.body);
     const parsedB = parseTrendBody(b.body);
-    const isNewsA = parsedA.type === '구글 뉴스' || parsedA.group.includes('뉴스');
-    const isNewsB = parsedB.type === '구글 뉴스' || parsedB.group.includes('뉴스');
+    const isNewsA = isNewsPost(parsedA, a);
+    const isNewsB = isNewsPost(parsedB, b);
 
-    // Blogs first, News second
+    // Blogs FIRST, News LAST
     if (!isNewsA && isNewsB) return -1;
     if (isNewsA && !isNewsB) return 1;
 
-    // If both are blogs, sort strictly by reactivity score descending (highest reactivity post #1 at top)
+    // If both are blogs, sort strictly by calculated reactivity score descending (highest reactivity post #1 at top)
     if (!isNewsA && !isNewsB) {
-      const scoreA = parsedA.engagementScore > 0 ? parsedA.engagementScore : (parseInt(parsedA.score, 10) || 0);
-      const scoreB = parsedB.engagementScore > 0 ? parsedB.engagementScore : (parseInt(parsedB.score, 10) || 0);
-      return scoreB - scoreA;
+      return parsedB.engagementScore - parsedA.engagementScore;
     }
-    return 0;
+    return b.id - a.id;
   });
 
   return (
@@ -321,10 +336,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           <div style={cardsGridStyle}>
             {filteredTrends.map((issue) => {
               const parsed = parseTrendBody(issue.body);
-              const isNews = parsed.type === '구글 뉴스' || parsed.group.includes('뉴스');
-              const displayScore = parsed.engagementScore > 0 
-                ? parsed.engagementScore 
-                : (parseInt(parsed.score, 10) || 85);
+              const isNews = isNewsPost(parsed, issue);
+              const displayScore = parsed.engagementScore;
 
               return (
                 <div key={issue.id} className="trend-card animate-slide-up" style={cardStyle}>

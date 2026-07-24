@@ -15,3 +15,13 @@
     5. Card Badge Labels & Metrics (e.g. `🔥 반응도 점수` instead of `클린지수`)
   - All layers MUST be updated together in a single coherent step, ensuring no leftover old tabs, old forms, or wrong badge labels remain anywhere in the UI or codebase.
   - Always verify that the UI components (tabs, forms, badges, labels) completely reflect the new backend logic before declaring completion.
+
+- **Mandatory Direct Answer First Rule**:
+  - Whenever the user asks a question or raises an issue, the AI agent **MUST** provide a clear, direct natural language answer and explanation **FIRST** before taking action, running commands, or modifying code.
+  - Never jump straight to executing tool calls or code edits without answering the user's inquiry first.
+
+- **Mandatory Empirical Code Verification Before Answering Rule**:
+  - The AI agent **MUST NEVER** make assumptions, guess variable values, or give answers based on memory without FIRST reading and empirically inspecting the actual source files using code search or view tools.
+  - Every answer provided to the user must be verified directly against the latest raw code, schemas, and runtime configurations.
+
+
