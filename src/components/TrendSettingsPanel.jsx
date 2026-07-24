@@ -58,32 +58,13 @@ const NAVER_CATEGORIES = [
 ];
 
 export default function TrendSettingsPanel({ isOpen, onClose }) {
-  const [activeSubTab, setActiveSubTab] = useState('myInterest'); // myInterest, naverHotTopic, realtimeHotIssue, naverCategoryPopular
-
-  const [configs, setConfigs] = useState({
-    myInterest: {
-      keywords: [],
-      sources: { naverBlog: true, naverNews: true, naverShopping: false },
-      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true, maxAgeDays: 60 }
-    },
-    naverHotTopic: {
-      keywords: [],
-      sources: { naverBlog: true, naverNews: false, naverShopping: false },
-      filtering: { minCleanScore: 90, customBlacklist: [], checkAdRegex: true, maxAgeDays: 30 }
-    },
-    realtimeHotIssue: {
-      keywords: [],
-      sources: { naverBlog: true, naverNews: true, naverShopping: true },
-      filtering: { minCleanScore: 75, customBlacklist: [], checkAdRegex: true, maxAgeDays: 14 }
-    },
-    naverCategoryPopular: {
-      categories: [],
-      sources: { naverBlog: true, naverNews: false, naverShopping: false },
-      filtering: { minCleanScore: 80, customBlacklist: [], checkAdRegex: true, maxAgeDays: 30 }
-    }
-  });
-
-  const [newKeyword, setNewKeyword] = useState('');
+  const [categories, setCategories] = useState([
+    30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25
+  ]);
+  const [sympathyWeight, setSympathyWeight] = useState(1.0);
+  const [commentWeight, setCommentWeight] = useState(2.0);
+  const [minCleanScore, setMinCleanScore] = useState(80);
+  const [customBlacklist, setCustomBlacklist] = useState(["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
   const [newBlacklistWord, setNewBlacklistWord] = useState('');
   const [intervalHours, setIntervalHours] = useState(6);
 
@@ -107,79 +88,17 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
-        if (cloudConfig && (cloudConfig.myInterest || cloudConfig.naverHotTopic || cloudConfig.realtimeHotIssue || cloudConfig.naverCategoryPopular)) {
-          setConfigs({
-            myInterest: {
-              keywords: cloudConfig.myInterest?.keywords || [],
-              sources: cloudConfig.myInterest?.sources || { naverBlog: true, naverNews: true, naverShopping: false },
-              filtering: {
-                minCleanScore: cloudConfig.myInterest?.filtering?.minCleanScore ?? 80,
-                customBlacklist: cloudConfig.myInterest?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.myInterest?.filtering?.checkAdRegex ?? true,
-                maxAgeDays: cloudConfig.myInterest?.filtering?.maxAgeDays ?? 60
-              }
-            },
-            naverHotTopic: {
-              keywords: cloudConfig.naverHotTopic?.keywords || [],
-              sources: cloudConfig.naverHotTopic?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
-              filtering: {
-                minCleanScore: cloudConfig.naverHotTopic?.filtering?.minCleanScore ?? 90,
-                customBlacklist: cloudConfig.naverHotTopic?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.naverHotTopic?.filtering?.checkAdRegex ?? true,
-                maxAgeDays: cloudConfig.naverHotTopic?.filtering?.maxAgeDays ?? 30
-              }
-            },
-            realtimeHotIssue: {
-              keywords: cloudConfig.realtimeHotIssue?.keywords || [],
-              sources: cloudConfig.realtimeHotIssue?.sources || { naverBlog: true, naverNews: true, naverShopping: true },
-              filtering: {
-                minCleanScore: cloudConfig.realtimeHotIssue?.filtering?.minCleanScore ?? 75,
-                customBlacklist: cloudConfig.realtimeHotIssue?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.realtimeHotIssue?.filtering?.checkAdRegex ?? true,
-                maxAgeDays: cloudConfig.realtimeHotIssue?.filtering?.maxAgeDays ?? 14
-              }
-            },
-            naverCategoryPopular: {
-              categories: cloudConfig.naverCategoryPopular?.categories || [],
-              sources: cloudConfig.naverCategoryPopular?.sources || { naverBlog: true, naverNews: false, naverShopping: false },
-              filtering: {
-                minCleanScore: cloudConfig.naverCategoryPopular?.filtering?.minCleanScore ?? 80,
-                customBlacklist: cloudConfig.naverCategoryPopular?.filtering?.customBlacklist || [],
-                checkAdRegex: cloudConfig.naverCategoryPopular?.filtering?.checkAdRegex ?? true,
-                maxAgeDays: cloudConfig.naverCategoryPopular?.filtering?.maxAgeDays ?? 30
-              }
-            }
-          });
+        if (cloudConfig && cloudConfig.unifiedTrend) {
+          const ut = cloudConfig.unifiedTrend;
+          setCategories(ut.categories || [30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25]);
+          setSympathyWeight(ut.engagementRules?.sympathyWeight ?? 1.0);
+          setCommentWeight(ut.engagementRules?.commentWeight ?? 2.0);
+          setMinCleanScore(ut.filtering?.minCleanScore ?? 80);
+          setCustomBlacklist(ut.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
-        } else {
-          // Fallback default presets
-          setConfigs({
-            myInterest: {
-              keywords: ["건강 정보", "경제 재테크", "IT 트렌드"],
-              sources: { naverBlog: true, naverNews: true, naverShopping: false },
-              filtering: { minCleanScore: 80, customBlacklist: ["공구", "마켓", "추천인", "최저가링크", "파트너스"], checkAdRegex: true, maxAgeDays: 60 }
-            },
-            naverHotTopic: {
-              keywords: ["다이소 꿀템", "코스트코 추천템", "가전 전자제품"],
-              sources: { naverBlog: true, naverNews: false, naverShopping: false },
-              filtering: { minCleanScore: 90, customBlacklist: ["홍보", "체험단", "협찬", "대여제외"], checkAdRegex: true, maxAgeDays: 30 }
-            },
-            realtimeHotIssue: {
-              keywords: ["AI 인공지능", "신제품 출시"],
-              sources: { naverBlog: true, naverNews: true, naverShopping: true },
-              filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true, maxAgeDays: 14 }
-            },
-            naverCategoryPopular: {
-              categories: [30, 33, 29, 14],
-              sources: { naverBlog: true, naverNews: false, naverShopping: false },
-              filtering: { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
-            }
-          });
-          setIntervalHours(cloudConfig?.scheduler?.intervalHours || 6);
         }
       } catch (err) {
         console.error(err);
-        setErrorMsg('서버에서 설정을 불러오는 도중 오류가 발생했습니다.');
       } finally {
         setIsLoading(false);
       }
@@ -188,82 +107,30 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     loadConfig();
   }, [isOpen]);
 
-  const currentTabConfig = configs[activeSubTab];
-
-  const updateCurrentConfig = (updates) => {
-    setConfigs(prev => ({
-      ...prev,
-      [activeSubTab]: {
-        ...prev[activeSubTab],
-        ...updates
-      }
-    }));
-  };
-
-  const handleAddKeyword = (e) => {
-    e.preventDefault();
-    const trimmed = newKeyword.trim();
-    if (trimmed && !currentTabConfig.keywords.includes(trimmed)) {
-      updateCurrentConfig({
-        keywords: [...currentTabConfig.keywords, trimmed]
-      });
-      setNewKeyword('');
+  const handleToggleCategory = (seq) => {
+    if (categories.includes(seq)) {
+      setCategories(prev => prev.filter(id => id !== seq));
+    } else {
+      setCategories(prev => [...prev, seq]);
     }
-  };
-
-  const handleRemoveKeyword = (kw) => {
-    updateCurrentConfig({
-      keywords: currentTabConfig.keywords.filter(item => item !== kw)
-    });
   };
 
   const handleAddBlacklist = (e) => {
     e.preventDefault();
     const trimmed = newBlacklistWord.trim();
-    if (trimmed && !currentTabConfig.filtering.customBlacklist.includes(trimmed)) {
-      updateCurrentConfig({
-        filtering: {
-          ...currentTabConfig.filtering,
-          customBlacklist: [...currentTabConfig.filtering.customBlacklist, trimmed]
-        }
-      });
+    if (trimmed && !customBlacklist.includes(trimmed)) {
+      setCustomBlacklist(prev => [...prev, trimmed]);
       setNewBlacklistWord('');
     }
   };
 
   const handleRemoveBlacklist = (word) => {
-    updateCurrentConfig({
-      filtering: {
-        ...currentTabConfig.filtering,
-        customBlacklist: currentTabConfig.filtering.customBlacklist.filter(item => item !== word)
-      }
-    });
-  };
-
-  const handleToggleCategory = (seq) => {
-    const currentCats = currentTabConfig.categories || [];
-    if (currentCats.includes(seq)) {
-      updateCurrentConfig({
-        categories: currentCats.filter(id => id !== seq)
-      });
-    } else {
-      updateCurrentConfig({
-        categories: [...currentCats, seq]
-      });
-    }
+    setCustomBlacklist(prev => prev.filter(item => item !== word));
   };
 
   const handleSave = async () => {
-    if (configs.myInterest.keywords.length === 0) {
-      setErrorMsg('📌 내 관심사 수집 키워드를 최소 1개 이상 지정해 주세요.');
-      return;
-    }
-    if (configs.naverHotTopic.keywords.length === 0) {
-      setErrorMsg('🔥 네이버 핫토픽 수집 키워드를 최소 1개 이상 지정해 주세요.');
-      return;
-    }
-    if (activeSubTab === 'naverCategoryPopular' && configs.naverCategoryPopular.categories.length === 0) {
-      setErrorMsg('📈 카테고리 인기글에서 수집할 카테고리를 최소 1개 이상 선택해 주세요.');
+    if (categories.length === 0) {
+      setErrorMsg('수집할 네이버 카테고리를 최소 1개 이상 선택해 주세요.');
       return;
     }
 
@@ -272,25 +139,26 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     setStatusMsg('');
 
     const configObj = {
-      myInterest: configs.myInterest,
-      naverHotTopic: configs.naverHotTopic,
-      realtimeHotIssue: configs.realtimeHotIssue,
-      naverCategoryPopular: configs.naverCategoryPopular,
-      scheduler: {
-        intervalHours
-      }
+      unifiedTrend: {
+        enableKeywordFreeDump: true,
+        categories,
+        sources: { naverBlog: true, googleNews: true },
+        engagementRules: { sympathyWeight, commentWeight, minEngagementScore: 1 },
+        filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 }
+      },
+      scheduler: { intervalHours }
     };
 
     try {
       await saveTrendConfigToGithub(configObj);
-      setStatusMsg('트렌드 환경설정이 GitHub 레포지토리에 저장되었습니다!');
+      setStatusMsg('무키워드 수집 환경설정이 GitHub 레포지토리에 성공적으로 저왔습니다!');
       setTimeout(() => {
         setStatusMsg('');
         onClose();
       }, 1500);
     } catch (err) {
       console.error(err);
-      setErrorMsg(err.message || 'GitHub 설정 커밋 도중 예기치 못한 오류가 발생했습니다.');
+      setErrorMsg(err.message || 'GitHub 설정 저장 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -306,62 +174,33 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         <div style={modalHeaderStyle}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
             <Settings size={20} className="pulse-glow" style={{ color: 'var(--color-violet)' }} />
-            TCCG 트렌드 수집 제어 센터
+            TCCG 무키워드 반응도 수집 제어 센터
           </h3>
           <button style={closeBtnStyle} onClick={onClose}>&times;</button>
         </div>
 
-        {/* Tab Selection Navigation */}
-        <div style={tabContainerStyle}>
-          <button
-            onClick={() => {
-              setActiveSubTab('myInterest');
-              setErrorMsg('');
-            }}
-            style={activeSubTab === 'myInterest' ? activeTabStyle : inactiveTabStyle}
-          >
-            📌 내 관심사
-          </button>
-          <button
-            onClick={() => {
-              setActiveSubTab('naverHotTopic');
-              setErrorMsg('');
-            }}
-            style={activeSubTab === 'naverHotTopic' ? activeTabStyle : inactiveTabStyle}
-          >
-            🔥 네이버 핫토픽
-          </button>
-          <button
-            onClick={() => {
-              setActiveSubTab('realtimeHotIssue');
-              setErrorMsg('');
-            }}
-            style={activeSubTab === 'realtimeHotIssue' ? activeTabStyle : inactiveTabStyle}
-          >
-            ⚡ 실시간 핫이슈
-          </button>
-          <button
-            onClick={() => {
-              setActiveSubTab('naverCategoryPopular');
-              setErrorMsg('');
-            }}
-            style={activeSubTab === 'naverCategoryPopular' ? activeTabStyle : inactiveTabStyle}
-          >
-            📈 카테고리 인기글
-          </button>
+        {/* Info Banner */}
+        <div style={{
+          padding: '10px 14px',
+          margin: '12px 20px 0 20px',
+          background: 'rgba(139, 92, 246, 0.1)',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          borderRadius: '8px',
+          fontSize: '0.78rem',
+          color: 'var(--text-secondary)',
+          lineHeight: '1.4'
+        }}>
+          💡 <strong>특정 검색어 키워드 입력이 완전 전면 제거되었습니다.</strong><br />
+          네이버 전체 카테고리의 실시간 핫포인트를 검색어 한계 없이 전수 탐지하고, <strong>공감 수 + 댓글 수 반응도 점수</strong>가 가장 높은 핫글을 자동으로 상위 노출합니다.
         </div>
 
         {/* Body */}
         <div style={modalBodyStyle}>
-          {errorMsg ? (
+          {errorMsg && (
             <div style={errorContainerStyle}>
               <AlertTriangle size={16} />
               <span>{errorMsg}</span>
             </div>
-          ) : (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
-              각 카테고리별 수집 키워드와 필터 규칙은 격리 저장되며, 6시간 주기 자동화 크롤러가 <code style={{ color: 'var(--color-cyan)', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: '4px' }}>trend-rules.json</code> 파일을 참고하여 실시간 수집을 기동합니다.
-            </p>
           )}
 
           {isLoading && !statusMsg && !errorMsg ? (
@@ -372,274 +211,171 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           ) : (
             <div style={scrollContainerStyle}>
               
-              {/* 1. Keywords or Categories Settings */}
+              {/* 1. Category Selection */}
               <div style={{ marginBottom: '22px' }}>
-                {activeSubTab === 'naverCategoryPopular' ? (
-                  <>
-                    <h4 style={sectionTitleStyle}>1. 인기글 수집 카테고리 선택</h4>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      padding: '16px',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-color)',
-                      maxHeight: '260px',
-                      overflowY: 'auto'
-                    }}>
-                      {NAVER_CATEGORIES.map((groupObj, gIdx) => (
-                        <div key={gIdx} style={{ marginBottom: '8px' }}>
-                          <div style={{
-                            fontSize: '0.78rem',
-                            fontWeight: '700',
-                            color: 'var(--color-violet)',
-                            marginBottom: '6px',
-                            borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
-                            paddingBottom: '4px'
-                          }}>
-                            {groupObj.group}
-                          </div>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '6px'
-                          }}>
-                            {groupObj.list.map((cat) => {
-                              const isChecked = (currentTabConfig.categories || []).includes(cat.seq);
-                              return (
-                                <label
-                                  key={cat.seq}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    fontSize: '0.74rem',
-                                    color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                    padding: '4px 6px',
-                                    borderRadius: '4px',
-                                    background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
-                                    border: isChecked ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid transparent',
-                                    transition: 'all var(--transition-fast)'
-                                  }}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleToggleCategory(cat.seq)}
-                                    style={{
-                                      accentColor: 'var(--color-violet)',
-                                      width: '14px',
-                                      height: '14px',
-                                      cursor: 'pointer'
-                                    }}
-                                  />
-                                  {cat.name}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                <h4 style={sectionTitleStyle}>1. 실시간 핫글 수집 네이버 카테고리 선택</h4>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  padding: '16px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-color)',
+                  maxHeight: '260px',
+                  overflowY: 'auto'
+                }}>
+                  {NAVER_CATEGORIES.map((groupObj, gIdx) => (
+                    <div key={gIdx} style={{ marginBottom: '8px' }}>
+                      <div style={{
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        color: 'var(--color-violet)',
+                        marginBottom: '6px',
+                        borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                        paddingBottom: '4px'
+                      }}>
+                        {groupObj.group}
+                      </div>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '6px'
+                      }}>
+                        {groupObj.list.map((cat) => {
+                          const isChecked = categories.includes(cat.seq);
+                          return (
+                            <label
+                              key={cat.seq}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '0.74rem',
+                                color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                padding: '4px 6px',
+                                borderRadius: '4px',
+                                background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
+                                border: isChecked ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid transparent',
+                                transition: 'all var(--transition-fast)'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleToggleCategory(cat.seq)}
+                                style={{
+                                  accentColor: 'var(--color-violet)',
+                                  width: '14px',
+                                  height: '14px',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                              {cat.name}
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <h4 style={sectionTitleStyle}>1. 수집 타겟 키워드 관리</h4>
-                    <form onSubmit={handleAddKeyword} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                      <input
-                        type="text"
-                        className="input-field"
-                        placeholder={
-                          activeSubTab === 'myInterest' ? "예: 건강 정보, 경제 재테크" :
-                          activeSubTab === 'naverHotTopic' ? "예: 다이소 꿀템, 코스트코 추천템" :
-                          "예: AI 인공지능, 신제품 출시"
-                        }
-                        value={newKeyword}
-                        onChange={(e) => setNewKeyword(e.target.value)}
-                        disabled={!!errorMsg}
-                        style={{ flex: 1, fontSize: '0.82rem' }}
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Engagement Weights & Clean Filtering */}
+              <div style={{ marginBottom: '22px' }}>
+                <h4 style={sectionTitleStyle}>2. 공감/댓글 반응도 가중치 & 클린 필터링</h4>
+                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>❤️ 공감 가중치</label>
+                      <input 
+                        type="number"
+                        step="0.5"
+                        value={sympathyWeight}
+                        onChange={(e) => setSympathyWeight(parseFloat(e.target.value) || 1.0)}
+                        style={inputStyle}
                       />
-                      <button type="submit" className="btn-neon" disabled={!!errorMsg} style={{ padding: '8px 14px' }}>
-                        <Plus size={16} /> 추가
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>💬 댓글 가중치 (기본 2.0)</label>
+                      <input 
+                        type="number"
+                        step="0.5"
+                        value={commentWeight}
+                        onChange={(e) => setCommentWeight(parseFloat(e.target.value) || 2.0)}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>최소 광고 정제 지수 (Clean Cut-off Score)</span>
+                      <span style={{ fontWeight: '700', color: 'var(--color-cyan)' }}>{minCleanScore}점 이상</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="50" 
+                      max="95" 
+                      step="5"
+                      value={minCleanScore}
+                      onChange={(e) => setMinCleanScore(parseInt(e.target.value, 10))}
+                      style={{ width: '100%', accentColor: 'var(--color-cyan)', cursor: 'pointer' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>🚫 제외할 광고성 키워드 블랙리스트</label>
+                    <form onSubmit={handleAddBlacklist} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="예: 체험단, 대여, 소정의수수료"
+                        value={newBlacklistWord}
+                        onChange={(e) => setNewBlacklistWord(e.target.value)}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      <button type="submit" style={addBtnStyle}>
+                        <Plus size={14} /> 추가
                       </button>
                     </form>
-
-                    <div style={tagWrapperStyle}>
-                      {currentTabConfig.keywords.length === 0 ? (
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 수집 키워드가 없습니다. 직접 추가해 주세요.</div>
-                      ) : (
-                        currentTabConfig.keywords.map((kw, i) => (
-                          <span key={i} style={tagStyle}>
-                            {kw}
-                            <button type="button" onClick={() => handleRemoveKeyword(kw)} style={tagRemoveStyle}>
-                              <X size={11} />
-                            </button>
-                          </span>
-                        ))
-                      )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {customBlacklist.map((word, idx) => (
+                        <span key={idx} style={blacklistTagStyle}>
+                          {word}
+                          <X size={12} style={{ cursor: 'pointer' }} onClick={() => handleRemoveBlacklist(word)} />
+                        </span>
+                      ))}
                     </div>
-                  </>
-                )}
-              </div>
-
-              {/* 2. Sources Settings */}
-              <div style={{ marginBottom: '22px' }}>
-                <h4 style={sectionTitleStyle}>2. 수집 채널 범위 설정</h4>
-                <div style={sourceGridStyle}>
-                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverBlog)}>
-                    <input
-                      type="checkbox"
-                      checked={currentTabConfig.sources.naverBlog}
-                      onChange={(e) => updateCurrentConfig({
-                        sources: { ...currentTabConfig.sources, naverBlog: e.target.checked }
-                      })}
-                      disabled={!!errorMsg}
-                      style={checkboxInputStyle}
-                    />
-                    💚 네이버 블로그 포스팅
-                  </label>
-                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverNews)}>
-                    <input
-                      type="checkbox"
-                      checked={currentTabConfig.sources.naverNews}
-                      onChange={(e) => updateCurrentConfig({
-                        sources: { ...currentTabConfig.sources, naverNews: e.target.checked }
-                      })}
-                      disabled={!!errorMsg}
-                      style={checkboxInputStyle}
-                    />
-                    📰 네이버 최신 뉴스 기사
-                  </label>
-                  <label style={checkboxLabelStyle(currentTabConfig.sources.naverShopping)}>
-                    <input
-                      type="checkbox"
-                      checked={currentTabConfig.sources.naverShopping}
-                      onChange={(e) => updateCurrentConfig({
-                        sources: { ...currentTabConfig.sources, naverShopping: e.target.checked }
-                      })}
-                      disabled={!!errorMsg}
-                      style={checkboxInputStyle}
-                    />
-                    🛒 네이버 쇼핑 정보/트렌드
-                  </label>
-                </div>
-              </div>
-
-              {/* 3. Filtering Logic */}
-              <div style={{ marginBottom: '22px' }}>
-                <h4 style={sectionTitleStyle}>3. 3단계 고도화 클킨 필터 임계치</h4>
-                
-                <div style={inputRowStyle}>
-                  <label style={formLabelStyle}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Flame size={14} style={{ color: 'var(--color-rose)' }} />
-                      최소 통과 클린도 스코어
-                    </span>
-                    <span style={{ color: 'var(--color-cyan)', fontWeight: '700' }}>{currentTabConfig.filtering.minCleanScore}점</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="50"
-                    max="95"
-                    step="5"
-                    value={currentTabConfig.filtering.minCleanScore}
-                    onChange={(e) => updateCurrentConfig({
-                      filtering: { ...currentTabConfig.filtering, minCleanScore: parseInt(e.target.value) }
-                    })}
-                    disabled={!!errorMsg}
-                    style={{ width: '100%', accentColor: 'var(--color-violet)' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                    <span>50점 (낮은 정제도)</span>
-                    <span>75점 (보통)</span>
-                    <span>95점 (엄격한 스팸 배제)</span>
                   </div>
                 </div>
-
-                <div style={{ marginTop: '16px' }}>
-                  <label style={checkboxLabelStyle(currentTabConfig.filtering.checkAdRegex)}>
-                    <input
-                      type="checkbox"
-                      checked={currentTabConfig.filtering.checkAdRegex}
-                      onChange={(e) => updateCurrentConfig({
-                        filtering: { ...currentTabConfig.filtering, checkAdRegex: e.target.checked }
-                      })}
-                      disabled={!!errorMsg}
-                      style={checkboxInputStyle}
-                    />
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ShieldAlert size={14} style={{ color: 'var(--color-violet)' }} />
-                      홍보성 대가형 배너 & 도배 이모지 정밀 필터 활성화
-                    </span>
-                  </label>
-                </div>
-
-                <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ ...formLabelStyle, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      📅 블로그 수집 제한 기간
-                    </span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: '400' }}>
-                      최근 몇 일 이내에 작성된 블로그 포스팅만 수집할지 범위를 조정합니다.
-                    </span>
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={currentTabConfig.filtering.maxAgeDays || 60}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 1) {
-                          updateCurrentConfig({
-                            filtering: { ...currentTabConfig.filtering, maxAgeDays: val }
-                          });
-                        }
-                      }}
-                      disabled={!!errorMsg}
-                      className="input-field"
-                      style={{ width: '80px', textAlign: 'center', padding: '6px', fontSize: '0.82rem' }}
-                    />
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>일 이내 발행글만 수집</span>
-                  </div>
-                </div>
-
               </div>
 
-              {/* 4. Custom Blacklist */}
+              {/* 3. Crawler Schedule Interval */}
               <div>
-                <h4 style={sectionTitleStyle}>4. 추가 필터링 차단 키워드 (블랙리스트)</h4>
-                <form onSubmit={handleAddBlacklist} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="예: 협찬문의, 대여제외"
-                    value={newBlacklistWord}
-                    onChange={(e) => setNewBlacklistWord(e.target.value)}
-                    disabled={!!errorMsg}
-                    style={{ flex: 1, fontSize: '0.82rem' }}
-                  />
-                  <button type="submit" className="btn-secondary" disabled={!!errorMsg} style={{ padding: '8px 14px' }}>
-                    <Plus size={16} /> 추가
-                  </button>
-                </form>
-
-                <div style={tagWrapperStyle}>
-                  {currentTabConfig.filtering.customBlacklist.length === 0 ? (
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>등록된 블랙리스트 단어가 없습니다.</div>
-                  ) : (
-                    currentTabConfig.filtering.customBlacklist.map((word, i) => (
-                      <span key={i} style={{ ...tagStyle, background: 'var(--color-rose-glow)', border: '1px solid rgba(244, 63, 94, 0.25)', color: 'var(--color-rose)' }}>
-                        {word}
-                        <button type="button" onClick={() => handleRemoveBlacklist(word)} style={{ ...tagRemoveStyle, color: 'var(--color-rose)' }}>
-                          <X size={11} />
-                        </button>
-                      </span>
-                    ))
-                  )}
+                <h4 style={sectionTitleStyle}>3. 크롤러 자동 수집 주기 (Interval)</h4>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {[3, 6, 12, 24].map((hours) => (
+                    <button
+                      key={hours}
+                      type="button"
+                      onClick={() => setIntervalHours(hours)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.78rem',
+                        fontWeight: '600',
+                        border: intervalHours === hours ? '1px solid var(--color-cyan)' : '1px solid var(--border-color)',
+                        background: intervalHours === hours ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: intervalHours === hours ? 'var(--color-cyan)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)'
+                      }}
+                    >
+                      {hours}시간 마다
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -647,26 +383,19 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           )}
 
           {statusMsg && (
-            <div style={{
-              marginTop: '16px',
-              fontSize: '0.82rem',
-              color: 'var(--color-emerald)',
-              textAlign: 'center',
-              fontWeight: '600'
-            }}>
-              {statusMsg}
+            <div style={successContainerStyle}>
+              <CheckCircle size={16} />
+              <span>{statusMsg}</span>
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div style={modalFooterStyle}>
-          <button className="btn-secondary" onClick={onClose} disabled={isLoading}>
-            닫기
-          </button>
-          <button className="btn-neon" onClick={handleSave} disabled={isLoading || !!errorMsg} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>취소</button>
+          <button style={saveBtnStyle} onClick={handleSave} disabled={isLoading}>
             <Save size={16} />
-            트렌드 제어 설정 커밋
+            {isLoading ? "저장 중..." : "GitHub 레포지토리에 설정 적용"}
           </button>
         </div>
 
@@ -675,192 +404,137 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   );
 }
 
-// Styling Objects matching SettingsPanel.jsx premium style
-const tabContainerStyle = {
-  display: 'flex',
-  gap: '4px',
-  background: 'rgba(255, 255, 255, 0.02)',
-  padding: '6px',
-  borderRadius: '8px',
-  border: '1px solid var(--border-color)',
-  margin: '0 24px 16px',
-};
-
-const activeTabStyle = {
-  flex: 1,
-  padding: '10px 4px',
-  background: 'var(--color-violet-glow)',
-  border: '1px solid rgba(139, 92, 246, 0.3)',
-  borderRadius: '6px',
-  color: 'var(--color-violet)',
-  fontWeight: '700',
-  fontSize: '0.8rem',
-  cursor: 'pointer',
-  textAlign: 'center',
-  transition: 'all var(--transition-fast)',
-};
-
-const inactiveTabStyle = {
-  flex: 1,
-  padding: '10px 4px',
-  background: 'transparent',
-  border: '1px solid transparent',
-  borderRadius: '6px',
-  color: 'var(--text-secondary)',
-  fontWeight: '500',
-  fontSize: '0.8rem',
-  cursor: 'pointer',
-  textAlign: 'center',
-  transition: 'all var(--transition-fast)',
-};
-
+// Inline Styles
 const modalOverlayStyle = {
   position: 'fixed',
-  top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(5, 5, 8, 0.7)',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  background: 'rgba(0, 0, 0, 0.75)',
   backdropFilter: 'blur(8px)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
   zIndex: 1000,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '20px'
 };
 
 const modalContentStyle = {
-  width: '95%',
-  maxWidth: '520px',
-  background: 'var(--bg-surface-solid)',
-  padding: '0px',
-  borderRadius: 'var(--radius-lg)',
-  overflow: 'hidden',
+  width: '100%',
+  maxWidth: '580px',
+  background: 'var(--bg-glass-card)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  boxShadow: 'var(--shadow-lg)',
   display: 'flex',
   flexDirection: 'column',
   maxHeight: '90vh',
-  border: '1px solid var(--border-color)',
-  boxShadow: 'var(--shadow-card)',
+  overflow: 'hidden'
 };
 
 const modalHeaderStyle = {
+  padding: '16px 20px',
+  borderBottom: '1px solid var(--border-color)',
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '20px 24px',
-  borderBottom: '1px solid var(--border-color)',
+  alignItems: 'center'
 };
 
 const closeBtnStyle = {
   background: 'none',
   border: 'none',
-  color: 'var(--text-secondary)',
-  fontSize: '24px',
-  cursor: 'pointer',
-  padding: '0 4px',
+  fontSize: '1.4rem',
+  color: 'var(--text-muted)',
+  cursor: 'pointer'
 };
 
 const modalBodyStyle = {
-  padding: '24px',
-  overflow: 'hidden',
-  display: 'flex',
-  flexDirection: 'column',
-  flex: 1,
+  padding: '20px',
+  overflowY: 'auto',
+  flex: 1
 };
 
 const scrollContainerStyle = {
-  overflowY: 'auto',
-  paddingRight: '6px',
   display: 'flex',
-  flexDirection: 'column',
-  flex: 1,
+  flexDirection: 'column'
 };
 
 const sectionTitleStyle = {
-  fontSize: '0.82rem',
+  fontSize: '0.85rem',
   fontWeight: '700',
   color: 'var(--text-primary)',
-  marginBottom: '10px',
-  letterSpacing: '0.03em',
+  marginBottom: '10px'
 };
 
-const tagWrapperStyle = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '6px',
-  background: 'var(--bg-surface-solid)',
+const inputStyle = {
+  width: '100%',
+  padding: '8px 12px',
+  background: 'rgba(0, 0, 0, 0.2)',
   border: '1px solid var(--border-color)',
   borderRadius: 'var(--radius-sm)',
-  padding: '10px',
-  minHeight: '44px',
-  alignItems: 'center',
+  color: 'var(--text-primary)',
+  fontSize: '0.8rem',
+  outline: 'none'
 };
 
-const tagStyle = {
-  display: 'inline-flex',
+const addBtnStyle = {
+  display: 'flex',
   alignItems: 'center',
-  gap: '5px',
-  fontSize: '0.74rem',
+  gap: '4px',
+  padding: '8px 14px',
   background: 'var(--color-violet-glow)',
-  border: '1px solid var(--border-color)',
-  color: 'var(--color-violet)',
-  padding: '4px 8px',
-  borderRadius: '4px',
-};
-
-const tagRemoveStyle = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--color-violet)',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  padding: 0,
-};
-
-const sourceGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  gap: '8px',
-  background: 'var(--bg-surface-solid)',
-  padding: '12px',
+  border: '1px solid rgba(139, 92, 246, 0.4)',
   borderRadius: 'var(--radius-sm)',
-  border: '1px solid var(--border-color)',
-};
-
-const checkboxLabelStyle = (isChecked) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  fontSize: '0.82rem',
-  color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
-  cursor: 'pointer',
-  padding: '4px 6px',
-  borderRadius: '4px',
-  background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
-  transition: 'all var(--transition-fast)',
-});
-
-const checkboxInputStyle = {
-  accentColor: 'var(--color-violet)',
-  width: '16px',
-  height: '16px',
-  cursor: 'pointer',
-};
-
-const inputRowStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  background: 'var(--bg-surface-solid)',
-  padding: '12px',
-  borderRadius: 'var(--radius-sm)',
-  border: '1px solid var(--border-color)',
-};
-
-const formLabelStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
+  color: 'var(--text-primary)',
   fontSize: '0.78rem',
   fontWeight: '600',
+  cursor: 'pointer'
+};
+
+const blacklistTagStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  padding: '4px 10px',
+  background: 'rgba(244, 63, 94, 0.1)',
+  border: '1px solid rgba(244, 63, 94, 0.25)',
+  borderRadius: '12px',
+  color: 'var(--color-rose)',
+  fontSize: '0.72rem',
+  fontWeight: '500'
+};
+
+const modalFooterStyle = {
+  padding: '16px 20px',
+  borderTop: '1px solid var(--border-color)',
+  display: 'flex',
+  justifyContent: 'flex-end',
+  gap: '10px'
+};
+
+const cancelBtnStyle = {
+  padding: '8px 16px',
+  background: 'transparent',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-sm)',
   color: 'var(--text-secondary)',
+  fontSize: '0.8rem',
+  cursor: 'pointer'
+};
+
+const saveBtnStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '8px 18px',
+  background: 'linear-gradient(135deg, var(--color-violet) 0%, var(--color-cyan) 100%)',
+  border: 'none',
+  borderRadius: 'var(--radius-sm)',
+  color: '#ffffff',
+  fontSize: '0.82rem',
+  fontWeight: '700',
+  cursor: 'pointer'
 };
 
 const loadingContainerStyle = {
@@ -868,39 +542,41 @@ const loadingContainerStyle = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '60px 0',
-  gap: '12px',
-  flex: 1,
+  padding: '40px 0',
+  gap: '12px'
 };
 
 const spinnerStyle = {
   width: '24px',
   height: '24px',
-  border: '2px solid rgba(255, 255, 255, 0.1)',
-  borderTop: '2px solid var(--color-violet)',
+  border: '3px solid rgba(255, 255, 255, 0.1)',
+  borderTopColor: 'var(--color-cyan)',
   borderRadius: '50%',
-  animation: 'spin 0.8s linear infinite',
-  display: 'inline-block',
+  animation: 'spin 1s linear infinite'
 };
 
 const errorContainerStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  padding: '12px 16px',
+  padding: '10px 14px',
+  background: 'rgba(244, 63, 94, 0.1)',
+  border: '1px solid rgba(244, 63, 94, 0.3)',
   borderRadius: 'var(--radius-sm)',
-  background: 'rgba(244, 63, 94, 0.08)',
-  border: '1px solid rgba(244, 63, 94, 0.2)',
   color: 'var(--color-rose)',
-  fontSize: '0.8rem',
-  lineHeight: '1.4',
-  marginBottom: '16px',
+  fontSize: '0.78rem',
+  marginBottom: '14px'
 };
 
-const modalFooterStyle = {
+const successContainerStyle = {
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '16px 24px 24px',
-  borderTop: '1px solid var(--border-color)',
+  gap: '8px',
+  padding: '10px 14px',
+  background: 'rgba(16, 185, 129, 0.1)',
+  border: '1px solid rgba(16, 185, 129, 0.3)',
+  borderRadius: 'var(--radius-sm)',
+  color: '#10b981',
+  fontSize: '0.78rem',
+  marginTop: '14px'
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2 } from 'lucide-react';
+import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2, Flame } from 'lucide-react';
 import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub, closeMultipleTrendIssuesOnGithub } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
@@ -237,38 +237,29 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         </div>
       </div>
 
-      {/* Category Segmented Tabs */}
-      <div style={tabContainerStyle}>
-        <button 
-          onClick={() => setActiveGroupTab('all')}
-          style={tabItemStyle(activeGroupTab === 'all', 'all')}
-        >
-          🔥 전체 무키워드 반응도 TOP (공감+댓글)
-        </button>
-        <button 
-          onClick={() => setActiveGroupTab('my')}
-          style={tabItemStyle(activeGroupTab === 'my', 'my')}
-        >
-          📌 내 관심사
-        </button>
-        <button 
-          onClick={() => setActiveGroupTab('naver')}
-          style={tabItemStyle(activeGroupTab === 'naver', 'naver')}
-        >
-          🔥 네이버 핫토픽
-        </button>
-        <button 
-          onClick={() => setActiveGroupTab('google')}
-          style={tabItemStyle(activeGroupTab === 'google', 'google')}
-        >
-          ⚡ 실시간 핫이슈
-        </button>
-        <button 
-          onClick={() => setActiveGroupTab('radar')}
-          style={tabItemStyle(activeGroupTab === 'radar', 'radar')}
-        >
-          📈 카테고리 인기글
-        </button>
+      {/* Unified Feed Banner */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justify: 'space-between',
+        padding: '10px 16px',
+        margin: '12px 16px 8px 16px',
+        background: 'linear-gradient(90deg, rgba(244, 63, 94, 0.12) 0%, rgba(6, 182, 212, 0.12) 100%)',
+        border: '1px solid rgba(244, 63, 94, 0.25)',
+        borderRadius: '10px',
+        fontSize: '0.82rem',
+        fontWeight: '700',
+        color: 'var(--text-primary)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🔥 무키워드 반응도 (공감+댓글) 실시간 상위 핫템 통합 피드</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-cyan)', background: 'rgba(6, 182, 212, 0.15)', padding: '2px 8px', borderRadius: '12px' }}>
+            실시간 랭킹 순 정렬
+          </span>
+        </div>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          총 {filteredTrends.length}개 탐지됨
+        </span>
       </div>
 
       <div style={feedBodyStyle}>
@@ -304,19 +295,33 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           <div style={cardsGridStyle}>
             {filteredTrends.map((issue) => {
               const parsed = parseTrendBody(issue.body);
-              const isHighClean = parseInt(parsed.score) >= 80;
+              const engagementScore = (parsed.sympathyCnt * 1.0) + (parsed.commentCnt * 2.0);
+              const isHighEngagement = engagementScore >= 5 || parsed.sympathyCnt >= 3 || parsed.commentCnt >= 2;
 
               return (
                 <div key={issue.id} className="trend-card animate-slide-up" style={cardStyle}>
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <span style={groupBadgeStyle(parsed.group)}>{getGroupLabelWithEmoji(parsed.group)}</span>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: '700',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        background: 'rgba(244, 63, 94, 0.15)',
+                        color: 'var(--color-rose)',
+                        border: '1px solid rgba(244, 63, 94, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}>
+                        <Flame size={12} />
+                        반응도: {engagementScore > 0 ? `${engagementScore}점` : '실시간 핫이슈'}
+                      </span>
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span style={scoreBadgeStyle(isHighClean)}>
-                        <Award size={12} />
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
                         클린지수: {parsed.score}
                       </span>
                       <button 
