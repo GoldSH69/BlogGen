@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Plus, X, Save, Trash2, CheckCircle, Flame, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Settings, X, Save, CheckCircle, AlertTriangle } from 'lucide-react';
 import { getGithubConfig, fetchTrendConfigFromGithub, saveTrendConfigToGithub } from '../services/github';
 
 const NAVER_CATEGORIES = [
@@ -151,7 +151,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
     try {
       await saveTrendConfigToGithub(configObj);
-      setStatusMsg('무키워드 수집 환경설정이 GitHub 레포지토리에 성공적으로 저왔습니다!');
+      setStatusMsg('무키워드 수집 환경설정이 성공적으로 저장되었습니다!');
       setTimeout(() => {
         setStatusMsg('');
         onClose();
@@ -172,7 +172,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         
         {/* Header */}
         <div style={modalHeaderStyle}>
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: '700' }}>
             <Settings size={20} className="pulse-glow" style={{ color: 'var(--color-violet)' }} />
             TCCG 무키워드 반응도 수집 제어 센터
           </h3>
@@ -181,48 +181,59 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
         {/* Info Banner */}
         <div style={{
-          padding: '10px 14px',
-          margin: '12px 20px 0 20px',
-          background: 'rgba(139, 92, 246, 0.1)',
-          border: '1px solid rgba(139, 92, 246, 0.2)',
-          borderRadius: '8px',
+          padding: '12px 16px',
+          margin: '16px 24px 0 24px',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-sm)',
           fontSize: '0.78rem',
           color: 'var(--text-secondary)',
-          lineHeight: '1.4'
+          lineHeight: '1.5'
         }}>
-          💡 <strong>특정 검색어 키워드 입력이 완전 전면 제거되었습니다.</strong><br />
+          💡 <strong>특정 검색어 키워드 제약이 전면 제거되었습니다.</strong><br />
           네이버 전체 카테고리의 실시간 핫포인트를 검색어 한계 없이 전수 탐지하고, <strong>공감 수 + 댓글 수 반응도 점수</strong>가 가장 높은 핫글을 자동으로 상위 노출합니다.
         </div>
 
         {/* Body */}
         <div style={modalBodyStyle}>
           {errorMsg && (
-            <div style={errorContainerStyle}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              background: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--color-rose)',
+              fontSize: '0.78rem',
+              marginBottom: '16px'
+            }}>
               <AlertTriangle size={16} />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {isLoading && !statusMsg && !errorMsg ? (
-            <div style={loadingContainerStyle}>
-              <span style={spinnerStyle}></span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '12px' }}>
+              <span className="spinner"></span>
               <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>GitHub 연동 설정을 동기화 중...</span>
             </div>
           ) : (
-            <div style={scrollContainerStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {/* 1. Category Selection */}
-              <div style={{ marginBottom: '22px' }}>
+              <div>
                 <h4 style={sectionTitleStyle}>1. 실시간 핫글 수집 네이버 카테고리 선택</h4>
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
-                  background: 'rgba(255, 255, 255, 0.02)',
+                  background: 'var(--bg-surface)',
                   padding: '16px',
                   borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--border-color)',
-                  maxHeight: '260px',
+                  maxHeight: '240px',
                   overflowY: 'auto'
                 }}>
                   {NAVER_CATEGORIES.map((groupObj, gIdx) => (
@@ -232,7 +243,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                         fontWeight: '700',
                         color: 'var(--color-violet)',
                         marginBottom: '6px',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                        borderBottom: '1px solid var(--border-color)',
                         paddingBottom: '4px'
                       }}>
                         {groupObj.group}
@@ -251,13 +262,13 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '6px',
-                                fontSize: '0.74rem',
+                                fontSize: '0.75rem',
                                 color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
                                 cursor: 'pointer',
                                 padding: '4px 6px',
                                 borderRadius: '4px',
                                 background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
-                                border: isChecked ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid transparent',
+                                border: isChecked ? '1px solid var(--border-color)' : '1px solid transparent',
                                 transition: 'all var(--transition-fast)'
                               }}
                             >
@@ -283,19 +294,20 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               </div>
 
               {/* 2. Engagement Weights & Clean Filtering */}
-              <div style={{ marginBottom: '22px' }}>
+              <div>
                 <h4 style={sectionTitleStyle}>2. 공감/댓글 반응도 가중치 & 클린 필터링</h4>
-                <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                     <div>
                       <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>❤️ 공감 가중치</label>
                       <input 
                         type="number"
                         step="0.5"
+                        className="input-field"
                         value={sympathyWeight}
                         onChange={(e) => setSympathyWeight(parseFloat(e.target.value) || 1.0)}
-                        style={inputStyle}
+                        style={{ width: '100%' }}
                       />
                     </div>
                     <div>
@@ -303,17 +315,18 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                       <input 
                         type="number"
                         step="0.5"
+                        className="input-field"
                         value={commentWeight}
                         onChange={(e) => setCommentWeight(parseFloat(e.target.value) || 2.0)}
-                        style={inputStyle}
+                        style={{ width: '100%' }}
                       />
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '14px' }}>
+                  <div style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>최소 광고 정제 지수 (Clean Cut-off Score)</span>
-                      <span style={{ fontWeight: '700', color: 'var(--color-cyan)' }}>{minCleanScore}점 이상</span>
+                      <span style={{ fontWeight: '700', color: 'var(--color-violet)' }}>{minCleanScore}점 이상</span>
                     </div>
                     <input 
                       type="range" 
@@ -322,7 +335,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                       step="5"
                       value={minCleanScore}
                       onChange={(e) => setMinCleanScore(parseInt(e.target.value, 10))}
-                      style={{ width: '100%', accentColor: 'var(--color-cyan)', cursor: 'pointer' }}
+                      style={{ width: '100%', accentColor: 'var(--color-violet)', cursor: 'pointer' }}
                     />
                   </div>
 
@@ -331,18 +344,30 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                     <form onSubmit={handleAddBlacklist} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input 
                         type="text" 
+                        className="input-field"
                         placeholder="예: 체험단, 대여, 소정의수수료"
                         value={newBlacklistWord}
                         onChange={(e) => setNewBlacklistWord(e.target.value)}
-                        style={{ ...inputStyle, flex: 1 }}
+                        style={{ flex: 1 }}
                       />
-                      <button type="submit" style={addBtnStyle}>
-                        <Plus size={14} /> 추가
+                      <button type="submit" className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.76rem' }}>
+                        추가
                       </button>
                     </form>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {customBlacklist.map((word, idx) => (
-                        <span key={idx} style={blacklistTagStyle}>
+                        <span key={idx} style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 10px',
+                          background: 'var(--color-rose-glow)',
+                          border: '1px solid rgba(244, 63, 94, 0.25)',
+                          borderRadius: '12px',
+                          color: 'var(--color-rose)',
+                          fontSize: '0.72rem',
+                          fontWeight: '500'
+                        }}>
                           {word}
                           <X size={12} style={{ cursor: 'pointer' }} onClick={() => handleRemoveBlacklist(word)} />
                         </span>
@@ -355,22 +380,17 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
               {/* 3. Crawler Schedule Interval */}
               <div>
                 <h4 style={sectionTitleStyle}>3. 크롤러 자동 수집 주기 (Interval)</h4>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   {[3, 6, 12, 24].map((hours) => (
                     <button
                       key={hours}
                       type="button"
                       onClick={() => setIntervalHours(hours)}
+                      className={intervalHours === hours ? "btn-neon" : "btn-secondary"}
                       style={{
-                        padding: '8px 14px',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.78rem',
-                        fontWeight: '600',
-                        border: intervalHours === hours ? '1px solid var(--color-cyan)' : '1px solid var(--border-color)',
-                        background: intervalHours === hours ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                        color: intervalHours === hours ? 'var(--color-cyan)' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all var(--transition-fast)'
+                        padding: '6px 12px',
+                        fontSize: '0.76rem',
+                        fontWeight: '600'
                       }}
                     >
                       {hours}시간 마다
@@ -383,7 +403,18 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           )}
 
           {statusMsg && (
-            <div style={successContainerStyle}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              background: 'var(--color-emerald-glow)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--color-emerald)',
+              fontSize: '0.78rem',
+              marginTop: '16px'
+            }}>
               <CheckCircle size={16} />
               <span>{statusMsg}</span>
             </div>
@@ -392,8 +423,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
         {/* Footer */}
         <div style={modalFooterStyle}>
-          <button style={cancelBtnStyle} onClick={onClose} disabled={isLoading}>취소</button>
-          <button style={saveBtnStyle} onClick={handleSave} disabled={isLoading}>
+          <button className="btn-secondary" onClick={onClose} disabled={isLoading}>취소</button>
+          <button className="btn-neon" onClick={handleSave} disabled={isLoading} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Save size={16} />
             {isLoading ? "저장 중..." : "GitHub 레포지토리에 설정 적용"}
           </button>
@@ -404,60 +435,52 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   );
 }
 
-// Inline Styles
+// Styles using Theme Variables for 100% Design Consistency
 const modalOverlayStyle = {
   position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'rgba(0, 0, 0, 0.75)',
+  top: 0, left: 0, right: 0, bottom: 0,
+  backgroundColor: 'rgba(5, 5, 8, 0.7)',
   backdropFilter: 'blur(8px)',
-  zIndex: 1000,
   display: 'flex',
-  alignItems: 'center',
   justifyContent: 'center',
-  padding: '20px'
+  alignItems: 'center',
+  zIndex: 1000,
 };
 
 const modalContentStyle = {
-  width: '100%',
-  maxWidth: '580px',
-  background: 'var(--bg-glass-card)',
+  width: '95%',
+  maxWidth: '560px',
+  background: 'var(--bg-surface-solid)',
   border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-md)',
-  boxShadow: 'var(--shadow-lg)',
+  borderRadius: 'var(--radius-lg)',
+  overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
   maxHeight: '90vh',
-  overflow: 'hidden'
+  boxShadow: 'var(--shadow-card)',
 };
 
 const modalHeaderStyle = {
-  padding: '16px 20px',
-  borderBottom: '1px solid var(--border-color)',
   display: 'flex',
   justifyContent: 'space-between',
-  alignItems: 'center'
+  alignItems: 'center',
+  padding: '20px 24px',
+  borderBottom: '1px solid var(--border-color)',
 };
 
 const closeBtnStyle = {
   background: 'none',
   border: 'none',
-  fontSize: '1.4rem',
-  color: 'var(--text-muted)',
-  cursor: 'pointer'
+  color: 'var(--text-secondary)',
+  fontSize: '24px',
+  cursor: 'pointer',
+  padding: '0 4px',
 };
 
 const modalBodyStyle = {
-  padding: '20px',
+  padding: '24px',
   overflowY: 'auto',
   flex: 1
-};
-
-const scrollContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column'
 };
 
 const sectionTitleStyle = {
@@ -467,116 +490,11 @@ const sectionTitleStyle = {
   marginBottom: '10px'
 };
 
-const inputStyle = {
-  width: '100%',
-  padding: '8px 12px',
-  background: 'rgba(0, 0, 0, 0.2)',
-  border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-primary)',
-  fontSize: '0.8rem',
-  outline: 'none'
-};
-
-const addBtnStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-  padding: '8px 14px',
-  background: 'var(--color-violet-glow)',
-  border: '1px solid rgba(139, 92, 246, 0.4)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-primary)',
-  fontSize: '0.78rem',
-  fontWeight: '600',
-  cursor: 'pointer'
-};
-
-const blacklistTagStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  padding: '4px 10px',
-  background: 'rgba(244, 63, 94, 0.1)',
-  border: '1px solid rgba(244, 63, 94, 0.25)',
-  borderRadius: '12px',
-  color: 'var(--color-rose)',
-  fontSize: '0.72rem',
-  fontWeight: '500'
-};
-
 const modalFooterStyle = {
-  padding: '16px 20px',
-  borderTop: '1px solid var(--border-color)',
   display: 'flex',
   justifyContent: 'flex-end',
-  gap: '10px'
-};
-
-const cancelBtnStyle = {
-  padding: '8px 16px',
-  background: 'transparent',
-  border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--text-secondary)',
-  fontSize: '0.8rem',
-  cursor: 'pointer'
-};
-
-const saveBtnStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  padding: '8px 18px',
-  background: 'linear-gradient(135deg, var(--color-violet) 0%, var(--color-cyan) 100%)',
-  border: 'none',
-  borderRadius: 'var(--radius-sm)',
-  color: '#ffffff',
-  fontSize: '0.82rem',
-  fontWeight: '700',
-  cursor: 'pointer'
-};
-
-const loadingContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '40px 0',
-  gap: '12px'
-};
-
-const spinnerStyle = {
-  width: '24px',
-  height: '24px',
-  border: '3px solid rgba(255, 255, 255, 0.1)',
-  borderTopColor: 'var(--color-cyan)',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite'
-};
-
-const errorContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  padding: '10px 14px',
-  background: 'rgba(244, 63, 94, 0.1)',
-  border: '1px solid rgba(244, 63, 94, 0.3)',
-  borderRadius: 'var(--radius-sm)',
-  color: 'var(--color-rose)',
-  fontSize: '0.78rem',
-  marginBottom: '14px'
-};
-
-const successContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  padding: '10px 14px',
-  background: 'rgba(16, 185, 129, 0.1)',
-  border: '1px solid rgba(16, 185, 129, 0.3)',
-  borderRadius: 'var(--radius-sm)',
-  color: '#10b981',
-  fontSize: '0.78rem',
-  marginTop: '14px'
+  gap: '12px',
+  padding: '16px 24px',
+  borderTop: '1px solid var(--border-color)',
+  background: 'var(--bg-surface-solid)'
 };

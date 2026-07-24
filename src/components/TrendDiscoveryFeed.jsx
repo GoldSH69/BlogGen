@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2, Flame } from 'lucide-react';
+import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2, Flame, Zap } from 'lucide-react';
 import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub, closeMultipleTrendIssuesOnGithub } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
@@ -121,7 +121,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
   const parseTrendBody = (body) => {
-    if (!body) return { type: '기타', blogger: '알수없음', score: 'N/A', link: '#', content: '', group: '내 관심사', pubDate: '', sympathyCnt: 0, commentCnt: 0 };
+    if (!body) return { type: '기타', blogger: '알수없음', score: '80', link: '#', content: '', group: '통합 트렌드', pubDate: '', sympathyCnt: 0, commentCnt: 0, engagementScore: 0 };
 
     const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^\n\r]+)/i);
@@ -129,23 +129,38 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const linkMatch = body.match(/\[네이버 상세 본문 링크\]\(([^)]+)\)/i) || body.match(/\[원본\s*연결\s*링크\]\(([^)]+)\)/i) || body.match(/\[원본 상세 본문 링크\]\(([^)]+)\)/i);
     const groupMatch = body.match(/-\s*\*\*수집\s*그룹\*\*:\s*`?([^\n\r]+)/i);
     const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^\n\r]+)/i);
+    const engagementMatch = body.match(/-\s*\*\*반응도\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
-    const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '내 관심사';
-    const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '기타';
-    const parsedScore = scoreMatch ? scoreMatch[1].replace(/[`*]/g, '').trim() : 'N/A';
+    const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '통합 트렌드';
+    const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '네이버 블로그';
+    const parsedScore = scoreMatch ? scoreMatch[1].replace(/[`*]/g, '').trim() : '80';
     
     let rawBlogger = bloggerMatch ? bloggerMatch[1].replace(/[`*]/g, '').trim() : '작성자';
     let parsedBlogger = rawBlogger;
     let sympathyCnt = 0;
     let commentCnt = 0;
 
-    // Extract likes and comments count from blogger format: "BloggerName (공감 X개 / 댓글 Y개)" or "BloggerName (공감 X / 댓글 Y)"
-    const statsMatch = rawBlogger.match(/(.+?)\s*\(\s*공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?\s*\)/);
+    // 1) Match blogger format: "BloggerName (공감 X / 댓글 Y)" or "(공감 X개 / 댓글 Y개)"
+    const statsMatch = rawBlogger.match(/(.+?)\s*\(\s*공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?\s*\)/i) || body.match(/공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?/i);
     if (statsMatch) {
-      parsedBlogger = statsMatch[1].trim();
-      sympathyCnt = parseInt(statsMatch[2], 10);
-      commentCnt = parseInt(statsMatch[3], 10);
+      if (statsMatch.length === 4) {
+        parsedBlogger = statsMatch[1].trim();
+        sympathyCnt = parseInt(statsMatch[2], 10) || 0;
+        commentCnt = parseInt(statsMatch[3], 10) || 0;
+      } else if (statsMatch.length === 3) {
+        sympathyCnt = parseInt(statsMatch[1], 10) || 0;
+        commentCnt = parseInt(statsMatch[2], 10) || 0;
+      }
+    }
+
+    // 2) Match explicit engagement score line if present
+    let engagementScore = (sympathyCnt * 1.0) + (commentCnt * 2.0);
+    if (engagementMatch) {
+      const scoreValMatch = engagementMatch[1].match(/(\d+)/);
+      if (scoreValMatch) {
+        engagementScore = Math.max(engagementScore, parseInt(scoreValMatch[1], 10) || 0);
+      }
     }
 
     const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
@@ -160,6 +175,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       pubDate: parsedPubDate,
       sympathyCnt,
       commentCnt,
+      engagementScore,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -173,15 +189,24 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
   };
 
-  // Filter trends locally based on segmented group tab
-  const filteredTrends = trends.filter(issue => {
-    if (activeGroupTab === 'all') return true;
-    const parsed = parseTrendBody(issue.body);
-    if (activeGroupTab === 'my') return parsed.group === '내 관심사';
-    if (activeGroupTab === 'naver') return parsed.group === '네이버 핫토픽';
-    if (activeGroupTab === 'google') return parsed.group === '실시간 핫이슈';
-    if (activeGroupTab === 'radar') return parsed.group.includes('레이더') || parsed.group.includes('Radar') || parsed.group.includes('카테고리') || parsed.group.includes('Category');
-    return true;
+  // Sort trends: Naver Blog FIRST (ordered by engagementScore descending), Google News SECOND
+  const filteredTrends = [...trends].sort((a, b) => {
+    const parsedA = parseTrendBody(a.body);
+    const parsedB = parseTrendBody(b.body);
+    const isNewsA = parsedA.type === '구글 뉴스' || parsedA.group.includes('뉴스');
+    const isNewsB = parsedB.type === '구글 뉴스' || parsedB.group.includes('뉴스');
+
+    // Blogs first, News second
+    if (!isNewsA && isNewsB) return -1;
+    if (isNewsA && !isNewsB) return 1;
+
+    // If both are blogs, sort strictly by reactivity score descending (highest reactivity post #1 at top)
+    if (!isNewsA && !isNewsB) {
+      const scoreA = parsedA.engagementScore > 0 ? parsedA.engagementScore : (parseInt(parsedA.score, 10) || 0);
+      const scoreB = parsedB.engagementScore > 0 ? parsedB.engagementScore : (parseInt(parsedB.score, 10) || 0);
+      return scoreB - scoreA;
+    }
+    return 0;
   });
 
   return (
@@ -242,18 +267,19 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         display: 'flex',
         alignItems: 'center',
         justify: 'space-between',
-        padding: '10px 16px',
-        margin: '12px 16px 8px 16px',
-        background: 'linear-gradient(90deg, rgba(244, 63, 94, 0.12) 0%, rgba(6, 182, 212, 0.12) 100%)',
-        border: '1px solid rgba(244, 63, 94, 0.25)',
-        borderRadius: '10px',
+        padding: '12px 16px',
+        margin: '0 0 16px 0',
+        background: 'var(--color-violet-glow)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-sm)',
         fontSize: '0.82rem',
         fontWeight: '700',
         color: 'var(--text-primary)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>🔥 무키워드 반응도 (공감+댓글) 실시간 상위 핫템 통합 피드</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-cyan)', background: 'rgba(6, 182, 212, 0.15)', padding: '2px 8px', borderRadius: '12px' }}>
+          <Flame size={16} style={{ color: 'var(--color-violet)' }} />
+          <span>무키워드 반응도 (공감+댓글) 실시간 상위 핫템 통합 피드</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-violet)', background: 'var(--bg-surface-solid)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '12px' }}>
             실시간 랭킹 순 정렬
           </span>
         </div>
@@ -295,35 +321,52 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           <div style={cardsGridStyle}>
             {filteredTrends.map((issue) => {
               const parsed = parseTrendBody(issue.body);
-              const engagementScore = (parsed.sympathyCnt * 1.0) + (parsed.commentCnt * 2.0);
-              const isHighEngagement = engagementScore >= 5 || parsed.sympathyCnt >= 3 || parsed.commentCnt >= 2;
+              const isNews = parsed.type === '구글 뉴스' || parsed.group.includes('뉴스');
+              const displayScore = parsed.engagementScore > 0 
+                ? parsed.engagementScore 
+                : (parseInt(parsed.score, 10) || 85);
 
               return (
                 <div key={issue.id} className="trend-card animate-slide-up" style={cardStyle}>
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: '700',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        background: 'rgba(244, 63, 94, 0.15)',
-                        color: 'var(--color-rose)',
-                        border: '1px solid rgba(244, 63, 94, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}>
-                        <Flame size={12} />
-                        반응도: {engagementScore > 0 ? `${engagementScore}점` : '실시간 핫이슈'}
-                      </span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {isNews ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          padding: '3px 12px',
+                          borderRadius: '14px',
+                          background: 'rgba(59, 130, 246, 0.12)',
+                          color: '#3b82f6',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <Zap size={14} />
+                          ⚡ 실시간 이슈 뉴스
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          padding: '3px 12px',
+                          borderRadius: '14px',
+                          background: 'var(--color-rose-glow)',
+                          color: 'var(--color-rose)',
+                          border: '1px solid rgba(244, 63, 94, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <Flame size={14} />
+                          🔥 반응도 점수: {displayScore}점
+                        </span>
+                      )}
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '2px 6px', borderRadius: '4px' }}>
-                        클린지수: {parsed.score}
-                      </span>
                       <button 
                         onClick={(e) => handleDeleteIssue(e, issue.number)}
                         style={deleteBtnStyle}
@@ -341,19 +384,19 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
                   {/* Blogger & Traffic Stats Row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>
-                    <span style={{ fontWeight: '500' }}>✍️ {parsed.blogger}</span>
-                    {(parsed.sympathyCnt > 0 || parsed.commentCnt > 0) && (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {parsed.sympathyCnt > 0 && (
-                          <span style={{ color: 'var(--color-rose)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            ❤️ {parsed.sympathyCnt}
-                          </span>
-                        )}
-                        {parsed.commentCnt > 0 && (
-                          <span style={{ color: 'var(--color-cyan)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            💬 {parsed.commentCnt}
-                          </span>
-                        )}
+                    <span style={{ fontWeight: '600' }}>{isNews ? `📰 ${parsed.blogger}` : `✍️ ${parsed.blogger}`}</span>
+                    {isNews ? (
+                      <span style={{ color: '#3b82f6', fontWeight: '700' }}>
+                        📈 실시간 급상승 핫이슈
+                      </span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--color-rose)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          ❤️ 공감 {parsed.sympathyCnt}개
+                        </span>
+                        <span style={{ color: 'var(--color-violet)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          💬 댓글 {parsed.commentCnt}개
+                        </span>
                       </div>
                     )}
                   </div>
