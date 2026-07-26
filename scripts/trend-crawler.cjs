@@ -109,6 +109,92 @@ function convertToMobileBlogUrl(url) {
   return url;
 }
 
+// Naver Blog Sympathy (Likes) & Comment Count Real-time Scraper
+async function fetchNaverBlogReactions(link) {
+  let sympathyCnt = 0;
+  let commentCnt = 0;
+  if (!link || (!link.includes('blog.naver.com') && !link.includes('m.blog.naver.com'))) {
+    return { sympathyCnt, commentCnt };
+  }
+
+  try {
+    let blogId = '';
+    let logNo = '';
+
+    const urlObj = new URL(link);
+    if (urlObj.searchParams.has('blogId') && urlObj.searchParams.has('logNo')) {
+      blogId = urlObj.searchParams.get('blogId');
+      logNo = urlObj.searchParams.get('logNo');
+    } else {
+      const match = urlObj.pathname.match(/\/([^/]+)\/(\d+)/);
+      if (match) {
+        blogId = match[1];
+        logNo = match[2];
+      }
+    }
+
+    if (blogId && logNo) {
+      // 1. Fetch Sympathy (Likes) Count via Naver LikeIt API
+      const likeUrl = `https://common.like.naver.com/v1/search/contents?suppress_response_codes=true&q=BLOG%5B${blogId}_${logNo}%5D`;
+      const likeRes = await fetch(likeUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': `https://m.blog.naver.com/${blogId}/${logNo}`
+        }
+      });
+      if (likeRes.ok) {
+        const likeJson = await likeRes.json();
+        const contents = likeJson.contents || (likeJson.result && likeJson.result.contents) || [];
+        if (contents.length > 0 && Array.isArray(contents[0].reactions)) {
+          sympathyCnt = contents[0].reactions.reduce((sum, r) => sum + (r.count || 0), 0);
+        }
+      }
+
+      // 2. Fetch Comment Count via Mobile HTML Property
+      const mobileUrl = `https://m.blog.naver.com/${blogId}/${logNo}`;
+      const mobileRes = await fetch(mobileUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      if (mobileRes.ok) {
+        const mobileHtml = await mobileRes.text();
+        const commentMatch = mobileHtml.match(/commentCount="(\d+)"/i) || mobileHtml.match(/commentCount\s*=\s*"(\d+)"/i) || mobileHtml.match(/id="[^"]*commentCount"[^>]*>\s*(\d+)/i);
+        if (commentMatch) {
+          commentCnt = parseInt(commentMatch[1], 10) || 0;
+        }
+      }
+    }
+  } catch (e) {
+    // Silent fallback
+  }
+
+  return { sympathyCnt, commentCnt };
+}
+
+async function enrichCandidatesWithReactions(candidates) {
+  if (!candidates || candidates.length === 0) return;
+  console.log(`- [반응도 파서] 총 ${candidates.length}개 후보 포스팅의 실시간 공감수 및 댓글수 파싱 중...`);
+  
+  await Promise.all(candidates.map(async (cand) => {
+    if (cand.type === '네이버 블로그' && cand.link) {
+      const { sympathyCnt, commentCnt } = await fetchNaverBlogReactions(cand.link);
+      cand.sympathyCnt = Math.max(cand.sympathyCnt || 0, sympathyCnt);
+      cand.commentCnt = Math.max(cand.commentCnt || 0, commentCnt);
+    } else {
+      cand.sympathyCnt = cand.sympathyCnt || 0;
+      cand.commentCnt = cand.commentCnt || 0;
+    }
+
+    // engagementScore = (sympathy * 1.0) + (comment * 2.0)
+    cand.engagementScore = (cand.sympathyCnt * 1.0) + (cand.commentCnt * 2.0);
+
+    // Format bloggername
+    const rawBlogger = (cand.bloggername || '네이버 블로거').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
+    cand.bloggername = `${rawBlogger} (공감 ${cand.sympathyCnt}개 / 댓글 ${cand.commentCnt}개)`;
+  }));
+}
+
 // Full Text Scraper Engine (Zero-Dependency)
 async function scrapeFullText(link, type) {
   let url = link;
@@ -852,11 +938,16 @@ async function run() {
     }
   }
 
-  // --- 4. 정렬 및 각 그룹별 상위 5개 선발 (총 20개 카드 구성) ---
-  group1Candidates.sort((a, b) => b.score - a.score);
-  group2Candidates.sort((a, b) => b.score - a.score);
-  group3Candidates.sort((a, b) => b.score - a.score);
-  group4Candidates.sort((a, b) => b.score - a.score);
+  // --- 4. 반응도 데이터(공감/댓글) 비동기 수집 & 최고 반응도 순 내림차순 정렬 ---
+  await enrichCandidatesWithReactions(group1Candidates);
+  await enrichCandidatesWithReactions(group2Candidates);
+  await enrichCandidatesWithReactions(group3Candidates);
+  await enrichCandidatesWithReactions(group4Candidates);
+
+  group1Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+  group2Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+  group3Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+  group4Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
 
   const topG1 = group1Candidates.slice(0, 5);
   const topG2 = group2Candidates.slice(0, 5);
@@ -938,6 +1029,7 @@ async function run() {
 - **원글 발행 시간**: \`${trend.pubDate || ''}\`
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
+- **반응도 스코어**: \`${trend.engagementScore || 0}점 (공감 ${trend.sympathyCnt || 0}개 / 댓글 ${trend.commentCnt || 0}개)\`
 - **클린 필터링 스코어**: \`${trend.score}점 / 100점\`
 
 ### 📝 원본 정보 및 원고 소스 텍스트

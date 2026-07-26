@@ -161,6 +161,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       if (scoreValMatch) {
         engagementScore = Math.max(engagementScore, parseInt(scoreValMatch[1], 10) || 0);
       }
+      const engagementStats = engagementMatch[1].match(/공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?/i);
+      if (engagementStats) {
+        sympathyCnt = Math.max(sympathyCnt, parseInt(engagementStats[1], 10) || 0);
+        commentCnt = Math.max(commentCnt, parseInt(engagementStats[2], 10) || 0);
+        if (engagementScore === 0) {
+          engagementScore = (sympathyCnt * 1.0) + (commentCnt * 2.0);
+        }
+      }
     }
 
     const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
