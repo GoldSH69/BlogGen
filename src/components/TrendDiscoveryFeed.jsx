@@ -4,6 +4,7 @@ import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflo
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
+  const [sortMode, setSortMode] = useState('engagement'); // 'engagement' vs 'category'
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
@@ -116,50 +117,33 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const engagementMatch = body.match(/-\s*\*\*반응도\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
-    const keywordMatch = (title || '').match(/^\[트렌드\]\s*([^:]+):/i);
-    const categoryName = keywordMatch ? keywordMatch[1].trim() : '일반';
-
-    const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '통합 트렌드';
-    const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '네이버 블로그';
-    const parsedScore = scoreMatch ? scoreMatch[1].replace(/[`*]/g, '').trim() : '80';
+    const parsedType = channelMatch ? channelMatch[1].replace(/`/g, '').trim() : '네이버 블로그';
+    const parsedBlogger = bloggerMatch ? bloggerMatch[1].replace(/`/g, '').trim() : '작성자 미상';
+    const parsedScore = scoreMatch ? scoreMatch[1].replace(/`/g, '').trim() : '85';
+    const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
+    const parsedGroup = groupMatch ? groupMatch[1].replace(/`/g, '').trim() : '통합 트렌드';
+    const parsedPubDate = pubDateMatch ? pubDateMatch[1].replace(/`/g, '').trim() : '';
     
-    let rawBlogger = bloggerMatch ? bloggerMatch[1].replace(/[`*]/g, '').trim() : '작성자';
-    let parsedBlogger = rawBlogger;
+    // Parse engagement numbers
     let sympathyCnt = 0;
     let commentCnt = 0;
-
-    // 1) Match blogger format: "BloggerName (공감 X / 댓글 Y)" or "(공감 X개 / 댓글 Y개)"
-    const statsMatch = rawBlogger.match(/(.+?)\s*\(\s*공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?\s*\)/i) || body.match(/공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?/i);
-    if (statsMatch) {
-      if (statsMatch.length === 4) {
-        parsedBlogger = statsMatch[1].trim();
-        sympathyCnt = parseInt(statsMatch[2], 10) || 0;
-        commentCnt = parseInt(statsMatch[3], 10) || 0;
-      } else if (statsMatch.length === 3) {
-        sympathyCnt = parseInt(statsMatch[1], 10) || 0;
-        commentCnt = parseInt(statsMatch[2], 10) || 0;
-      }
-    }
-
-    // 2) Match explicit engagement score line if present
-    let engagementScore = (sympathyCnt * 1.0) + (commentCnt * 2.0);
+    let engagementScore = 0;
     if (engagementMatch) {
-      const scoreValMatch = engagementMatch[1].match(/(\d+)/);
-      if (scoreValMatch) {
-        engagementScore = Math.max(engagementScore, parseInt(scoreValMatch[1], 10) || 0);
-      }
-      const engagementStats = engagementMatch[1].match(/공감\s*(\d+)개?\s*\/\s*댓글\s*(\d+)개?/i);
-      if (engagementStats) {
-        sympathyCnt = Math.max(sympathyCnt, parseInt(engagementStats[1], 10) || 0);
-        commentCnt = Math.max(commentCnt, parseInt(engagementStats[2], 10) || 0);
-        if (engagementScore === 0) {
-          engagementScore = (sympathyCnt * 1.0) + (commentCnt * 2.0);
-        }
-      }
+      const engText = engagementMatch[1].replace(/`/g, '').trim();
+      const engScoreM = engText.match(/^([0-9.]+)/);
+      const symM = engText.match(/공감\s*([0-9,]+)/i);
+      const comM = engText.match(/댓글\s*([0-9,]+)/i);
+      if (engScoreM) engagementScore = parseFloat(engScoreM[1]) || 0;
+      if (symM) sympathyCnt = parseInt(symM[1].replace(/,/g, ''), 10) || 0;
+      if (comM) commentCnt = parseInt(comM[1].replace(/,/g, ''), 10) || 0;
     }
 
-    const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
-    const parsedPubDate = pubDateMatch ? pubDateMatch[1].replace(/[`*]/g, '').trim() : '';
+    // Extract categoryName from title [트렌드] (카테고리명): 제목
+    let categoryName = '일반';
+    const titleCatMatch = title.match(/^\[트렌드\]\s*([^:]+):/i);
+    if (titleCatMatch) {
+      categoryName = titleCatMatch[1].trim();
+    }
 
     return {
       type: parsedType,
@@ -202,23 +186,57 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     );
   };
 
-  // Sort trends: Naver Blog FIRST (ordered strictly by engagementScore descending), Realtime News LAST (bottom)
-  const filteredTrends = [...trends].sort((a, b) => {
-    const parsedA = parseTrendBody(a.body, a.title);
-    const parsedB = parseTrendBody(b.body, b.title);
-    const isNewsA = isNewsPost(parsedA, a);
-    const isNewsB = isNewsPost(parsedB, b);
+  // Sort and Deduplicate trends:
+  // 1. Separate Blogs and News
+  // 2. Deduplicate News (keep 1 unique news item per distinct news topic)
+  // 3. Sort Blogs according to sortMode ('engagement' vs 'category')
+  // 4. Combine: Blogs FIRST, News ALWAYS LAST at bottom!
+  const getProcessedTrends = () => {
+    const blogList = [];
+    const newsList = [];
 
-    // Blogs FIRST, News LAST
-    if (!isNewsA && isNewsB) return -1;
-    if (isNewsA && !isNewsB) return 1;
+    trends.forEach(issue => {
+      const parsed = parseTrendBody(issue.body, issue.title);
+      const isNews = isNewsPost(parsed, issue);
+      if (isNews) {
+        newsList.push({ issue, parsed });
+      } else {
+        blogList.push({ issue, parsed });
+      }
+    });
 
-    // If both are blogs, sort strictly by calculated reactivity score descending (highest reactivity post #1 at top)
-    if (!isNewsA && !isNewsB) {
-      return parsedB.engagementScore - parsedA.engagementScore;
+    // Sort Blog Posts
+    if (sortMode === 'category') {
+      blogList.sort((a, b) => {
+        const catCompare = a.parsed.categoryName.localeCompare(b.parsed.categoryName, 'ko-KR');
+        if (catCompare !== 0) return catCompare;
+        return b.parsed.engagementScore - a.parsed.engagementScore;
+      });
+    } else { // 'engagement' (default)
+      blogList.sort((a, b) => b.parsed.engagementScore - a.parsed.engagementScore);
     }
-    return b.id - a.id;
-  });
+
+    // Deduplicate News List (Keep 1 unique news item per distinct topic/title)
+    const uniqueNewsMap = new Map();
+    newsList.forEach(item => {
+      const normalizedTitle = item.issue.title
+        .replace(/^\[트렌드\]\s*/, '')
+        .replace(/[-_].*$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!uniqueNewsMap.has(normalizedTitle)) {
+        uniqueNewsMap.set(normalizedTitle, item);
+      }
+    });
+    const uniqueNewsList = Array.from(uniqueNewsMap.values());
+
+    return [
+      ...blogList.map(item => item.issue),
+      ...uniqueNewsList.map(item => item.issue)
+    ];
+  };
+
+  const filteredTrends = getProcessedTrends();
 
   return (
     <div className="glass-card" style={feedPanelStyle}>
@@ -273,11 +291,11 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         </div>
       </div>
 
-      {/* Unified Feed Banner */}
+      {/* Unified Feed Banner & Sort Toggle */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         padding: '12px 16px',
         margin: '0 0 16px 0',
         background: 'var(--color-violet-glow)',
@@ -285,15 +303,58 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         borderRadius: 'var(--radius-sm)',
         fontSize: '0.82rem',
         fontWeight: '700',
-        color: 'var(--text-primary)'
+        color: 'var(--text-primary)',
+        flexWrap: 'wrap',
+        gap: '10px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Flame size={16} style={{ color: 'var(--color-violet)' }} />
-          <span>무키워드 반응도 (공감+댓글) 실시간 상위 핫템 통합 피드</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-violet)', background: 'var(--bg-surface-solid)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '12px' }}>
-            실시간 랭킹 순 정렬
-          </span>
+          <span>트렌드 핫템 피드</span>
         </div>
+
+        {/* Sort Mode Toggle Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-solid)', padding: '3px 4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <button
+            onClick={() => setSortMode('engagement')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              background: sortMode === 'engagement' ? 'var(--color-violet)' : 'transparent',
+              color: sortMode === 'engagement' ? '#fff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Flame size={13} />
+            🔥 반응도순
+          </button>
+          <button
+            onClick={() => setSortMode('category')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              background: sortMode === 'category' ? 'var(--color-violet)' : 'transparent',
+              color: sortMode === 'category' ? '#fff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            📂 카테고리순
+          </button>
+        </div>
+
         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
           총 {filteredTrends.length}개 탐지됨
         </span>

@@ -297,9 +297,9 @@ async function scrapeFullText(link, type) {
   }
 }
 
-// 구글 트렌드 RSS 한국 실시간 급상승 키워드 파서
-async function fetchGoogleTrendingKeywords() {
-  console.log('- 구글 트렌드 RSS에서 한국 실시간 급상승 키워드 수집 중...');
+// 구글 트렌드 RSS 한국 실시간 급상승 키워드 파서 (상위 9개 파싱)
+async function fetchGoogleTrendingKeywords(limitCount = 9) {
+  console.log(`- 구글 트렌드 RSS에서 한국 실시간 급상승 키워드 상위 ${limitCount}개 수집 중...`);
   const keywords = [];
   try {
     const res = await fetch('https://trends.google.com/trending/rss?geo=KR', {
@@ -312,7 +312,7 @@ async function fetchGoogleTrendingKeywords() {
       const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
       let match;
       let count = 0;
-      while ((match = itemPattern.exec(xml)) !== null && count < 8) {
+      while ((match = itemPattern.exec(xml)) !== null && count < limitCount) {
         const itemContent = match[1];
         const titleMatch = itemContent.match(/<title>([\s\S]*?)<\/title>/i);
         if (titleMatch && titleMatch[1]) {
@@ -331,7 +331,7 @@ async function fetchGoogleTrendingKeywords() {
   return keywords;
 }
 
-// 구글 뉴스 RSS 직접 검색 및 수집 엔진
+// 구글 뉴스 RSS 직접 검색 및 수집 엔진 (키워드당 1개의 대표 뉴스만 선발)
 async function fetchGoogleNewsResults(keyword) {
   const items = [];
   try {
@@ -345,7 +345,7 @@ async function fetchGoogleNewsResults(keyword) {
       const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
       let match;
       let count = 0;
-      while ((match = itemPattern.exec(xml)) !== null && count < 3) {
+      while ((match = itemPattern.exec(xml)) !== null && count < 1) { // 키워드당 대표 기사 1개만 선발
         const content = match[1];
         const titleM = content.match(/<title>([\s\S]*?)<\/title>/i);
         const linkM = content.match(/<link>([\s\S]*?)<\/link>/i);
@@ -418,7 +418,7 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
 }
 
 async function run() {
-  console.log('TCCG Trend Crawler 시작 (설정 기반 100% 정밀 수집 엔진)...');
+  console.log('TCCG Trend Crawler 시작 (서로 다른 실시간 뉴스 9개 단일화 정밀 시스템)...');
 
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -454,7 +454,7 @@ async function run() {
   const minCleanScore = unified.filtering?.minCleanScore ?? 75;
   const customBlacklist = unified.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"];
   const minEngagementScore = unified.engagementRules?.minEngagementScore ?? 1; // Block 0-engagement posts!
-  const MAX_AGE_DAYS = 5; // 오늘 기준 최근 5일 이내 작성글만 허용 (지침 반영)
+  const MAX_AGE_DAYS = 5; // 오늘 기준 최근 5일 이내 작성글만 허용
 
   const categoryMap = {
     5: '문학·책', 6: '영화', 8: '미술·디자인', 7: '공연·전시', 11: '음악', 9: '드라마', 12: '스타·연예인', 13: '만화·애니', 10: '방송',
@@ -512,9 +512,8 @@ async function run() {
 
           if (!link) continue;
 
-          // 최근 5일 이내 작성 날짜 검증
           if (!isRecentPost(post.addDate, MAX_AGE_DAYS)) {
-            continue; // 5일 초과 작성글은 엄격 차단
+            continue;
           }
 
           const sympathy = post.sympathyCount ?? post.sympathyCnt ?? 0;
@@ -544,12 +543,10 @@ async function run() {
           }
         }
 
-        // 반응도 수집 및 0점 포스팅 자동 차단
         await enrichCandidatesWithReactions(categoryCandidates);
         const validCategoryCandidates = categoryCandidates.filter(c => (c.engagementScore || 0) >= minEngagementScore);
         validCategoryCandidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
 
-        // 카테고리당 최고 반응도 핫글 상위 3개씩 엄선!
         const top3ForCategory = validCategoryCandidates.slice(0, 3);
         console.log(`  => [${catName}] 반응도 컷트라인 통과 ${validCategoryCandidates.length}개 중 상위 ${top3ForCategory.length}개 선발 완료`);
         selectedBlogs.push(...top3ForCategory);
@@ -560,42 +557,39 @@ async function run() {
   }
 
   // =============================================================
-  // [트랙 2] 구글 실시간 급상승 트렌드 언론사 핫뉴스 수집
+  // [트랙 2] 구글 실시간 급상승 9개 키워드 ➔ 9개 서로 다른 뉴스 단일화 수집
   // =============================================================
   console.log('\n=======================================');
-  console.log('[트랙 2] 구글 실시간 급상승 트렌드 뉴스 수집 시작...');
+  console.log('[트랙 2] 구글 실시간 급상승 9개 키워드 핫뉴스 수집 시작...');
   console.log('=======================================');
 
-  const realtimeKeywords = await fetchGoogleTrendingKeywords();
+  const realtimeKeywords = await fetchGoogleTrendingKeywords(9); // 정확히 9개 키워드 수집
 
-  for (const keyword of realtimeKeywords.slice(0, 5)) {
+  for (const keyword of realtimeKeywords) {
     try {
       const googleNewsItems = await fetchGoogleNewsResults(keyword);
       if (googleNewsItems && googleNewsItems.length > 0) {
-        const filtered = googleNewsItems.map(news => {
-          const { score, reasons } = calculateCleanScore(
-            { title: news.title, description: news.description },
-            customBlacklist,
-            true
-          );
-          return { ...news, keyword, score, reasons };
-        }).filter(news => news.score >= minCleanScore && isRecentPost(news.pubDate, MAX_AGE_DAYS));
-
-        newsCandidates.push(...filtered);
+        const topNewsItem = googleNewsItems[0]; // 키워드당 대표 뉴스 1개만 선발
+        const { score, reasons } = calculateCleanScore(
+          { title: topNewsItem.title, description: topNewsItem.description },
+          customBlacklist,
+          true
+        );
+        if (score >= minCleanScore && isRecentPost(topNewsItem.pubDate, MAX_AGE_DAYS)) {
+          newsCandidates.push({ ...topNewsItem, score, reasons });
+        }
       }
     } catch (e) {
       console.error(`실시간 뉴스 수집 예외 (${keyword}):`, e.message);
     }
   }
 
-  newsCandidates.sort((a, b) => b.score - a.score);
-  const topNews = newsCandidates.slice(0, 5);
-  console.log(`=> 실시간 뉴스 최종 ${topNews.length}개 선발`);
+  console.log(`=> 서로 다른 실시간 핫뉴스 최종 ${newsCandidates.length}개 선발 완료`);
 
   // =============================================================
   // [통합] 최종 선발 및 중복 제거
   // =============================================================
-  const topTrends = [...selectedBlogs, ...topNews];
+  const topTrends = [...selectedBlogs, ...newsCandidates];
   const uniqueTrendsMap = new Map();
   for (const trend of topTrends) {
     const key = (trend.link || trend.title).trim();
@@ -605,7 +599,7 @@ async function run() {
   }
   const finalUniqueTrends = Array.from(uniqueTrendsMap.values());
 
-  console.log(`\n최종 수집 완료: 총 ${finalUniqueTrends.length}개 (블로그 ${selectedBlogs.length}개, 뉴스 ${topNews.length}개)`);
+  console.log(`\n최종 수집 완료: 총 ${finalUniqueTrends.length}개 (블로그 ${selectedBlogs.length}개, 뉴스 ${newsCandidates.length}개)`);
 
   // 원본 전체 본문 스크래핑
   console.log('\n--- 원본 본문 스크래핑 시작 ---');
