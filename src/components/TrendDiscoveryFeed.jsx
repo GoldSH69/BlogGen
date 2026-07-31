@@ -331,7 +331,6 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
               gap: '4px'
             }}
           >
-            <Flame size={13} />
             🔥 반응도순
           </button>
           <button
@@ -414,7 +413,6 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                           alignItems: 'center',
                           gap: '4px'
                         }}>
-                          <Zap size={13} />
                           ⚡ 실시간 뉴스
                         </span>
                       ) : (
@@ -445,7 +443,6 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                             alignItems: 'center',
                             gap: '4px'
                           }}>
-                            <Flame size={13} />
                             🔥 반응도: {displayScore}점
                           </span>
                         </>
