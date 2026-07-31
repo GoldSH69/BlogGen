@@ -540,12 +540,16 @@ async function run() {
     filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true }
   };
 
-  // 4그룹 "네이버 카테고리 인기글" 설정 바인딩 & 폴백 프리셋
+  // 4그룹 "네이버 카테고리 인기글" 설정 바인딩 & 폴백 프리셋 (unifiedTrend 연동)
+  const unifiedTrend = config.unifiedTrend || {};
   const naverCategoryPopular = config.naverCategoryPopular || {
-    categories: [30, 33, 29, 14],
-    sources: { naverBlog: true, naverNews: false, naverShopping: false },
-    filtering: { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
+    categories: unifiedTrend.categories || [30, 33, 29],
+    sources: unifiedTrend.sources || { naverBlog: true, naverNews: false, naverShopping: false },
+    filtering: unifiedTrend.filtering || { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
   };
+  if (unifiedTrend.categories && Array.isArray(unifiedTrend.categories)) {
+    naverCategoryPopular.categories = unifiedTrend.categories;
+  }
 
 
   // -------------------------------------------------------------
@@ -836,7 +840,9 @@ async function run() {
     30: 'IT·컴퓨터', 31: '사회·정치', 32: '건강·의학', 33: '비즈니스·경제', 35: '어학·외국어', 34: '교육·학문'
   };
 
-  const selectedCategories = naverCategoryPopular.categories || [30, 33, 29, 14];
+  const selectedCategories = (config.unifiedTrend && Array.isArray(config.unifiedTrend.categories)) 
+    ? config.unifiedTrend.categories 
+    : (naverCategoryPopular.categories || [30, 33, 29]);
   
   for (const seq of selectedCategories) {
     const catName = categoryMap[seq] || `카테고리 ${seq}`;
