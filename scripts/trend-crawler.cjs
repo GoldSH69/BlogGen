@@ -159,9 +159,17 @@ async function fetchNaverBlogReactions(link) {
       });
       if (mobileRes.ok) {
         const mobileHtml = await mobileRes.text();
-        const commentMatch = mobileHtml.match(/commentCount="(\d+)"/i) || mobileHtml.match(/commentCount\s*=\s*"(\d+)"/i) || mobileHtml.match(/id="[^"]*commentCount"[^>]*>\s*(\d+)/i);
+        const commentMatch = 
+          mobileHtml.match(/commentCount="(\d+)"/i) || 
+          mobileHtml.match(/commentCount\s*=\s*"(\d+)"/i) || 
+          mobileHtml.match(/"commentCount"\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/commentCount\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/comment_count\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/_commentCount\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/id="[^"]*commentCount"[^>]*>\s*([0-9,]+)/i) ||
+          mobileHtml.match(/class="[^"]*btn_comment[^"]*"[^>]*>\s*([0-9,]+)/i);
         if (commentMatch) {
-          commentCnt = parseInt(commentMatch[1], 10) || 0;
+          commentCnt = parseInt(commentMatch[1].replace(/,/g, ''), 10) || 0;
         }
       }
     }
