@@ -126,7 +126,9 @@ async function fetchNaverBlogReactions(link) {
       blogId = urlObj.searchParams.get('blogId');
       logNo = urlObj.searchParams.get('logNo');
     } else {
-      const match = urlObj.pathname.match(/\/([^/]+)\/(\d+)/);
+      const match = urlObj.pathname.match(/\/([^/]+)\/(\d+)/) || 
+                    link.match(/blogId=([^&]+).*logNo=(\d+)/i) || 
+                    link.match(/blog\.naver\.com\/([^/?#]+)\/(\d+)/i);
       if (match) {
         blogId = match[1];
         logNo = match[2];
@@ -150,7 +152,7 @@ async function fetchNaverBlogReactions(link) {
         }
       }
 
-      // 2. Fetch Comment Count via Mobile HTML Property
+      // 2. Fetch Mobile HTML to parse Comment Count and Sympathy Fallback (0 Extra Network Calls)
       const mobileUrl = `https://m.blog.naver.com/${blogId}/${logNo}`;
       const mobileRes = await fetch(mobileUrl, {
         headers: {
@@ -159,6 +161,8 @@ async function fetchNaverBlogReactions(link) {
       });
       if (mobileRes.ok) {
         const mobileHtml = await mobileRes.text();
+        
+        // Comment count extraction
         const commentMatch = 
           mobileHtml.match(/commentCount="(\d+)"/i) || 
           mobileHtml.match(/commentCount\s*=\s*"(\d+)"/i) || 
@@ -170,6 +174,19 @@ async function fetchNaverBlogReactions(link) {
           mobileHtml.match(/class="[^"]*btn_comment[^"]*"[^>]*>\s*([0-9,]+)/i);
         if (commentMatch) {
           commentCnt = parseInt(commentMatch[1].replace(/,/g, ''), 10) || 0;
+        }
+
+        // Sympathy count extraction fallback (in case LikeIt API returned empty or failed)
+        const sympathyMatch = 
+          mobileHtml.match(/"sympathyCount"\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/sympathyCount\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/sympathy_count\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/_sympathyCount\s*:\s*"?([0-9,]+)"?/i) ||
+          mobileHtml.match(/id="[^"]*sympathyCount"[^>]*>\s*([0-9,]+)/i) ||
+          mobileHtml.match(/class="[^"]*u_cnt[^"]*"[^>]*>\s*([0-9,]+)/i);
+        if (sympathyMatch) {
+          const htmlSympathy = parseInt(sympathyMatch[1].replace(/,/g, ''), 10) || 0;
+          sympathyCnt = Math.max(sympathyCnt, htmlSympathy);
         }
       }
     }
@@ -740,49 +757,7 @@ async function run() {
       console.error('실시간 구글 뉴스 직접 수집 실패:', e.message);
     }
 
-    const encodedKeyword = encodeURIComponent(keyword);
-
-    if (realtimeHotIssue.sources.naverBlog) {
-      try {
-        const displayCount = 10;
-        const urls = [
-          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
-          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
-        ];
-        const processedLinks = new Set();
-        for (const url of urls) {
-          const res = await fetch(url, {
-            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const items = data.items || [];
-            for (const item of items) {
-              if (processedLinks.has(item.link)) continue;
-              processedLinks.add(item.link);
-              const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
-              const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
-              if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-                group3Candidates.push({
-                  keyword,
-                  type: '네이버 블로그',
-                  title: cleanHtml(item.title),
-                  description: cleanHtml(item.description),
-                  link: item.link,
-                  bloggername: item.bloggername,
-                  score,
-                  reasons,
-                  groupName: '실시간 핫이슈',
-                  pubDate: formatPostdate(item.postdate)
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error('실시간 블로그 검색 실패:', e.message);
-      }
-    }
+    // Group 3 (실시간 핫이슈)는 순수 언론사 핫뉴스 기사(네이버 뉴스 & 구글 뉴스) 전용 수집
 
     if (realtimeHotIssue.sources.naverNews) {
       try {

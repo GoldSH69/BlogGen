@@ -120,8 +120,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   };
 
   // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
-  const parseTrendBody = (body) => {
-    if (!body) return { type: '기타', blogger: '알수없음', score: '80', link: '#', content: '', group: '통합 트렌드', pubDate: '', sympathyCnt: 0, commentCnt: 0, engagementScore: 0 };
+  const parseTrendBody = (body, title = '') => {
+    if (!body) return { type: '기타', blogger: '알수없음', score: '80', link: '#', content: '', group: '통합 트렌드', pubDate: '', sympathyCnt: 0, commentCnt: 0, engagementScore: 0, categoryName: '일반' };
 
     const scoreMatch = body.match(/-\s*\*\*클린\s*필터링\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const channelMatch = body.match(/-\s*\*\*수집\s*채널\*\*:\s*`?([^\n\r]+)/i);
@@ -131,6 +131,9 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^\n\r]+)/i);
     const engagementMatch = body.match(/-\s*\*\*반응도\s*스코어\*\*:\s*`?([^\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
+
+    const keywordMatch = (title || '').match(/^\[트렌드\]\s*([^:]+):/i);
+    const categoryName = keywordMatch ? keywordMatch[1].trim() : '일반';
 
     const parsedGroup = groupMatch ? groupMatch[1].replace(/[`*]/g, '').trim() : '통합 트렌드';
     const parsedType = channelMatch ? channelMatch[1].replace(/[`*]/g, '').trim() : '네이버 블로그';
@@ -184,6 +187,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       sympathyCnt,
       commentCnt,
       engagementScore,
+      categoryName,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -216,8 +220,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   // Sort trends: Naver Blog FIRST (ordered strictly by engagementScore descending), Realtime News LAST (bottom)
   const filteredTrends = [...trends].sort((a, b) => {
-    const parsedA = parseTrendBody(a.body);
-    const parsedB = parseTrendBody(b.body);
+    const parsedA = parseTrendBody(a.body, a.title);
+    const parsedB = parseTrendBody(b.body, b.title);
     const isNewsA = isNewsPost(parsedA, a);
     const isNewsB = isNewsPost(parsedB, b);
 
@@ -343,7 +347,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         ) : (
           <div style={cardsGridStyle}>
             {filteredTrends.map((issue) => {
-              const parsed = parseTrendBody(issue.body);
+              const parsed = parseTrendBody(issue.body, issue.title);
               const isNews = isNewsPost(parsed, issue);
               const displayScore = parsed.engagementScore;
 
@@ -351,13 +355,29 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                 <div key={issue.id} className="trend-card animate-slide-up" style={cardStyle}>
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      {/* Category Badge */}
+                      <span style={{
+                        fontSize: '0.73rem',
+                        fontWeight: '800',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: 'rgba(168, 85, 247, 0.15)',
+                        color: '#c084fc',
+                        border: '1px solid rgba(168, 85, 247, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        📂 카테고리: {parsed.categoryName}
+                      </span>
+
                       {isNews ? (
                         <span style={{
-                          fontSize: '0.75rem',
+                          fontSize: '0.73rem',
                           fontWeight: '800',
-                          padding: '3px 12px',
-                          borderRadius: '14px',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
                           background: 'rgba(59, 130, 246, 0.12)',
                           color: '#3b82f6',
                           border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -365,15 +385,15 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                           alignItems: 'center',
                           gap: '4px'
                         }}>
-                          <Zap size={14} />
-                          ⚡ 실시간 이슈 뉴스
+                          <Zap size={13} />
+                          ⚡ 실시간 뉴스
                         </span>
                       ) : (
                         <span style={{
-                          fontSize: '0.75rem',
+                          fontSize: '0.73rem',
                           fontWeight: '800',
-                          padding: '3px 12px',
-                          borderRadius: '14px',
+                          padding: '3px 10px',
+                          borderRadius: '12px',
                           background: 'var(--color-rose-glow)',
                           color: 'var(--color-rose)',
                           border: '1px solid rgba(244, 63, 94, 0.3)',
@@ -381,8 +401,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                           alignItems: 'center',
                           gap: '4px'
                         }}>
-                          <Flame size={14} />
-                          🔥 반응도 점수: {displayScore}점
+                          <Flame size={13} />
+                          🔥 반응도: {displayScore}점
                         </span>
                       )}
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
