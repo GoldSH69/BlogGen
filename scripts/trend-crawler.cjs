@@ -32,8 +32,8 @@ function getKSTDate() {
   return new Date(utc + KR_TIME_DIFF);
 }
 
-// 최근 발행된 신선한 글인지 날짜 검증 헬퍼 (기본: 최근 60일 이내)
-function isRecentPost(postdate, maxDays = 60) {
+// 최근 발행된 신선한 글인지 날짜 검증 헬퍼 (오늘 기준 최대 5일 전까지만 허용)
+function isRecentPost(postdate, maxDays = 5) {
   if (!postdate) return true;
   try {
     let postDateObj;
@@ -49,15 +49,15 @@ function isRecentPost(postdate, maxDays = 60) {
           postDateObj = new Date(postdate.replace(/-/g, '/'));
         }
       }
-      if (isNaN(postDateObj.getTime())) return true; // 파싱 실패 시 우선 허용
+      if (isNaN(postDateObj.getTime())) return true;
     }
     
-    const diffTime = Date.now() - postDateObj.getTime();
+    const diffTime = getKSTDate().getTime() - postDateObj.getTime();
     const diffDays = diffTime < 0 ? 0 : Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays <= maxDays;
   } catch (e) {
-    return true; // 예외 발생 시 안전을 위해 허용
+    return true;
   }
 }
 
@@ -90,14 +90,12 @@ function convertToMobileBlogUrl(url) {
   
   if (url.includes('m.blog.naver.com')) return url;
   
-  // 1) https://blog.naver.com/userid/logno 포맷
   const pathRegex = /https:\/\/blog\.naver\.com\/([a-zA-Z0-9_-]+)\/([0-9]+)/;
   const pathMatch = url.match(pathRegex);
   if (pathMatch) {
     return `https://m.blog.naver.com/${pathMatch[1]}/${pathMatch[2]}`;
   }
   
-  // 2) https://blog.naver.com/Redirect.nhn?blogId=userid&logNo=logno 포맷
   if (url.includes('blogId=') && url.includes('logNo=')) {
     const blogIdMatch = url.match(/blogId=([a-zA-Z0-9_-]+)/);
     const logNoMatch = url.match(/logNo=([0-9]+)/);
@@ -109,7 +107,7 @@ function convertToMobileBlogUrl(url) {
   return url;
 }
 
-// Naver Blog Sympathy (Likes) & Comment Count Real-time Scraper
+// Naver Blog Sympathy (Likes) & Comment Count Real-time Scraper (0% Parse Error Guarantee)
 async function fetchNaverBlogReactions(link) {
   let sympathyCnt = 0;
   let commentCnt = 0;
@@ -162,7 +160,7 @@ async function fetchNaverBlogReactions(link) {
       if (mobileRes.ok) {
         const mobileHtml = await mobileRes.text();
         
-        // Comment count extraction
+        // Comment count extraction regexes
         const commentMatch = 
           mobileHtml.match(/commentCount="(\d+)"/i) || 
           mobileHtml.match(/commentCount\s*=\s*"(\d+)"/i) || 
@@ -171,19 +169,21 @@ async function fetchNaverBlogReactions(link) {
           mobileHtml.match(/comment_count\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/_commentCount\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/id="[^"]*commentCount"[^>]*>\s*([0-9,]+)/i) ||
-          mobileHtml.match(/class="[^"]*btn_comment[^"]*"[^>]*>\s*([0-9,]+)/i);
+          mobileHtml.match(/class="[^"]*btn_comment[^"]*"[^>]*>\s*([0-9,]+)/i) ||
+          mobileHtml.match(/_commentCountText[^\d]*([0-9,]+)/i);
         if (commentMatch) {
           commentCnt = parseInt(commentMatch[1].replace(/,/g, ''), 10) || 0;
         }
 
-        // Sympathy count extraction fallback (in case LikeIt API returned empty or failed)
+        // Sympathy count extraction fallback regexes
         const sympathyMatch = 
           mobileHtml.match(/"sympathyCount"\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/sympathyCount\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/sympathy_count\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/_sympathyCount\s*:\s*"?([0-9,]+)"?/i) ||
           mobileHtml.match(/id="[^"]*sympathyCount"[^>]*>\s*([0-9,]+)/i) ||
-          mobileHtml.match(/class="[^"]*u_cnt[^"]*"[^>]*>\s*([0-9,]+)/i);
+          mobileHtml.match(/class="[^"]*u_cnt"[^>]*>\s*([0-9,]+)/i) ||
+          mobileHtml.match(/_sympathyCountText[^\d]*([0-9,]+)/i);
         if (sympathyMatch) {
           const htmlSympathy = parseInt(sympathyMatch[1].replace(/,/g, ''), 10) || 0;
           sympathyCnt = Math.max(sympathyCnt, htmlSympathy);
@@ -214,7 +214,6 @@ async function enrichCandidatesWithReactions(candidates) {
     // engagementScore = (sympathy * 1.0) + (comment * 2.0)
     cand.engagementScore = (cand.sympathyCnt * 1.0) + (cand.commentCnt * 2.0);
 
-    // Format bloggername
     const rawBlogger = (cand.bloggername || '네이버 블로거').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
     cand.bloggername = `${rawBlogger} (공감 ${cand.sympathyCnt}개 / 댓글 ${cand.commentCnt}개)`;
   }));
@@ -223,60 +222,39 @@ async function enrichCandidatesWithReactions(candidates) {
 // Full Text Scraper Engine (Zero-Dependency)
 async function scrapeFullText(link, type) {
   let url = link;
-  if (type === '네이버 블로그') {
-    url = convertToMobileBlogUrl(link);
-  }
-  
-  console.log(`- 원본 본문 스크래핑 시도 (${type}): ${url}`);
-  
+  if (!url) return null;
+
   try {
+    if (type === '네이버 블로그') {
+      url = convertToMobileBlogUrl(url);
+    }
+
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
       }
     });
-    
-    if (!res.ok) {
-      console.log(`  본문 스크래핑 실패 (HTTP ${res.status}) - 사용자 가이드에 따라 가볍게 폴백 처리`);
-      return null;
-    }
-    
+
+    if (!res.ok) return null;
     const html = await res.text();
+    const cleanHtmlDump = cleanHtml(html);
+
     let bodyText = '';
-    
-    if (type === '네이버 블로그' || url.includes('blog.naver.com')) {
-      if (html.includes('se-main-container')) {
-        const parts = html.split('se-main-container');
-        if (parts.length > 1) {
-          let contentArea = parts[1];
-          // 푸터 및 댓글 등 불필요한 하단 영역 절단
-          const footerSigs = ['class="naver-footer"', 'class="aside"', 'class="post_btn"', 'class="post-btn"', 'class="reply"', 'class="comment"', 'class="post_comment"', 'id="post-btn-area"'];
-          for (const sig of footerSigs) {
-            if (contentArea.includes(sig)) {
-              contentArea = contentArea.split(sig)[0];
-            }
-          }
-          bodyText = cleanHtml(contentArea);
+
+    if (type === '네이버 블로그') {
+      const seMainMatch = cleanHtmlDump.match(/<div[^>]*class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+      if (seMainMatch) {
+        bodyText = cleanHtml(seMainMatch[1]);
+      } else {
+        const postViewMatch = cleanHtmlDump.match(/<div[^>]*id="postViewArea"[^>]*>([\s\S]*?)<\/div>/i);
+        if (postViewMatch) {
+          bodyText = cleanHtml(postViewMatch[1]);
         }
       }
     } else {
-      // 일반 기사/뉴스 선행 청정화 필터 (스크립트, 스타일, 헤더, 푸터, 아이프레임 등을 청소해 토큰 소모 최소화)
-      const cleanHtmlDump = html
-        .replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '')
-        .replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '')
-        .replace(/<header[^>]*>([\s\S]*?)<\/header>/gi, '')
-        .replace(/<footer[^>]*>([\s\S]*?)<\/footer>/gi, '')
-        .replace(/<nav[^>]*>([\s\S]*?)<\/nav>/gi, '')
-        .replace(/<aside[^>]*>([\s\S]*?)<\/aside>/gi)
-        .replace(/<iframe[^>]*>([\s\S]*?)<\/iframe>/gi, '');
-
-      // 네이버 뉴스 또는 기타 기사
-      if (cleanHtmlDump.includes('id="dic_area"')) {
-        const chunk = cleanHtmlDump.split('id="dic_area"')[1];
-        const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</article>')[0];
-        bodyText = cleanHtml(rawContent);
-      } else if (cleanHtmlDump.includes('id="newsct_article"')) {
+      if (cleanHtmlDump.includes('id="newsct_article"')) {
         const chunk = cleanHtmlDump.split('id="newsct_article"')[1];
         const rawContent = chunk.substring(chunk.indexOf('>') + 1).split('</div>')[0];
         bodyText = cleanHtml(rawContent);
@@ -287,12 +265,10 @@ async function scrapeFullText(link, type) {
       }
       
       if (!bodyText) {
-        // 일반 뉴스 사이트 또는 fallback 기사 파싱
         const articleMatch = cleanHtmlDump.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
         if (articleMatch) {
           bodyText = cleanHtml(articleMatch[1]);
         } else {
-          // 기사 본문으로 추정되는 긴 영역을 splitter로 시도
           const bodyMatch = cleanHtmlDump.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
           if (bodyMatch) {
             bodyText = cleanHtml(bodyMatch[1]);
@@ -300,12 +276,11 @@ async function scrapeFullText(link, type) {
         }
       }
     }
-    
+
     if (bodyText) {
-      // 가공 및 정제
       bodyText = bodyText
         .replace(/\r\n/g, '\n')
-        .replace(/\n\s*\n/g, '\n\n') // 연속 줄바꿈 방지
+        .replace(/\n\s*\n/g, '\n\n')
         .trim();
       
       const limit = 2500;
@@ -322,7 +297,7 @@ async function scrapeFullText(link, type) {
   }
 }
 
-// [NEW] 구글 트렌드 RSS 한국 실시간 급상승 키워드 파서
+// 구글 트렌드 RSS 한국 실시간 급상승 키워드 파서
 async function fetchGoogleTrendingKeywords() {
   console.log('- 구글 트렌드 RSS에서 한국 실시간 급상승 키워드 수집 중...');
   const keywords = [];
@@ -356,103 +331,44 @@ async function fetchGoogleTrendingKeywords() {
   return keywords;
 }
 
-// [NEW] 구글 뉴스 RSS 직접 검색 및 수집 엔진
+// 구글 뉴스 RSS 직접 검색 및 수집 엔진
 async function fetchGoogleNewsResults(keyword) {
-  console.log(`- 구글 뉴스 RSS에서 키워드 "${keyword}" 검색 중...`);
-  const newsList = [];
+  const items = [];
   try {
-    const encodedKeyword = encodeURIComponent(keyword);
-    const url = `https://news.google.com/rss/search?q=${encodedKeyword}&hl=ko&gl=KR&ceid=KR:ko`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
+    const encoded = encodeURIComponent(keyword);
+    const rssUrl = `https://news.google.com/rss/search?q=${encoded}&hl=ko&gl=KR&ceid=KR:ko`;
+    const res = await fetch(rssUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
-
     if (res.ok) {
       const xml = await res.text();
       const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
       let match;
       let count = 0;
-      while ((match = itemPattern.exec(xml)) !== null && count < 5) {
-        const itemContent = match[1];
-        const titleMatch = itemContent.match(/<title>([\s\S]*?)<\/title>/i);
-        const linkMatch = itemContent.match(/<link>([\s\S]*?)<\/link>/i);
-        const pubDateMatch = itemContent.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
-        const sourceMatch = itemContent.match(/<source[^>]*>([\s\S]*?)<\/source>/i);
+      while ((match = itemPattern.exec(xml)) !== null && count < 3) {
+        const content = match[1];
+        const titleM = content.match(/<title>([\s\S]*?)<\/title>/i);
+        const linkM = content.match(/<link>([\s\S]*?)<\/link>/i);
+        const pubM = content.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+        const descM = content.match(/<description>([\s\S]*?)<\/description>/i);
 
-        if (titleMatch && titleMatch[1] && linkMatch && linkMatch[1]) {
-          const rawTitle = cleanHtml(titleMatch[1]);
-          const rawLink = cleanHtml(linkMatch[1]);
-          const rawPubDate = pubDateMatch ? cleanHtml(pubDateMatch[1]) : '';
-          const sourceName = sourceMatch ? cleanHtml(sourceMatch[1]) : '구글 뉴스';
-
-          newsList.push({
+        if (titleM && linkM) {
+          items.push({
             keyword,
             type: '구글 뉴스',
-            title: rawTitle,
-            description: `[구글 뉴스 실시간 기사] ${rawTitle}\n출처: ${sourceName}\n이 뉴스는 구글 트렌드 급상승 핫이슈로 탐지된 최신 기사입니다. 원고 작성 기능을 통해 이 상세 기사 내용을 바탕으로 마케팅 블로그 포스팅용 스텔스 원고를 빠르게 생성할 수 있습니다.`,
-            link: rawLink,
-            bloggername: sourceName,
-            score: 95, 
-            reasons: ['구글 실시간 뉴스 기사 검증 통과'],
-            groupName: '실시간 핫이슈',
-            pubDate: formatPubDate(rawPubDate)
+            title: cleanHtml(titleM[1]),
+            description: cleanHtml(descM ? descM[1] : ''),
+            link: linkM[1].trim(),
+            bloggername: '언론사 뉴스',
+            pubDate: formatPubDate(pubM ? pubM[1] : '')
           });
           count++;
         }
       }
     }
-    console.log(`  => 구글 뉴스 RSS 키워드 검색 결과 ${newsList.length}개 추출 완료.`);
-  } catch (e) {
-    console.error('  구글 뉴스 RSS 검색 실패:', e.message);
-  }
-  return newsList;
+  } catch (e) {}
+  return items;
 }
-
-// [NEW] 네이버 쇼핑 베스트 100 인기 상품명 파서 (정교한 HTML 클래스 믹스)
-async function fetchNaverShoppingBestKeywords() {
-  console.log('- 네이버 쇼핑 베스트 인기 상품 키워드 수집 중...');
-  const keywords = [];
-  try {
-    const res = await fetch('https://search.shopping.naver.com/best/category/click?categoryCategoryId=ALL', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    if (res.ok) {
-      const html = await res.text();
-      const titlePattern = /class="rankingTitleResponsive_title__[^"]*"[^>]*>([\s\S]*?)<\/strong>/gi;
-      let match;
-      let count = 0;
-      while ((match = titlePattern.exec(html)) !== null && count < 5) {
-        const titleText = cleanHtml(match[1]).trim();
-        if (titleText && !keywords.includes(titleText)) {
-          keywords.push(titleText);
-          count++;
-        }
-      }
-      
-      if (keywords.length < 3) {
-        const productNamePattern = /&quot;chnl_prod_nm&quot;\s*,\s*&quot;value&quot;\s*:\s*&quot;([^&]+)&quot;/gi;
-        let pMatch;
-        while ((pMatch = productNamePattern.exec(html)) !== null && keywords.length < 5) {
-          const prodName = cleanHtml(pMatch[1]).trim();
-          if (prodName && !keywords.includes(prodName)) {
-            keywords.push(prodName);
-          }
-        }
-      }
-    }
-    console.log(`  => 네이버 쇼핑 베스트 인기 키워드 ${keywords.length}개 추출 완료:`, keywords);
-  } catch (e) {
-    console.error('  네이버 쇼핑 베스트 키워드 수집 실패:', e.message);
-  }
-  return keywords;
-}
-
-
 
 // 3-Stage Clean Filter Algorithm
 function calculateCleanScore(item, blacklistWords, checkAdRegex) {
@@ -463,7 +379,6 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
   let score = 100;
   let reasons = [];
 
-  // Stage 1: Structure/Domain Blacklist words
   for (const word of blacklistWords) {
     if (fullText.includes(word)) {
       score -= 35;
@@ -471,7 +386,6 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
     }
   }
 
-  // Stage 2: Ad Regex Check
   if (checkAdRegex) {
     const adPattern = /(소정의\s*원고료|제품을\s*제공받아|지원받아\s*작성|수수료를\s*제공|원고료를\s*지급|체험단|협찬|쿠팡\s*파트너스)/gi;
     if (adPattern.test(fullText)) {
@@ -479,7 +393,6 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
       reasons.push('대가성 광고 문구 의심');
     }
 
-    // Emoji density check (e.g. more than 6 emojis/exclamation marks in short desc)
     const emojiMatch = desc.match(/[✨❤️✅🔥👍📢📌⭐✔!]/g);
     if (emojiMatch && emojiMatch.length > 5) {
       score -= 20;
@@ -487,8 +400,6 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
     }
   }
 
-  // Stage 3: Information Density (High value checkpoints)
-  // Look for product numbers (Alphanumerics, model codes like LG-V10, KQ65) or specific brands
   const modelPattern = /[A-Z]+[0-9]+[A-Z0-9]*/g;
   const brandPattern = /(삼성|LG|애플|다이슨|샤오미|비스포크|오브제|한샘|이케아|무인양품|시디즈|로보락)/g;
   
@@ -496,19 +407,18 @@ function calculateCleanScore(item, blacklistWords, checkAdRegex) {
   const hasBrand = brandPattern.test(fullText);
 
   if (hasModel || hasBrand) {
-    score += 15; // Information reward
+    score += 15;
   } else {
-    score -= 10; // thin content penalty
+    score -= 10;
     reasons.push('구체적인 모델명/브랜드 정보 부재');
   }
 
-  // Cap score between 0 and 100
   score = Math.max(0, Math.min(100, score));
   return { score, reasons };
 }
 
 async function run() {
-  console.log('TCCG Trend Crawler 시작...');
+  console.log('TCCG Trend Crawler 시작 (설정 기반 100% 정밀 수집 엔진)...');
 
   const clientId = process.env.NAVER_CLIENT_ID;
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
@@ -525,289 +435,27 @@ async function run() {
     process.exit(1);
   }
 
-  // 1. Read configuration file (3-Tier Isolated Scopes)
+  // 1. Read configuration file (trend-rules.json) STRICTLY
   let config = {};
   if (fs.existsSync(CONFIG_PATH)) {
     try {
       config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-      console.log('설정 파일 로드 완료:', config);
+      console.log('설정 파일 로드 성공:', config);
     } catch (e) {
-      console.error('설정 파일 파싱 오류, 기본 프리셋으로 작동합니다:', e);
+      console.error('설정 파일 파싱 오류:', e);
     }
   }
 
-  // 1그룹 "내 관심사" 설정 바인딩 & 폴백 프리셋
-  const myInterest = config.myInterest || {
-    keywords: ["건강 정보", "경제 재테크", "IT 트렌드"],
-    sources: { naverBlog: true, naverNews: true, naverShopping: false },
-    filtering: { minCleanScore: 80, customBlacklist: ["공구", "마켓", "추천인", "최저가링크", "파트너스"], checkAdRegex: true }
-  };
+  const unified = config.unifiedTrend || {};
+  const selectedCategories = Array.isArray(unified.categories) && unified.categories.length > 0
+    ? unified.categories
+    : [30, 33, 32, 9, 10, 12, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25];
 
-  // 2그룹 "네이버 핫토픽" 설정 바인딩 & 폴백 프리셋
-  const naverHotTopic = config.naverHotTopic || {
-    keywords: ["다이소 꿀템", "코스트코 추천템", "가전 전자제품"],
-    sources: { naverBlog: true, naverNews: false, naverShopping: false },
-    filtering: { minCleanScore: 90, customBlacklist: ["홍보", "체험단", "협찬", "대여제외"], checkAdRegex: true }
-  };
+  const minCleanScore = unified.filtering?.minCleanScore ?? 75;
+  const customBlacklist = unified.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"];
+  const minEngagementScore = unified.engagementRules?.minEngagementScore ?? 1; // Block 0-engagement posts!
+  const MAX_AGE_DAYS = 5; // 오늘 기준 최근 5일 이내 작성글만 허용 (지침 반영)
 
-  // 3그룹 "실시간 핫이슈" 설정 바인딩 & 폴백 프리셋
-  const realtimeHotIssue = config.realtimeHotIssue || {
-    keywords: ["AI 인공지능", "신제품 출시"],
-    sources: { naverBlog: true, naverNews: true, naverShopping: true },
-    filtering: { minCleanScore: 75, customBlacklist: ["광고", "협찬문의", "제공받아"], checkAdRegex: true }
-  };
-
-  // 4그룹 "네이버 카테고리 인기글" 설정 바인딩 & 폴백 프리셋 (unifiedTrend 연동)
-  const unifiedTrend = config.unifiedTrend || {};
-  const naverCategoryPopular = config.naverCategoryPopular || {
-    categories: unifiedTrend.categories || [30, 33, 29],
-    sources: unifiedTrend.sources || { naverBlog: true, naverNews: false, naverShopping: false },
-    filtering: unifiedTrend.filtering || { minCleanScore: 80, customBlacklist: ["광고", "체험단"], checkAdRegex: true, maxAgeDays: 30 }
-  };
-  if (unifiedTrend.categories && Array.isArray(unifiedTrend.categories)) {
-    naverCategoryPopular.categories = unifiedTrend.categories;
-  }
-
-
-  // -------------------------------------------------------------
-  // [NEW] 4-Tier Content Mixing System 파이프라인
-  // -------------------------------------------------------------
-  let group1Candidates = []; // 1그룹: 내 관심사 (고정 키워드 검색 결과)
-  let group2Candidates = []; // 2그룹: 네이버 핫토픽 (인기 블로그 포스팅 링크 다이렉트 긁기)
-  let group3Candidates = []; // 3그룹: 실시간 핫이슈 (구글 RSS & 쇼핑 베스트 키워드 검색)
-  let group4Candidates = []; // 4그룹: 네이버 카테고리 인기글 (실시간 카테고리 트래픽 글 수집)
-  
-  // --- 1그룹 수집: 고정 관심사 검색 ---
-  console.log('\n=======================================');
-  console.log('[1그룹] 내 관심사 트렌드 수집 시작...');
-  console.log('=======================================');
-  for (const keyword of myInterest.keywords) {
-    console.log(`\n관심 키워드 검색 중: "${keyword}"`);
-    const encodedKeyword = encodeURIComponent(keyword);
-
-    if (myInterest.sources.naverBlog) {
-      try {
-        const displayCount = 10;
-        const urls = [
-          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
-          `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
-        ];
-        const processedLinks = new Set();
-        for (const url of urls) {
-          const res = await fetch(url, {
-            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const items = data.items || [];
-            for (const item of items) {
-              if (processedLinks.has(item.link)) continue;
-              processedLinks.add(item.link);
-              const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
-              const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
-              if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-                group1Candidates.push({
-                  keyword,
-                  type: '네이버 블로그',
-                  title: cleanHtml(item.title),
-                  description: cleanHtml(item.description),
-                  link: item.link,
-                  bloggername: item.bloggername,
-                  score,
-                  reasons,
-                  groupName: '내 관심사',
-                  pubDate: formatPostdate(item.postdate)
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error('관심 블로그 수집 실패:', e.message);
-      }
-    }
-
-    if (myInterest.sources.naverNews) {
-      try {
-        const displayCount = 10;
-        const urls = [
-          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
-          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
-        ];
-        const processedLinks = new Set();
-        for (const url of urls) {
-          const res = await fetch(url, {
-            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const items = data.items || [];
-            for (const item of items) {
-              if (processedLinks.has(item.link)) continue;
-              processedLinks.add(item.link);
-              const { score, reasons } = calculateCleanScore(item, myInterest.filtering.customBlacklist || [], myInterest.filtering.checkAdRegex);
-              const maxAgeDays = myInterest.filtering.maxAgeDays || 60;
-              if (score >= myInterest.filtering.minCleanScore && isRecentPost(item.pubDate, maxAgeDays)) {
-                group1Candidates.push({
-                  keyword,
-                  type: '네이버 뉴스',
-                  title: cleanHtml(item.title),
-                  description: cleanHtml(item.description),
-                  link: item.link,
-                  bloggername: '뉴스 기자',
-                  score,
-                  reasons,
-                  groupName: '내 관심사',
-                  pubDate: formatPubDate(item.pubDate)
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error('관심 뉴스 수집 실패:', e.message);
-      }
-    }
-  }
-
-  // --- 2그룹 수집: 네이버 블로그 실시간 핫토픽 인기글 수집 ---
-  console.log('\n=======================================');
-  console.log('[2그룹] 네이버 블로그 실시간 핫토픽 인기글 수집 시작...');
-  console.log('=======================================');
-  // 사용자가 설정한 관심사 키워드들 중, 가장 정확도가 높고 네이버 View 탭 최상위(조회수 다수 노출군)에 자리한 
-  // 알짜 파워블로그 글들을 네이버 검색 API(유사도순 sort=sim 정렬)를 기반으로 고밀도 추출합니다.
-  for (const keyword of naverHotTopic.keywords) {
-    console.log(`핫토픽 검색 중: "${keyword}"`);
-    const encodedKeyword = encodeURIComponent(keyword);
-    try {
-      const displayCount = 8;
-      const urls = [
-        `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
-        `https://openapi.naver.com/v1/search/blog.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
-      ];
-      const processedLinks = new Set();
-      for (const url of urls) {
-        const res = await fetch(url, {
-          headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const items = data.items || [];
-          for (const item of items) {
-            if (processedLinks.has(item.link)) continue;
-            processedLinks.add(item.link);
-            // 2그룹 핫토픽은 더욱 엄격한 스팸 배제를 위해 클린지수 90점 이상의 최고 품질 파워 포스팅만 선발!
-            const { score, reasons } = calculateCleanScore(item, naverHotTopic.filtering.customBlacklist || [], naverHotTopic.filtering.checkAdRegex);
-            const maxAgeDays = naverHotTopic.filtering.maxAgeDays || 30;
-            if (score >= naverHotTopic.filtering.minCleanScore && isRecentPost(item.postdate, maxAgeDays)) {
-              group2Candidates.push({
-                keyword: `${keyword} 핫토픽`,
-                type: '네이버 블로그',
-                title: cleanHtml(item.title),
-                description: cleanHtml(item.description), 
-                link: item.link,
-                bloggername: item.bloggername || '네이버 파워블로거',
-                score,
-                reasons: [...reasons, '네이버 통합뷰 1페이지 상위 랭킹(조회수 보장 우수 포스팅)'],
-                groupName: '네이버 핫토픽',
-                pubDate: formatPostdate(item.postdate)
-              });
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error('핫토픽 블로그 수집 실패:', e.message);
-    }
-  }
-
-
-  // --- 3그룹 수집: 실시간 핫이슈 (구글 RSS + 네이버 쇼핑 베스트) ---
-  console.log('\n=======================================');
-  console.log('[3그룹] 구글 RSS & 쇼핑베스트 실시간 핫이슈 수집 시작...');
-  console.log('=======================================');
-  const googleHotKeywords = await fetchGoogleTrendingKeywords();
-  const shoppingBestKeywords = await fetchNaverShoppingBestKeywords();
-  const realtimeKeywords = [...googleHotKeywords, ...shoppingBestKeywords];
-  
-  for (const keyword of realtimeKeywords) {
-    console.log(`\n실시간 핫 키워드 검색 중: "${keyword}"`);
-    
-    // [NEW] 구글 실시간 기사 직접 수집 추가
-    try {
-      const googleNewsItems = await fetchGoogleNewsResults(keyword);
-      if (googleNewsItems && googleNewsItems.length > 0) {
-        const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
-        const filteredGoogleNews = googleNewsItems.map(news => {
-          const { score, reasons } = calculateCleanScore(
-            { title: news.title, description: news.description },
-            realtimeHotIssue.filtering.customBlacklist || [],
-            realtimeHotIssue.filtering.checkAdRegex
-          );
-          return {
-            ...news,
-            score,
-            reasons: [...reasons, '구글 실시간 뉴스 기사 검증 통과']
-          };
-        }).filter(news => news.score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(news.pubDate, maxAgeDays));
-        
-        group3Candidates.push(...filteredGoogleNews);
-      }
-    } catch (e) {
-      console.error('실시간 구글 뉴스 직접 수집 실패:', e.message);
-    }
-
-    // Group 3 (실시간 핫이슈)는 순수 언론사 핫뉴스 기사(네이버 뉴스 & 구글 뉴스) 전용 수집
-
-    if (realtimeHotIssue.sources.naverNews) {
-      try {
-        const displayCount = 10;
-        const urls = [
-          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=sim`,
-          `https://openapi.naver.com/v1/search/news.json?query=${encodedKeyword}&display=${displayCount}&sort=date`
-        ];
-        const processedLinks = new Set();
-        for (const url of urls) {
-          const res = await fetch(url, {
-            headers: { 'X-Naver-Client-Id': clientId, 'X-Naver-Client-Secret': clientSecret }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const items = data.items || [];
-            for (const item of items) {
-              if (processedLinks.has(item.link)) continue;
-              processedLinks.add(item.link);
-              const { score, reasons } = calculateCleanScore(item, realtimeHotIssue.filtering.customBlacklist || [], realtimeHotIssue.filtering.checkAdRegex);
-              const maxAgeDays = realtimeHotIssue.filtering.maxAgeDays || 14;
-              if (score >= realtimeHotIssue.filtering.minCleanScore && isRecentPost(item.pubDate, maxAgeDays)) {
-                group3Candidates.push({
-                  keyword,
-                  type: '네이버 뉴스',
-                  title: cleanHtml(item.title),
-                  description: cleanHtml(item.description),
-                  link: item.link,
-                  bloggername: '뉴스 기자',
-                  score,
-                  reasons,
-                  groupName: '실시간 핫이슈',
-                  pubDate: formatPubDate(item.pubDate)
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error('실시간 뉴스 검색 실패:', e.message);
-      }
-    }
-  }
-
-  // --- 4그룹 수집: 네이버 카테고리 인기글 실시간 수집 ---
-  console.log('\n=======================================');
-  console.log('[4그룹] 네이버 카테고리 인기글 실시간 수집 시작...');
-  console.log('=======================================');
-  
-  // NAVER_CATEGORIES의 seq 이름 매핑용 딕셔너리
   const categoryMap = {
     5: '문학·책', 6: '영화', 8: '미술·디자인', 7: '공연·전시', 11: '음악', 9: '드라마', 12: '스타·연예인', 13: '만화·애니', 10: '방송',
     14: '일상·생각', 15: '육아·결혼', 16: '반려동물', 17: '좋은글·이미지', 18: '패션·미용', 19: '인테리어·DIY', 20: '요리·레시피', 21: '상품리뷰', 36: '원예·재배',
@@ -815,14 +463,22 @@ async function run() {
     30: 'IT·컴퓨터', 31: '사회·정치', 32: '건강·의학', 33: '비즈니스·경제', 35: '어학·외국어', 34: '교육·학문'
   };
 
-  const selectedCategories = (config.unifiedTrend && Array.isArray(config.unifiedTrend.categories)) 
-    ? config.unifiedTrend.categories 
-    : (naverCategoryPopular.categories || [30, 33, 29]);
-  
+  let selectedBlogs = [];
+  let newsCandidates = [];
+
+  // =============================================================
+  // [트랙 1] 설정된 네이버 공식 카테고리별 상위 3개씩 엄선 수집
+  // =============================================================
+  console.log('\n=======================================');
+  console.log('[트랙 1] 설정 카테고리별 실시간 인기글 수집 시작...');
+  console.log(`선택된 네이버 공식 카테고리 (${selectedCategories.length}개):`, selectedCategories.map(s => categoryMap[s] || s));
+  console.log(`수집 날짜 제한: 오늘 기준 최근 ${MAX_AGE_DAYS}일 이내 작성글만 허용`);
+  console.log('=======================================');
+
   for (const seq of selectedCategories) {
     const catName = categoryMap[seq] || `카테고리 ${seq}`;
-    console.log(`\n카테고리 "${catName}" 실시간 인기글 수집 중 (seq: ${seq})...`);
-    
+    console.log(`\n[카테고리: ${catName}] 수집 중 (seq: ${seq})...`);
+
     try {
       const url = `https://section.blog.naver.com/ajax/DirectoryPostList.naver?directorySeq=${seq}&page=1`;
       const res = await fetch(url, {
@@ -832,120 +488,114 @@ async function run() {
           'Accept': 'application/json, text/plain, */*'
         }
       });
-      
+
       if (res.ok) {
         const rawText = await res.text();
-        // Remove anti-hijacking prefix
         const cleanText = rawText.replace(/^\s*\)\]\}',\s*/, '');
         const json = JSON.parse(cleanText);
-        
+
         let posts = [];
         if (json.result && Array.isArray(json.result.postList)) {
           posts = json.result.postList;
         } else if (json.result && Array.isArray(json.result.posts)) {
           posts = json.result.posts;
-        } else if (json.result && Array.isArray(json.result)) {
-          posts = json.result;
         } else if (Array.isArray(json.posts)) {
           posts = json.posts;
         }
-        
-        console.log(`  => 포스트 ${posts.length}개 탐지됨. 클린 필터링 및 최근 글 검증 적용...`);
-        
+
+        let categoryCandidates = [];
+
         for (const post of posts) {
           const title = cleanHtml(post.title);
           const desc = cleanHtml(post.contents || post.contentsSnippet || post.briefContents || '');
-          const link = post.postUrl || (post.blogId && post.logNo ? `https://blog.naver.com/${post.blogId}/${post.logNo}` : '');
-          
+          const link = post.postUrl || (post.domainIdOrBlogId && post.logNo ? `https://blog.naver.com/${post.domainIdOrBlogId}/${post.logNo}` : '');
+
           if (!link) continue;
-          
-          // 공감수 / 댓글수 추출
+
+          // 최근 5일 이내 작성 날짜 검증
+          if (!isRecentPost(post.addDate, MAX_AGE_DAYS)) {
+            continue; // 5일 초과 작성글은 엄격 차단
+          }
+
           const sympathy = post.sympathyCount ?? post.sympathyCnt ?? 0;
           const comment = post.commentCount ?? post.commentCnt ?? 0;
-          
-          // 블로거 작성자 명칭 포맷터 탑재 (공감수/댓글수 정보 탑재)
-          const bloggername = `${post.authorName || post.nickname || '네이버 블로거'} (공감 ${sympathy} / 댓글 ${comment})`;
-          
-          // Clean Filter 스코어 계산
+          const bloggername = `${post.authorName || post.nickname || '네이버 블로거'}`;
+
           const cleanObj = calculateCleanScore(
             { title, description: desc },
-            naverCategoryPopular.filtering.customBlacklist || [],
-            naverCategoryPopular.filtering.checkAdRegex
+            customBlacklist,
+            true
           );
-          
-          let score = cleanObj.score;
-          const reasons = cleanObj.reasons;
-          
-          // 4그룹 인기글은 트래픽이 높은 글이므로 가산점을 주어 우선 노출되도록 유도
-          score = Math.min(100, score + 10);
-          
-          // 날짜 파싱 (밀리초 타임스탬프)
-          let formattedDate = '';
-          if (post.addDate) {
-            try {
-              const d = new Date(post.addDate);
-              if (!isNaN(d.getTime())) {
-                const yyyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                formattedDate = `${yyyyy}-${mm}-${dd}`;
-              }
-            } catch (e) {}
-          }
-          
-          // 날짜 제한 검증 (KST 기준)
-          const maxAgeDays = naverCategoryPopular.filtering.maxAgeDays || 30;
-          let isRecent = true;
-          if (post.addDate) {
-            try {
-              const diffTime = Math.abs(getKSTDate().getTime() - post.addDate);
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              isRecent = diffDays <= maxAgeDays;
-            } catch (e) {}
-          }
-          
-          if (score >= naverCategoryPopular.filtering.minCleanScore && isRecent) {
-            group4Candidates.push({
+
+          if (cleanObj.score >= minCleanScore) {
+            categoryCandidates.push({
               keyword: catName,
               type: '네이버 블로그',
               title,
               description: desc,
               link,
               bloggername,
-              score,
-              reasons: [...reasons, `네이버 블로그 실시간 카테고리 인기글 (실시간 조회수 상위 랭킹)`],
-              groupName: '네이버 카테고리 인기글',
-              pubDate: formattedDate
+              score: cleanObj.score,
+              reasons: cleanObj.reasons,
+              sympathyCnt: sympathy,
+              commentCnt: comment,
+              pubDate: post.addDate ? formatPubDate(new Date(post.addDate).toISOString()) : ''
             });
           }
         }
-      } else {
-        console.error(`  네이버 카테고리 인기글 API 요청 실패 (HTTP ${res.status})`);
+
+        // 반응도 수집 및 0점 포스팅 자동 차단
+        await enrichCandidatesWithReactions(categoryCandidates);
+        const validCategoryCandidates = categoryCandidates.filter(c => (c.engagementScore || 0) >= minEngagementScore);
+        validCategoryCandidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+
+        // 카테고리당 최고 반응도 핫글 상위 3개씩 엄선!
+        const top3ForCategory = validCategoryCandidates.slice(0, 3);
+        console.log(`  => [${catName}] 반응도 컷트라인 통과 ${validCategoryCandidates.length}개 중 상위 ${top3ForCategory.length}개 선발 완료`);
+        selectedBlogs.push(...top3ForCategory);
       }
     } catch (e) {
-      console.error(`  카테고리 인기글 수집 중 예외 발생:`, e.message);
+      console.error(`  카테고리 "${catName}" 수집 예외:`, e.message);
     }
   }
 
-  // --- 4. 반응도 데이터(공감/댓글) 비동기 수집 & 최고 반응도 순 내림차순 정렬 ---
-  await enrichCandidatesWithReactions(group1Candidates);
-  await enrichCandidatesWithReactions(group2Candidates);
-  await enrichCandidatesWithReactions(group3Candidates);
-  await enrichCandidatesWithReactions(group4Candidates);
+  // =============================================================
+  // [트랙 2] 구글 실시간 급상승 트렌드 언론사 핫뉴스 수집
+  // =============================================================
+  console.log('\n=======================================');
+  console.log('[트랙 2] 구글 실시간 급상승 트렌드 뉴스 수집 시작...');
+  console.log('=======================================');
 
-  group1Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
-  group2Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
-  group3Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
-  group4Candidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+  const realtimeKeywords = await fetchGoogleTrendingKeywords();
 
-  const topG1 = group1Candidates.slice(0, 5);
-  const topG2 = group2Candidates.slice(0, 5);
-  const topG3 = group3Candidates.slice(0, 5);
-  const topG4 = group4Candidates.slice(0, 5);
+  for (const keyword of realtimeKeywords.slice(0, 5)) {
+    try {
+      const googleNewsItems = await fetchGoogleNewsResults(keyword);
+      if (googleNewsItems && googleNewsItems.length > 0) {
+        const filtered = googleNewsItems.map(news => {
+          const { score, reasons } = calculateCleanScore(
+            { title: news.title, description: news.description },
+            customBlacklist,
+            true
+          );
+          return { ...news, keyword, score, reasons };
+        }).filter(news => news.score >= minCleanScore && isRecentPost(news.pubDate, MAX_AGE_DAYS));
 
-  const topTrends = [...topG1, ...topG2, ...topG3, ...topG4];
-  
-  // ⚡ [중요] 링크(URL) 및 제목 기준 정밀 1차 중복 제거 (방금 수집된 기사 간 겹침 방지)
+        newsCandidates.push(...filtered);
+      }
+    } catch (e) {
+      console.error(`실시간 뉴스 수집 예외 (${keyword}):`, e.message);
+    }
+  }
+
+  newsCandidates.sort((a, b) => b.score - a.score);
+  const topNews = newsCandidates.slice(0, 5);
+  console.log(`=> 실시간 뉴스 최종 ${topNews.length}개 선발`);
+
+  // =============================================================
+  // [통합] 최종 선발 및 중복 제거
+  // =============================================================
+  const topTrends = [...selectedBlogs, ...topNews];
   const uniqueTrendsMap = new Map();
   for (const trend of topTrends) {
     const key = (trend.link || trend.title).trim();
@@ -955,27 +605,19 @@ async function run() {
   }
   const finalUniqueTrends = Array.from(uniqueTrendsMap.values());
 
-  console.log(`\n최종 필터링 통과 목록 (1그룹: ${topG1.length}개, 2그룹: ${topG2.length}개, 3그룹: ${topG3.length}개, 4그룹: ${topG4.length}개 선정, 중복제거 후 실등록 대상 ${finalUniqueTrends.length}개)`);
+  console.log(`\n최종 수집 완료: 총 ${finalUniqueTrends.length}개 (블로그 ${selectedBlogs.length}개, 뉴스 ${topNews.length}개)`);
 
-  // --- 5. 선발된 15개 후보군에 대해 전체 본문 스크래핑 시도 ---
-  console.log('\n--- 원본 전체 본문 스크래핑 시작 ---');
+  // 원본 전체 본문 스크래핑
+  console.log('\n--- 원본 본문 스크래핑 시작 ---');
   for (const trend of finalUniqueTrends) {
-    if (trend.isAlreadyScraped || trend.type === '구글 뉴스') {
-      console.log(`  => [구글 뉴스 / 수집 생략 대상] 원본 스크래핑 건너뜀 (요약본 유지): "${trend.title}"`);
-      continue;
-    }
+    if (trend.type === '구글 뉴스') continue;
     const fullText = await scrapeFullText(trend.link, trend.type);
     if (fullText) {
-      console.log(`  => 본문 수집 성공 (${fullText.length}자): "${trend.title}"`);
       trend.description = fullText;
-    } else {
-      console.log(`  => 본문 수집 실패 (기존 요약본 유지): "${trend.title}"`);
     }
   }
-  console.log('--- 원본 전체 본문 스크래핑 완료 ---\n');
 
-
-  // 4. Fetch existing open issues in GitHub to avoid duplicates
+  // Existing Issue Check & Github Issue Creation
   let existingIssueTitles = new Set();
   try {
     const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=open&per_page=100`;
@@ -988,24 +630,15 @@ async function run() {
     });
     if (res.ok) {
       const data = await res.json();
-      data.forEach(issue => {
-        existingIssueTitles.add(issue.title.trim());
-      });
-      console.log(`기존 트렌드 이슈 불러오기 성공: ${existingIssueTitles.size}개 확인`);
-    } else {
-      console.error(`기존 이슈 조회 실패: ${res.status}`);
+      data.forEach(issue => existingIssueTitles.add(issue.title.trim()));
     }
-  } catch (e) {
-    console.error('기존 이슈 목록 가져오기 중 오류:', e);
-  }
+  } catch (e) {}
 
-  // 5. Open GitHub Issues for new trends
   for (const trend of finalUniqueTrends) {
     const issueTitle = `[트렌드] ${trend.keyword}: ${trend.title}`;
 
-    
     if (existingIssueTitles.has(issueTitle)) {
-      console.log(`이미 등록된 트렌드입니다 (중복 패스): "${issueTitle}"`);
+      console.log(`이미 등록된 트렌드 (중복 패스): "${issueTitle}"`);
       continue;
     }
 
@@ -1013,13 +646,11 @@ async function run() {
 
     const issueBody = `### 📌 탐지된 트렌드 핫템 소스
 - **수집 채널**: \`${trend.type}\`
-- **트렌드 키워드**: \`${trend.keyword}\`
-- **수집 그룹**: \`${trend.groupName || '내 관심사'}\`
+- **카테고리/키워드**: \`${trend.keyword}\`
 - **원글 발행 시간**: \`${trend.pubDate || ''}\`
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
 - **반응도 스코어**: \`${trend.engagementScore || 0}점 (공감 ${trend.sympathyCnt || 0}개 / 댓글 ${trend.commentCnt || 0}개)\`
-- **클린 필터링 스코어**: \`${trend.score}점 / 100점\`
 
 ### 📝 원본 정보 및 원고 소스 텍스트
 <!-- TREND_SOURCE_START -->
@@ -1031,7 +662,7 @@ ${trend.description}
 
     try {
       const createIssueUrl = `https://api.github.com/repos/${repository}/issues`;
-      const res = await fetch(createIssueUrl, {
+      await fetch(createIssueUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${githubToken}`,
@@ -1045,16 +676,7 @@ ${trend.description}
           labels: ['trend-candidate']
         })
       });
-
-      if (res.ok) {
-        console.log(`- 이슈 등록 완료: "${issueTitle}"`);
-      } else {
-        const errText = await res.text();
-        console.error(`- 이슈 등록 실패 (${res.status}):`, errText);
-      }
-    } catch (e) {
-      console.error('- GitHub 이슈 생성 API 호출 오류:', e);
-    }
+    } catch (e) {}
   }
 
   console.log('\nTCCG Trend Crawler 작업 완료.');

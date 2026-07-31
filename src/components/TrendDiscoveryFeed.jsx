@@ -4,7 +4,6 @@ import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflo
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
-  const [activeGroupTab, setActiveGroupTab] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
@@ -31,14 +30,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     if (filteredTrends.length === 0) return;
     
     const count = filteredTrends.length;
-    const tabName = 
-      activeGroupTab === 'all' ? '전체보기' :
-      activeGroupTab === 'my' ? '📌 내 관심사' :
-      activeGroupTab === 'naver' ? '🔥 네이버 핫토픽' :
-      activeGroupTab === 'google' ? '⚡ 실시간 핫이슈' :
-      '📈 네이버 카테고리 인기글';
-
-    if (!window.confirm(`현재 [${tabName}] 탭에 표시된 총 ${count}개의 모든 트렌드 카드를 일괄 제외(삭제) 처리하시겠습니까?\n이 작업은 깃허브 저장소 이슈를 동시 닫기 처리하며 되돌릴 수 없습니다.`)) {
+    if (!window.confirm(`현재 표시된 총 ${count}개의 모든 트렌드 카드를 일괄 제외(삭제) 처리하시겠습니까?\n이 작업은 깃허브 저장소 이슈를 동시 닫기 처리하며 되돌릴 수 없습니다.`)) {
       return;
     }
 
@@ -110,14 +102,6 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   useEffect(() => {
     loadTrends();
   }, [activeTab]);
-
-  const getGroupLabelWithEmoji = (group) => {
-    if (!group) return '📌 내 관심사';
-    if (group.includes('핫토픽')) return '🔥 네이버 핫토픽';
-    if (group.includes('핫이슈') || group.includes('실시간')) return '⚡ 실시간 핫이슈';
-    if (group.includes('레이더') || group.includes('Radar') || group.includes('카테고리') || group.includes('Category')) return '📈 네이버 카테고리 인기글';
-    return '📌 내 관심사';
-  };
 
   // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
   const parseTrendBody = (body, title = '') => {
@@ -356,22 +340,6 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   {/* Badge Row */}
                   <div style={badgeRowStyle}>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      {/* Category Badge */}
-                      <span style={{
-                        fontSize: '0.73rem',
-                        fontWeight: '800',
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        background: 'rgba(168, 85, 247, 0.15)',
-                        color: '#c084fc',
-                        border: '1px solid rgba(168, 85, 247, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        📂 카테고리: {parsed.categoryName}
-                      </span>
-
                       {isNews ? (
                         <span style={{
                           fontSize: '0.73rem',
@@ -389,21 +357,37 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                           ⚡ 실시간 뉴스
                         </span>
                       ) : (
-                        <span style={{
-                          fontSize: '0.73rem',
-                          fontWeight: '800',
-                          padding: '3px 10px',
-                          borderRadius: '12px',
-                          background: 'var(--color-rose-glow)',
-                          color: 'var(--color-rose)',
-                          border: '1px solid rgba(244, 63, 94, 0.3)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          <Flame size={13} />
-                          🔥 반응도: {displayScore}점
-                        </span>
+                        <>
+                          <span style={{
+                            fontSize: '0.73rem',
+                            fontWeight: '800',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            background: 'rgba(168, 85, 247, 0.15)',
+                            color: '#c084fc',
+                            border: '1px solid rgba(168, 85, 247, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            📂 {parsed.categoryName}
+                          </span>
+                          <span style={{
+                            fontSize: '0.73rem',
+                            fontWeight: '800',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            background: 'var(--color-rose-glow)',
+                            color: 'var(--color-rose)',
+                            border: '1px solid rgba(244, 63, 94, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Flame size={13} />
+                            🔥 반응도: {displayScore}점
+                          </span>
+                        </>
                       )}
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
                     </div>
