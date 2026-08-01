@@ -565,7 +565,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
               <div style={seoReportContainerStyle}>
                 <div style={seoReportHeaderStyle}>
                   <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    📊 네이버 블로그 SEO 분석 보고서
+                    📊 네이버 블로그 SEO 분석 보고서 <span style={{ fontWeight: '600', fontSize: '0.68rem', opacity: 0.75 }}>(AI 자기평가 참고)</span>
                   </span>
                   <span style={seoScoreBadgeStyle(pData.seoReport.score)}>
                     {pData.seoReport.score}점

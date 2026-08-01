@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Link, Users, MessageSquare, AlertCircle, CheckSquare, Shield, Image, Video } from 'lucide-react';
+import { Sparkles, Link, MessageSquare, AlertCircle, CheckSquare, Shield, Image, Video } from 'lucide-react';
 import { suggestExperience } from '../services/gemini';
 
-const AUDIENCE_PRESETS = [
-  { id: 'all', label: '전체 연령대' },
-  { id: '4060', label: '4060 건강/실속 관심층' },
-  { id: '2030', label: '2030 트렌디 직장인' },
-  { id: 'parent', label: '3040 육아맘/대디' },
-];
-
 const TONE_PRESETS = [
-  { id: 'friendly', label: '😊 친근하고 편안한 대화체' },
-  { id: 'professional', label: '📖 정보 중심의 신뢰감 있는 문체' },
-  { id: 'witty', label: '⚡ 위트있고 자극적인 후킹 문체' },
-  { id: 'sensory', label: '🔥 감성을 자극하는 스토리텔링' },
+  { id: 'friendly', label: '친근한 대화체' },
+  { id: 'professional', label: '신뢰감 정보체' },
+  { id: 'witty', label: '활력 후킹체' },
 ];
 
 export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   const [sourceText, setSourceText] = useState('');
   const [affiliateLink, setAffiliateLink] = useState(() => localStorage.getItem('affiliwrite_default_affiliate_link') || '');
-  const [targetAudience, setTargetAudience] = useState('4060 건강/실속 관심층');
-  const [tone, setTone] = useState('😊 친근하고 편안한 대화체');
-  const [disclaimerType, setDisclaimerType] = useState('general');
+  const [tone, setTone] = useState('친근한 대화체');
+  const [disclaimerType, setDisclaimerType] = useState('auto');
 
   // Naver Blog specific states
-  const [naverSeoType, setNaverSeoType] = useState('c-rank');
+  const [naverSeoType, setNaverSeoType] = useState('info');
   const [humanPersonaEnabled, setHumanPersonaEnabled] = useState(false);
   const [humanPersonaExperience, setHumanPersonaExperience] = useState('');
   const [imgCount, setImgCount] = useState(5);
@@ -83,7 +74,7 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
 
     setIsSuggestingExperience(true);
     try {
-      const keywords = targetAudience || '';
+      const keywords = topicText.substring(0, 80);
       const suggestion = await suggestExperience(topicText.substring(0, 300), keywords);
       setHumanPersonaExperience(suggestion);
     } catch (err) {
@@ -140,7 +131,6 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
     onGenerate({
       sourceText: trimmedSource,
       affiliateLink: cleanAffiliateLink,
-      targetAudience,
       tone,
       selectedPlatforms: selectedList,
       disclaimerType,
@@ -271,45 +261,12 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
               onChange={(e) => setNaverSeoType(e.target.value)}
               style={selectFieldStyle}
             >
-              <option value="c-rank">C-Rank & D.I.A.+ 기본 방식 (전통적 품질 & 전문성)</option>
-              <option value="alcon">ALCON 최신 방식 (다각화 검색의도 H2 구획화)</option>
-              <option value="aeo">AI 브리핑 노출 AEO 방식 (요약 + 비교표 + FAQ)</option>
-              <option value="home-plate">네이버 홈판 추천 Home-Plate 방식 (감성/스토리텔링/CTA)</option>
-              <option value="insight-edge">인사이트 엣지 방식 (독창적 관점 & 결핍 해결)</option>
+              <option value="info">정보성 SEO (검색 유입 최적화) — 추천</option>
+              <option value="story">감성 스토리 (홈피드 추천 최적화)</option>
             </select>
-            {/* SEO Strategy Detailed Guide */}
-            <div style={seoDetailCardStyle}>
-              <div style={seoDetailRowStyle}>
-                <span style={seoDetailLabelStyle}>장점 / 추천 대상</span>
-                <span style={seoDetailValueStyle}>
-                  {naverSeoType === 'c-rank' && '정보성·전문성 글에 최적(리빙/IT/건강). 표·인용구로 신뢰감 형성. 가장 무난, 승인 안정형.'}
-                  {naverSeoType === 'alcon' && '키워드 하나에 숨은 여러 검색의도(비용/후기/꿀팁)를 H2로 쪼개 체류시간 극대화. 모바일 최적.'}
-                  {naverSeoType === 'aeo' && 'AI 브리핑/검색이 본문을 바로 인용 요약하게 만듦. 두괄식+비교표+FAQ. 트래픽 새 통로.'}
-                  {naverSeoType === 'home-plate' && '네이버 앱 홈피드 추천에 뜨기 좋음. 감성·댓글 유도. 조회수 폭발형.'}
-                  {naverSeoType === 'insight-edge' && '뻔한 정보 배제하고 독창적 관점으로 차별화. 경쟁 적은 니치에서 강함.'}
-                </span>
-              </div>
-              <div style={seoDetailRowStyle}>
-                <span style={seoDetailLabelStyle}>단점 / 리스크</span>
-                <span style={seoDetailValueStyle}>
-                  {naverSeoType === 'c-rank' && '약간 밋밋할 수 있음. 트래픽 폭발보단 안정 추구.'}
-                  {naverSeoType === 'alcon' && '구조가 복잡해져 글이 길어짐. 초보자는 가이드대로 구조 잡기 어려움.'}
-                  {naverSeoType === 'aeo' && 'AI 브리핑 노출이 보장되진 않음. 표 위주라 감성 부족.'}
-                  {naverSeoType === 'home-plate' && '자극적 톤이 애드센스 전문성 심사에 불리할 수 있음. 스팸성으로 오해받을 위험.'}
-                  {naverSeoType === 'insight-edge' && '쓰기 가장 어려움. AI가 억지 인사이트 만들면 오히려 부자연스러워짐.'}
-                </span>
-              </div>
-              <div style={seoDetailRowStyle}>
-                <span style={seoDetailLabelStyle}>구글 애드센스 승인</span>
-                <span style={seoDetailValueStyle}>
-                  {naverSeoType === 'c-rank' && '🟢 매우 유리 (높은 전문성 위주의 서술로 승인 안정성이 높음)'}
-                  {naverSeoType === 'alcon' && '🟡 유리 (체류 시간이 극대화되어 광고 수익성 향상에 도움)'}
-                  {naverSeoType === 'aeo' && '🟡 유리 (구조화된 FAQ와 표 형식으로 구글 SEO/Helpful Content 기준 충족)'}
-                  {naverSeoType === 'home-plate' && '🔴 불리 (감성/스토리 위주 및 자극적 톤앤매너로 전문성 심사에 부적합할 수 있음)'}
-                  {naverSeoType === 'insight-edge' && '🟢 매우 유리 (독창적 시각과 결핍 해결로 구글이 권장하는 고유한 가치 보유)'}
-                </span>
-              </div>
-            </div>
+            <span style={helpTextStyle}>
+              💡 정보성 = 검색 노출/체류시간에 유리, 감성 = 네이버 홈피드 추천 노출에 유리
+            </span>
           </div>
 
           {/* Humanized Persona Experience */}
@@ -452,36 +409,6 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
         </div>
       )}
 
-      {/* Target Audience Preset */}
-      <div style={formGroupStyle}>
-        <label style={labelStyle}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Users size={15} style={{ color: 'var(--color-indigo)' }} />
-            타겟 독자층 설정
-          </span>
-        </label>
-        <div style={presetGridStyle}>
-          {AUDIENCE_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => setTargetAudience(preset.label)}
-              style={presetBtnStyle(targetAudience === preset.label)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        <input
-          type="text"
-          className="input-field"
-          placeholder="직접 타겟층을 입력하셔도 됩니다. (예: 50대 은퇴를 앞둔 직장인)"
-          value={targetAudience}
-          onChange={(e) => setTargetAudience(e.target.value)}
-          style={{ width: '100%', marginTop: '8px' }}
-        />
-      </div>
-
       {/* Tone Selection */}
       <div style={formGroupStyle}>
         <label style={labelStyle}>
@@ -528,6 +455,7 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
             fontSize: '0.82rem'
           }}
         >
+          <option value="auto" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>자동 감지 (권장) — 본문 주제에 맞게 자동 선택</option>
           <option value="general" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>일반 정보용 (리빙, IT, 일상 팁 등)</option>
           <option value="medical" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>의학/건강용 (건강기능식품, 질병 예방 등)</option>
           <option value="financial" style={{ background: 'var(--bg-surface-solid)', color: 'var(--text-primary)' }}>금융/투자용 (재테크, 자산 관리 등)</option>
@@ -608,26 +536,6 @@ const requiredStyle = {
   borderRadius: '4px',
   border: '1px solid rgba(244, 63, 94, 0.2)',
 };
-
-const presetGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, 1fr)',
-  gap: '8px',
-  width: '100%',
-};
-
-const presetBtnStyle = (isSelected) => ({
-  background: isSelected ? 'var(--color-indigo-glow)' : 'var(--bg-surface-solid)',
-  color: isSelected ? 'var(--color-indigo)' : 'var(--text-secondary)',
-  border: `1px solid ${isSelected ? 'var(--color-indigo)' : 'var(--border-color)'}`,
-  borderRadius: 'var(--radius-sm)',
-  padding: '10px 8px',
-  fontSize: '0.78rem',
-  fontWeight: '500',
-  cursor: 'pointer',
-  transition: 'all var(--transition-fast)',
-  textAlign: 'center',
-});
 
 const presetColStyle = {
   display: 'flex',
@@ -767,34 +675,4 @@ const rangeStyle = {
   flex: 1,
   accentColor: 'var(--color-cyan)',
   cursor: 'pointer',
-};
-
-const seoDetailCardStyle = {
-  marginTop: '10px',
-  padding: '12px',
-  background: 'var(--bg-surface-solid)',
-  border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-sm)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-};
-
-const seoDetailRowStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '3px',
-};
-
-const seoDetailLabelStyle = {
-  fontSize: '0.72rem',
-  fontWeight: '700',
-  color: 'var(--text-secondary)',
-  opacity: 0.85,
-};
-
-const seoDetailValueStyle = {
-  fontSize: '0.78rem',
-  color: 'var(--text-primary)',
-  lineHeight: '1.4',
 };

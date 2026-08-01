@@ -9,6 +9,28 @@ const GEMINI_MODELS = [
   'gemini-2.5-flash'
 ];
 
+/**
+ * Robustly extract a JSON object from a model response.
+ * Handles ```json fences and stray surrounding text.
+ */
+function extractJson(text) {
+  if (!text) return null;
+  let t = text.trim();
+
+  const fence = t.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
+  if (fence) t = fence[1].trim();
+
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  try {
+    return JSON.parse(t.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
 async function postToGemini(model, apiKey, prompt, generationConfig) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
@@ -37,7 +59,11 @@ async function postToGemini(model, apiKey, prompt, generationConfig) {
     throw new Error('AI의 응답 형식이 올바르지 않습니다.');
   }
 
-  return JSON.parse(textResponse);
+  const parsed = extractJson(textResponse);
+  if (!parsed) {
+    throw new Error('AI의 응답을 유효한 JSON으로 파싱할 수 없습니다.');
+  }
+  return parsed;
 }
 
 async function executeWithFallback(apiKey, prompt, generationConfig) {
@@ -98,7 +124,7 @@ export async function suggestExperience(topic, keywords) {
 위 주제와 키워드에 대해, 블로그 글쓴이가 일상에서 겪었거나 혹은 이전에 비슷한 일로 겪었던 구체적이고 생생한 가상의 실패 또는 성공 에피소드(체험담) 2~3문장을 한글로 작성해 주세요.
 로봇이 쓴 느낌이 나지 않도록 구어체 어미(~요, ~더라고요, ~했어요, ~인 것 같아요)를 자연스럽게 섞어서 문장을 완성하세요.
 
-출력 형식: 반드시 아래 JSON 구조로만 응답해 주세요. 백틱(\`\`\`json) 기호도 포함하고 다른 설명 텍스트는 일절 제외하세요.
+출력 형식: 반드시 아래 JSON 구조로만 응답해 주세요. 백틱(\`\`\`) 기호나 그 외 설명 텍스트는 일절 포함하지 말고 순수 JSON만 응답해 주세요.
 \`\`\`json
 {
   "experience": "여기에 2~3문장의 생생한 경험담을 작성해 주세요."
@@ -120,19 +146,17 @@ export async function suggestExperience(topic, keywords) {
  * @param {Object} params 
  * @param {string} params.sourceText - The original article or product info
  * @param {string} params.affiliateLink - The user's affiliate marketing URL
- * @param {string} params.targetAudience - Description or slider value for target audience
- * @param {string} params.tone - Base tone (e.g. friendly, professional, witty)
+ * @param {string} params.tone - Base tone (e.g. '친근한 대화체', '신뢰감 정보체', '활력 후킹체')
  * @param {string} [params.customPrompt] - Optional custom prompt override
  */
 export async function generateContent({ 
   sourceText, 
   affiliateLink, 
-  targetAudience, 
   tone, 
   selectedPlatforms = ['naverBlog', 'shorts', 'instagram', 'tiktok', 'mdx'], 
   customPrompt = '', 
-  disclaimerType = 'general',
-  naverSeoType = 'c-rank',
+  disclaimerType = 'auto',
+  naverSeoType = 'info',
   humanPersonaEnabled = false,
   humanPersonaExperience = '',
   imgCount = 5,
@@ -141,14 +165,34 @@ export async function generateContent({
 }) {
   const apiKey = getApiKey();
   
-  const disclaimers = {
+/**
+ * Auto-detect the appropriate disclaimer type based on the source text.
+ */
+function detectDisclaimerType(sourceText) {
+  const text = sourceText || '';
+  const medical = /건강|의학|질병|영양제|다이어트|치료|증상|면역|혈압|당뇨|운동|식단|보충제/i;
+  const financial = /주식|투자|재테크|펀드|코인|부동산|연금|예금|적금|세금|수익|ETF/i;
+
+  if (financial.test(text)) return 'financial';
+  if (medical.test(text)) return 'medical';
+  return 'general';
+}
+
+const TONE_GUIDES = {
+  '친근한 대화체': '독자와 대화하듯 부드럽고 편안한 구어체로 서술하세요. 문장을 짧게 끊고 일상적인 표현을 섞어 친근감을 주되, 가족이나 지인에게 설명하듯 자연스럽게 쓰세요.',
+  '신뢰감 정보체': '객관적 근거와 수치, 사실 중심의 정돈된 존댓말체로 서술하세요. 감정 표현을 자제하고 정보의 신뢰도를 최우선으로 하세요.',
+  '활력 후킹체': '감탄사와 반전, 짧고 강렬한 문장으로 독자의 흥미를 끌어올리는 활기찬 어조로 서술하세요. 단, 지나친 과장은 삼가고 사실을 과장하지 마세요.'
+};
+
+const disclaimers = {
     general: '> 본 포스팅에서 제공하는 정보는 일반적인 참고용 자료이며, 정확성이나 완결성을 보장하지 않습니다. 본문의 내용을 신뢰하여 행해진 개별적인 결정이나 행동에 대한 최종 책임은 독자 본인에게 있습니다.',
     medical: '> 본 포스팅에서 제공하는 정보는 일반적인 건강 상식 및 참고용 자료이며, 전문의의 개별적인 진단이나 진료를 절대 대신할 수 없습니다. 개별적인 증상이나 구체적인 치료 처방은 반드시 전문 의료진과의 직접 상담을 권장합니다.',
     financial: '> 본 포스팅은 투자 참고용 정보이며, 특정 종목 추천이나 투자 권유가 아닙니다. 모든 투자 결정 및 그로 인해 발생하는 손익에 대한 최종 책임은 투자자 본인에게 귀속됩니다.',
     none: ''
   };
 
-  const disclaimerText = disclaimers[disclaimerType] || disclaimers.general;
+  const effectiveDisclaimerType = disclaimerType === 'auto' ? detectDisclaimerType(sourceText) : disclaimerType;
+  const disclaimerText = disclaimers[effectiveDisclaimerType] || disclaimers.general;
   if (!apiKey) {
     throw new Error('Gemini API Key가 설정되지 않았습니다. 설정 단추를 눌러 API 키를 입력해주세요.');
   }
@@ -177,42 +221,26 @@ export async function generateContent({
   const kstDateOnlyString = `${year}-${month}-${day}`;
   const randomNum = Math.floor(1000 + Math.random() * 9000);
 
-  // Naver Blog SEO custom strategies
+  // Naver Blog SEO custom strategies (simplified to 2 modes)
   const naverSeoInstructions = {
-    'c-rank': `
-[네이버 C-Rank 및 D.I.A.+ 기본 최적화 가이드라인]:
-- 특정 주제(건강, IT 등)에 대한 전문성이 돋보이는 신뢰할 수 있는 정보성 글로 구성하세요.
-- 독자와의 1인칭 소통(체험담, 관점)을 강조하며 신뢰할 수 있는 출처나 객관적인 사실 자료를 적절히 인용하세요.
-- 본문 중간에 표(Table) 또는 구분선, 인용구 블록을 적극 활용하여 정보의 가독성과 완성도를 높이세요.
+    'info': `
+[정보성 SEO 모드 가이드라인 (검색 유입 최적화)]:
+- 검색 유입을 목표로, 사용자가 궁금해할 만한 '질문형 H2 소제목'(예: '~란 무엇인가요?', '~를 고르는 방법은?')으로 본문을 구획하십시오.
+- 각 질문형 소제목 첫 단락은 두괄식(먼저 결론/정답을 1~2문장으로)으로 제시하십시오.
+- 비교/스펙 정리용 표(Table), 구체적인 수치, 리스트(1, 2, 3)를 중간중간 배치하여 정보 밀도를 높이십시오.
+- 객관적 사실과 근거 중심의 전문적인 서술로 신뢰성을 확보하십시오.
+- 하단에는 검색 의도에 대응하는 '자주 묻는 질문(FAQ)' 3개를 두괄식 Q&A로 구성하십시오.
 `,
-    'alcon': `
-[네이버 ALCON(Context-based Ranking) 최신 알고리즘 가이드라인]:
-- 검색 키워드 하나에 내재된 다양한 검색 의도(예: 정보 검색, 꿀팁, 비용, 후기, 주의사항)를 여러 개의 H2 소제목 섹션으로 분할하여 모두 커버하세요.
-- 모바일 가독성에 최적화된 짧고 리드미컬한 문단을 유지하여 사용자의 체류 시간(Dwell Time)을 극대화하세요.
-- 시의성 있는 유행어나 최신 트렌드를 가미하여 독자가 끝까지 읽어 내려가도록 하세요.
-`,
-    'aeo': `
-[네이버 AI 브리핑 및 생성형 AI 검색(GEO) 최적화 AEO 가이드라인]:
-- AI 검색 엔진 및 AI 브리핑 시스템이 본문을 쉽게 파싱하고 답변의 출처로 인용(Generative Engine Optimization)할 수 있도록 구조화하십시오.
-- 소제목(H2)은 사용자가 직관적으로 궁금해할 만한 '질문형 H2 소제목'(예: '~란 무엇인가요?', '~를 해결하는 방법은?')으로 구성하십시오.
-- 각 질문형 소제목 바로 아래 첫 단락의 시작 부분에는 1~2문장으로 질문에 대한 명확한 정의와 결론(두괄식 정답)을 즉시 제시하세요.
-- AI 답변 엔진이 선호하는 구체적인 수치(통계 데이터), 핵심 결론 요약, 마크다운 형식의 비교분석 표(Table), 리스트(1, 2, 3 또는 -, *)를 본문 중간에 적극적으로 배치하십시오.
-- 하단에는 스키마 마크업 및 직접 인용에 최적화되도록 일목요연한 '자주 묻는 질문(FAQ)' 3가지 문답 블록을 구성하십시오.
-`,
-    'home-plate': `
-[네이버 홈피드 추천 Home-Plate 알고리즘 가이드라인]:
-- 일반적인 정보 전달을 넘어, 감성적이고 몰입감 있는 스토리텔링 중심으로 글을 전개하세요.
-- 추천 피드 클릭률을 극대화하기 위해 다소 자극적이거나 반전이 있는, 또는 감정을 터치하는 제목 추천을 1순위로 제공하세요.
-- 본문 끝부분에는 독자의 공감을 이끌어내고 적극적인 상호작용(댓글 쓰기, 이웃 추가, 공유)을 자연스럽게 유도하는 문장과 소통 CTA를 강력하게 주입하세요.
-`,
-    'insight-edge': `
-[네이버 인사이트 엣지(Insight Edge) 최적화 가이드라인]:
-- 어디서나 볼 수 있는 뻔한 정보 나열은 완전히 배제하고, 독자가 미처 몰랐던 깊이 있는 분석이나 결핍/Pain point를 예리하게 짚어내세요.
-- 기존의 보편적인 상식을 뒤집거나, 전문가적 관점에서 새롭게 재해석한 차별화된 독창적 관점(인사이트)을 최소 한 가지 이상 본문의 핵심으로 다루어 '대체 불가능한 정보'로 포지셔닝하세요.
+    'story': `
+[감성 스토리 모드 가이드라인 (홈피드 추천 노출 최적화)]:
+- 네이버 홈피드 추천 노출을 목표로 감성적이고 몰입감 있는 스토리텔링으로 전개하십시오.
+- 첫 문장은 강한 훅(의문, 감탄, 반전)으로 시작하고 감정이 담긴 서사로 자연스럽게 이어가십시오.
+- 다소 자극적이거나 반전 있는 표현으로 클릭을 유도하되, 사실은 과장하지 마십시오.
+- 본문 끝에는 댓글·이웃 추가·공유를 자연스럽게 유도하는 소통 CTA를 넣으십시오.
 `
   };
 
-  const seoInstruction = naverSeoInstructions[naverSeoType] || naverSeoInstructions['c-rank'];
+  const seoInstruction = naverSeoInstructions[naverSeoType] || naverSeoInstructions['info'];
 
   // Experience / Humanization instructions
   const personaInstruction = humanPersonaEnabled && humanPersonaExperience.trim() !== ''
@@ -222,12 +250,13 @@ export async function generateContent({
 - 경험담 내용: "${humanPersonaExperience.trim()}"
 `
     : `
-[인간화 경험담 자동 매핑 지침]:
-- 로봇이 쓴 글처럼 느끼지 못하도록, 본문 중간에 글 주제와 연관된 지극히 자연스럽고 공감 가득한 가상의 개인 경험담이나 일화(1~2문장)를 맥락에 어울리게 창작하여 자동 삽입하십시오. (예: "사실 저도 예전에 비슷한 걸 대충 샀다가 며칠도 못 쓰고 버린 뼈아픈 경험이 있거든요...")
+[경험담 지어내기 금지 지침 (페르소나 비활성 상태)]:
+- 사용자가 페르소나 경험담을 제공하지 않았으므로, 본문에 '제가 직접 써봤다', '제가 직접 구매했다', '며칠 써보니' 등 1인칭 직접 사용/구매/체험 경험을 절대 지어내어 서술하지 마십시오.
+- 신뢰도는 객관적 사실이나 실사용자 후기를 3인칭으로 인용('실사용자 후기에서 공통적으로...', '확인해 보니...')하는 방식과 팩트 중심 서술로 확보하십시오.
 `;
 
   // Media instructions
-  let mediaInstruction = '';
+  let mediaInstruction;
   if (mediaExcluded || (imgCount === 0 && videoCount === 0)) {
     mediaInstruction = `
 [미디어 제외 지침]:
@@ -238,7 +267,7 @@ export async function generateContent({
     mediaInstruction = `
 [미디어(이미지) 배치 지침]:
 - 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])만 본문 중간중간에 적절히 삽입하시고, 동영상 위치 안내 표시는 절대 포함하지 마십시오.
-- JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오.
+- JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오. imageGuides 배열에는 반드시 빠짐없이 정확히 ${imgCount}개의 요소를 채워 응답하십시오.
 `;
   } else if (imgCount === 0 && videoCount > 0) {
     mediaInstruction = `
@@ -250,7 +279,7 @@ export async function generateContent({
     mediaInstruction = `
 [미디어(이미지 및 동영상) 배치 지침]:
 - 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])와 총 ${videoCount}개의 동영상 위치 안내 표시(예: [동영상 1: 보글보글 끓는 전골 찌개 생생한 영상])를 본문 중간중간에 적절히 삽입하십시오.
-- JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오.
+- JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 사용자가 이미지 생성 AI(DALL-E, Midjourney 등)를 통해 사실적인 이미지를 생성할 수 있도록 정교하게 디자인된 영문 이미지 생성 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하여 제공하십시오. imageGuides 배열에는 반드시 빠짐없이 정확히 ${imgCount}개의 요소를 채워 응답하십시오.
 `;
   }
 
@@ -260,8 +289,8 @@ export async function generateContent({
 아래 제공된 [기사 원문/상품 정보/주제]를 바탕으로, 저작권 침해와 네이버 AI 필터링을 완벽하게 우회하면서 독자의 눈길을 사로잡는 **"스텔스 바이럴 마케팅 및 고품질 정보성 블로그 콘텐츠"**를 제작해야 합니다.
 
 사용자가 삽입하려는 제휴 마케팅 링크: ${hasLink ? `"${affiliateLink}"` : "없음 (단순 정보 공유형 콘텐츠이므로 제휴 마케팅 링크나 대가성 법적 고지 문구는 절대로 삽입하지 말아야 하며, 독자가 순수하게 유용한 정보를 자연스럽게 전달받도록 글을 구성하세요.)"}
-타겟 고객층: "${targetAudience}"
 기본 원고 어조: "${tone}"
+어조 상세 지침: ${TONE_GUIDES[tone] || TONE_GUIDES['친근한 대화체']}
 
 다음 선택된 플랫폼들[${selectedPlatforms.join(', ')}]에 대한 맞춤형 원고만 작성하고, 선택되지 않은 플랫폼은 JSON 객체 내부의 키값을 null로 설정해 주세요.
 
@@ -270,15 +299,18 @@ export async function generateContent({
 1. **기사 비틀기 (Stealth Copywriting) 및 제목 최적화**:
    - **원본 정보(Fact)의 엄격한 보존**: 제공된 [기사 원문/상품 정보/주제]에 포함된 객관적인 수치, 핵심 사실, 제품 스펙 등은 절대 왜곡하거나 없는 내용을 허위로 지어내지 마십시오(환각 절대 금지).
    - **문장 구조 및 표현의 완전한 재구성**: 사실 관계(Fact)는 철저히 유지하되, 문장 구조, 어휘, 조사 및 서술 흐름은 원본과 완전히 다르게 변형하여 새로 작성하십시오. 원본 단락을 통째로 복사하거나 3단어 이상 연속으로 동일하게 기술하는 행위는 절대로 금지됩니다. 완전히 독창적인 어투로 패러프레이징하십시오.
-   - **제목(H1) 최적화**: 클릭 욕구를 강하게 자극하는 카피(예: 의문형, 반전, 해결책 제시)를 사용하되, 구체적인 숫자(예: '3가지 비결', '연봉 2배 올린 방법')를 적절히 활용하고 스마트폰 화면에서의 가독성을 위해 30자 내외로 구성해 제안하십시오.
-   - **핵심 키워드 설계**: 본문의 주제를 관통하는 메인 키워드 1개와 이를 뒷받침하는 연관/맥락 키워드 5~8개를 사전에 설계하여 본문 전체에 걸쳐 기계적으로 중복 도배되지 않도록 자연스러운 어순과 문맥으로 골고루 분포시켜 자연스럽게 배치하십시오.
-2. **자연스러운 제휴 링크 삽입**: ${hasLink ? `글의 맥락상 가장 적절하고 궁금증이 극대화되는 시점에 제휴 링크(${affiliateLink})를 자연스러운 앵커 텍스트('제가 직접 써본 실리콘 찜기는 여기서...', '자세한 상품 스펙 확인은...')와 함께 삽입하세요.` : '제휴 링크가 지정되지 않았으므로 본문에 구매 링크나 상품 추천 링크를 일체 삽입하지 마시고, 독자의 유입과 공감을 이끄는 순수 유용 정보로 매끄럽게 마무리해 주세요.'}
+   - **최적 키워드 자동 설계**: 주제를 가장 잘 대표하는 최적의 메인 키워드 1개와 이를 뒷받침하는 연관/맥락 키워드 5~8개를 스스로 설계하십시오. 메인 키워드는 사람들이 실제로 검색할 만한 검색어로 선정하십시오.
+   - **제목(H1) 최적화**: 클릭 욕구를 강하게 자극하는 카피(예: 의문형, 반전, 해결책 제시)를 사용하되, 구체적인 숫자(예: '3가지 비결', '연봉 2배 올린 방법')를 적절히 활용하고 스마트폰 화면에서의 가독성을 위해 30자 내외로 구성해 제안하십시오. **추천 제목 3개는 '정보형(총정리/가이드)', '리스트형(숫자/단계)', '의문·반전형(질문/공감)'으로 서로 다른 각도**로 제안하십시오.
+   - **제목 키워드 선배치**: 네이버 검색은 제목 앞부분의 키워드 가중치가 높습니다. 모든 추천 제목의 **앞부분(앞 3~5자 이내)에 메인 키워드가 배치**되도록 구성하십시오.
+   - **핵심 키워드 분포**: 설계한 메인/연관 키워드를 본문 전체에 걸쳐 기계적으로 중복 도배되지 않도록 자연스러운 어순과 문맥으로 골고루 분포시켜 배치하십시오.
+2. **자연스러운 제휴 링크 삽입**: ${hasLink ? `글의 맥락상 가장 적절하고 궁금증이 극대화되는 시점에 제휴 링크(${affiliateLink})를 자연스러운 앵커 텍스트('자세한 상품 스펙과 가격은 여기서 확인하실 수 있어요', '관련 정보를 정리한 페이지를 참고해 보세요')와 함께 삽입하세요. 단, '직접 써봤다'는 1인칭 주장과 결합하지 말 것.` : '제휴 링크가 지정되지 않았으므로 본문에 구매 링크나 상품 추천 링크를 일체 삽입하지 마시고, 독자의 유입과 공감을 이끄는 순수 유용 정보로 매끄럽게 마무리해 주세요.'}
 3. **법적 고지 필수 삽입**: ${hasLink ? `텍스트 기반 소셜 플랫폼(네이버 블로그, 인스타그램)의 하단에는 공정거래위원회 지침에 의거한 투명한 대가성 표기 문구(예: '이 포스팅은 제휴 마케팅 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받을 수 있습니다.')를 고급스럽고 가시성 있게 포함해 주세요. 단, 개인 블로그 MDX 원고의 경우 구글 애드센스 심사를 위해 제휴 마케팅 링크(${affiliateLink})가 있더라도 법적 고지 문구를 삽입하지 않고 본문에만 자연스럽게 삽입되도록 하거나 생략하여 순수 전문 정보성 글로 보이도록 하십시오.` : '제휴 링크가 없으므로 공정위 법적 고지(대가성 수수료 표기 등) 문구를 절대로 삽입하지 마세요. 순수 정보성 글처럼 작성해야 합니다.'}
 4. **네이버 AI 필터 무력화 및 저품질 회피를 위한 무설정(Zero-Config) 자동 인간화 규칙 (네이버 블로그 naverBlog 및 MDX 필수 적용)**:
    - **문장 어미 자동 혼용 (로봇 어조 완전 차단)**: 모든 문장이 "~입니다", "~습니다" 등의 획일화되고 딱딱한 명사형 어미로 끝나지 않도록 철저히 통제하십시오. 본문 어미의 60% 이상은 자연스러운 구어체("~해요", "~하더라고요", "~했어요", "~인 것 같아요", "~일지도 몰라요")를 적절히 섞어 사람이 직접 말하듯 유연한 리듬으로 서술하십시오.
    - **문장 호흡 및 엔트로피 변동성 극대화**: AI 특유의 정형화되고 균일한 문장 길이를 타파하십시오. 의도적으로 10자 내외의 짧은 생각이나 감탄사('진짜 대박이죠.', '그럴 리가요.')를 섞어서 흐름을 깨뜨리고 긴 서술형 문장과 불규칙하게 배치하십시오.
    - **기계적 상투어 소거**: GPT나 Gemini 등의 흔적인 "첫째, 둘째, 셋째" 등의 기계적 나열 구조나 "결론적으로", "요약하자면", "~에 대해 알아보겠습니다", "그렇다면 지금부터 X에 주목해 보겠습니다" 같은 상투형 연결 문장을 100% 완전 소거하고, 대신 사람처럼 유연하고 세련된 어조('우선 가장 먼저 봐야 할 건', '참 신기하게도', '결국 핵심은 이렇습니다')를 자연스럽게 이식하십시오.
-   - **가상 인간 경험담 및 가이드 삽입 (E-E-A-T 확보)**: 네이버 DIA+ 알고리즘의 최우선 가점 요소인 '개인의 실제 경험'을 만족하기 위해, 본문 중간에 가이드에 맞춘 경험담을 삽입하십시오.
+   - **경험담 삽입 (페르소나 활성 시에만)**: 네이버 DIA+ 알고리즘의 '개인의 실제 경험' 가점을 위해, 사용자가 페르소나 경험담을 활성화한 경우에만 본문 중간에 그 경험담을 자연스럽게 녹여내십시오. 페르소나가 비활성 상태라면 1인칭 직접 사용/구매 경험을 지어내는 서술은 절대 금지하고, 팩트와 3인칭 후기 인용으로 신뢰도를 확보하십시오.
+   - **리드문(첫 문단) 메인 키워드 배치**: 서론의 첫 2문장 안에 메인 키워드를 자연스럽게 1회 포함하되, 기계적 나열 없이 문맥에 녹여 넣으십시오.
    - **모바일 가독성 개행**: 사용자가 스마트폰으로 포스팅을 볼 때 이탈률을 최소화하고 체류 시간(Retention)을 보장하기 위해 한 문단은 최대 3문장 이내로만 구성하고, 단락 사이에 2~3줄의 넉넉한 여백(빈 공백 라인)을 자동 삽입하십시오.
    - **시선강탈 훅 도입 및 댓글 소통 유도**: 첫 문장은 독자의 공감을 이끄는 강력한 질문이나 감탄사('이거 진짜 몰랐는데...', '혹시 여러분도 아침마다 피로하신가요?')로 시작하고, 결론 마지막 부분은 항상 독자와의 정겨운 소통을 유도하는 질문과 당부('여러분은 어떠신가요? 댓글로 편하게 나누어 주세요!')로 유려하게 매듭지으십시오.
    - **구글 애드센스 승인(애드고시) 및 기타 규칙 (MDX에 추가 적용)**:
@@ -302,7 +334,7 @@ ${selectedPlatforms.includes('naverBlog') ? `   - naverBlog: 네이버 블로그
      * [🚨핵심 어미 자동 혼용]: 모든 서술형 문말이 "~입니다/습니다"로만 단조롭게 끝나지 않도록 철저히 차단하고, 본문 전체 어미의 60% 이상은 자연스러운 구어체(~해요, ~하더라고요, ~했어요, ~인 것 같아요)를 번갈아 섞어 쓰며 말하듯 리듬감 있게 서술하십시오.
      * [🚨시선강탈 훅 & 댓글 유도]: 글의 첫 줄은 반드시 강렬한 독자 유입 유도용 감탄사나 의문문("이거 진짜 몰랐는데...", "혹시 여러분도 아침마다 몸이 무거우신가요?")으로 시작하고, 본문 마지막 문단은 독자와의 소통 및 댓글을 이끌어내는 친근한 질문("여러분은 어떠신가요? 댓글로 편하게 나누어 주세요!")으로 마쳐야 합니다.
      * 각 소제목은 반드시 '📌 소제목' 또는 '【 소제목 】' 형태로 눈에 띄게 이모티콘을 조합해 단 1회 구성하십시오. 소제목을 제외한 일반 서술 텍스트 내에는 구글 애드센스 품질 가이드라인 준수를 위해 어떠한 이모티콘이나 이모지도 일절 사용을 금지합니다.
-     * 제목 제안 3개와 해시태그를 포함하십시오.
+     * 제목 제안 3개와 해시태그 5~10개를 포함하십시오.
      * 아래 상세 SEO 전략 가이드, 인간화 페르소나 지침, 미디어 지침을 네이버 블로그에 반영하여 완벽하게 생성하십시오:
        ${seoInstruction}
        ${personaInstruction}
@@ -326,7 +358,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 {
   "naverBlog": ${selectedPlatforms.includes('naverBlog') ? `{
     "titleProposals": ["제목 추천 1", "제목 추천 2", "제목 추천 3"],
-    "content": "네이버 블로그 본문 (제목 제외, 문맥에 제휴 링크 및 하단 법적 고지 문구 포함. 일반 마크다운(**)이나 HTML 태그는 쓰지 않되, 요약/비교가 필요한 지점에는 헤더 바로 아래 구분선(| --- | --- |)을 반드시 기입한 표준 마크다운 표 형식(| 항목 | 내용 |\n| --- | --- |\n| 모터 출력 | 3500W |)을 적극적으로 사용하십시오. 소제목은 📌 또는 【】 등의 특수 괄호와 이모티콘으로 구성하고, 본문 텍스트 내에는 구글 애드센스 품질 심사 통과를 위해 어떠한 이모티콘이나 이모지도 절대 단 한 개도 쓰지 말아야 하며, 문장 호흡에 맞춰 2~3줄의 풍부한 여백(빈 줄)을 적극적으로 삽입하여 가시성이 극대화된 원고를 생성하십시오. 본문 중간에 적절한 문맥에 맞춰 이미지 및 동영상 가이드 표시인 [이미지 1: 설명], [동영상 1: 설명] 형태도 텍스트로 자연스럽게 이식해야 합니다.)",
+    "content": "네이버 블로그 본문 (제목 제외, 문맥에 제휴 링크 및 하단 법적 고지 문구 포함. 일반 마크다운(**)이나 HTML 태그는 쓰지 않되, 요약/비교가 필요한 지점에는 헤더 바로 아래 구분선(| --- | --- |)을 반드시 기입한 표준 마크다운 표 형식(| 항목 | 내용 |\n| --- | --- |\n| 모터 출력 | 3500W |)을 적극적으로 사용하십시오. 소제목은 📌 또는 【】 등의 특수 괄호와 이모티콘으로 구성하고, 본문 텍스트 내에는 구글 애드센스 품질 심사 통과를 위해 어떠한 이모티콘이나 이모지도 절대 단 한 개도 쓰지 말아야 하며, 문장 호흡에 맞춰 2~3줄의 풍부한 여백(빈 줄)을 적극적으로 삽입하여 가시성이 극대화된 원고를 생성하십시오. 본문 중간에 적절한 문맥에 맞춰 이미지 및 동영상 가이드 표시인 [이미지 1: 설명], [동영상 1: 설명] 형태도 텍스트로 자연스럽게 이식해야 하며, 서론 첫 문단에 메인 키워드를 자연스럽게 배치하십시오.)",
     "hashtags": ["해시태그1", "해시태그2"],
     "faq": [
       { "q": "자주 묻는 질문 1", "a": "답변 1" },
@@ -343,7 +375,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     "seoReport": {
       "score": 95,
       "checklist": [
-        { "item": "경험담 반영 (DIA+)", "status": "PASS", "desc": "1인칭 경험담이 포함되어 문장의 신뢰도가 상승했습니다." },
+        { "item": "경험담/신뢰도 반영 (DIA+)", "status": "PASS", "desc": "사용자 페르소나 경험담 또는 팩트·3인칭 후기 인용으로 신뢰도를 확보했습니다." },
         { "item": "알고리즘 최적화 반영", "status": "PASS", "desc": "선택한 SEO 전략 로직에 알맞는 구조로 원고가 가공되었습니다." },
         { "item": "모바일 가독성 개행 여부", "status": "PASS", "desc": "문단 중간중간에 충분한 줄바꿈이 정상 수행되었습니다." },
         { "item": "핵심/연관 키워드 설계", "status": "PASS", "desc": "메인 키워드: [선정한 핵심 메인 키워드] / 연관 키워드: [본문에 고루 배치한 5~8개 연관 키워드들을 쉼표로 나열]" },
