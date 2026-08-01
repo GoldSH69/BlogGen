@@ -48,7 +48,9 @@
       "gemini",
       "deepseek",
       "qwen",
-      "github 오픈소스"
+      "github 오픈소스",
+      "chatgpt",
+      "Anthropic"
     ],
     "sources": {
       "naverBlog": true,
