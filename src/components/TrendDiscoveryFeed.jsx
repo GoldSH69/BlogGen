@@ -118,7 +118,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     const parsedType = channelMatch ? channelMatch[1].replace(/`/g, '').trim() : '네이버 블로그';
-    const parsedBlogger = bloggerMatch ? bloggerMatch[1].replace(/`/g, '').trim() : '작성자 미상';
+    const parsedBlogger = (bloggerMatch ? bloggerMatch[1].replace(/`/g, '').trim() : '작성자 미상').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
     const parsedScore = scoreMatch ? scoreMatch[1].replace(/`/g, '').trim() : '85';
     const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
     const parsedGroup = groupMatch ? groupMatch[1].replace(/`/g, '').trim() : '통합 트렌드';

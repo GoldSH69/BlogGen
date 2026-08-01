@@ -67,6 +67,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [customBlacklist, setCustomBlacklist] = useState(["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
   const [newBlacklistWord, setNewBlacklistWord] = useState('');
   const [intervalHours, setIntervalHours] = useState(6);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiKeywords, setAiKeywords] = useState(["openai", "claude", "gemini", "deepseek", "qwen", "github 오픈소스"]);
+  const [newAiKeyword, setNewAiKeyword] = useState('');
+  const [aiMaxAgeDays, setAiMaxAgeDays] = useState(3);
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -96,6 +100,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           setMinCleanScore(ut.filtering?.minCleanScore ?? 80);
           setCustomBlacklist(ut.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
+          const an = cloudConfig.aiNews || {};
+          setAiEnabled(an.enabled !== false);
+          setAiKeywords(Array.isArray(an.keywords) && an.keywords.length > 0 ? an.keywords : ["openai", "claude", "gemini", "deepseek", "qwen", "github 오픈소스"]);
+          setAiMaxAgeDays(an.maxAgeDays ?? 3);
         }
       } catch (err) {
         console.error(err);
@@ -128,6 +136,19 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     setCustomBlacklist(prev => prev.filter(item => item !== word));
   };
 
+  const handleAddAiKeyword = (e) => {
+    e.preventDefault();
+    const trimmed = newAiKeyword.trim();
+    if (trimmed && !aiKeywords.includes(trimmed)) {
+      setAiKeywords(prev => [...prev, trimmed]);
+      setNewAiKeyword('');
+    }
+  };
+
+  const handleRemoveAiKeyword = (keyword) => {
+    setAiKeywords(prev => prev.filter(item => item !== keyword));
+  };
+
   const handleSave = async () => {
     if (categories.length === 0) {
       setErrorMsg('수집할 네이버 카테고리를 최소 1개 이상 선택해 주세요.');
@@ -145,6 +166,13 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         sources: { naverBlog: true, googleNews: true },
         engagementRules: { sympathyWeight, commentWeight, minEngagementScore: 1 },
         filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 }
+      },
+      aiNews: {
+        enabled: aiEnabled,
+        maxAgeDays: aiMaxAgeDays,
+        keywords: aiKeywords,
+        sources: { naverBlog: true, googleNews: true },
+        maxPerSource: 5
       },
       scheduler: { intervalHours }
     };
@@ -414,6 +442,77 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                       {hours}시간 마다
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* 4. AI Keywords Search */}
+              <div>
+                <h4 style={sectionTitleStyle}>4. AI 최신 뉴스/블로그 키워드 수집</h4>
+                <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
+                    <input
+                      type="checkbox"
+                      checked={aiEnabled}
+                      onChange={(e) => setAiEnabled(e.target.checked)}
+                      style={{ accentColor: 'var(--color-violet)', width: '15px', height: '15px', cursor: 'pointer' }}
+                    />
+                    고정 AI 키워드 기반 최신 수집 사용 (openai, claude, gemini, deepseek 등)
+                  </label>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>⌛ 최근 수집 기간 (maxAgeDays)</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {[1, 2, 3, 5].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => setAiMaxAgeDays(days)}
+                          className={aiMaxAgeDays === days ? "btn-neon" : "btn-secondary"}
+                          style={{ padding: '6px 12px', fontSize: '0.76rem', fontWeight: '600' }}
+                        >
+                          최근 {days}일
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>🔍 AI 검색 키워드 목록</label>
+                    <form onSubmit={handleAddAiKeyword} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <input 
+                        type="text" 
+                        className="input-field"
+                        placeholder="예: gpt-5, llama, ai 에이전트"
+                        value={newAiKeyword}
+                        onChange={(e) => setNewAiKeyword(e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button type="submit" className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.76rem' }}>
+                        추가
+                      </button>
+                    </form>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {aiKeywords.map((keyword, idx) => (
+                        <span key={idx} style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 10px',
+                          background: 'var(--color-cyan-glow)',
+                          border: '1px solid rgba(34, 211, 238, 0.25)',
+                          borderRadius: '12px',
+                          color: 'var(--color-cyan)',
+                          fontSize: '0.72rem',
+                          fontWeight: '500'
+                        }}>
+                          {keyword}
+                          <X size={12} style={{ cursor: 'pointer' }} onClick={() => handleRemoveAiKeyword(keyword)} />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
               </div>
 

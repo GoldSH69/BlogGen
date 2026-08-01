@@ -39,6 +39,23 @@
       "maxAgeDays": 10
     }
   },
+  "aiNews": {
+    "enabled": true,
+    "maxAgeDays": 3,
+    "keywords": [
+      "openai",
+      "claude",
+      "gemini",
+      "deepseek",
+      "qwen",
+      "github 오픈소스"
+    ],
+    "sources": {
+      "naverBlog": true,
+      "googleNews": true
+    },
+    "maxPerSource": 5
+  },
   "scheduler": {
     "intervalHours": 24
   }

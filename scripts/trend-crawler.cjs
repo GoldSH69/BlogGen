@@ -214,8 +214,7 @@ async function enrichCandidatesWithReactions(candidates) {
     // engagementScore = (sympathy * 1.0) + (comment * 2.0)
     cand.engagementScore = (cand.sympathyCnt * 1.0) + (cand.commentCnt * 2.0);
 
-    const rawBlogger = (cand.bloggername || '네이버 블로거').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
-    cand.bloggername = `${rawBlogger} (공감 ${cand.sympathyCnt}개 / 댓글 ${cand.commentCnt}개)`;
+    cand.bloggername = (cand.bloggername || '네이버 블로거').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
   }));
 }
 
@@ -331,8 +330,8 @@ async function fetchGoogleTrendingKeywords(limitCount = 9) {
   return keywords;
 }
 
-// 구글 뉴스 RSS 직접 검색 및 수집 엔진 (키워드당 1개의 대표 뉴스만 선발)
-async function fetchGoogleNewsResults(keyword) {
+// 구글 뉴스 RSS 직접 검색 및 수집 엔진 (키워드당 대표 뉴스 n개 선발)
+async function fetchGoogleNewsResults(keyword, limit = 1) {
   const items = [];
   try {
     const encoded = encodeURIComponent(keyword);
@@ -345,7 +344,7 @@ async function fetchGoogleNewsResults(keyword) {
       const itemPattern = /<item>([\s\S]*?)<\/item>/gi;
       let match;
       let count = 0;
-      while ((match = itemPattern.exec(xml)) !== null && count < 1) { // 키워드당 대표 기사 1개만 선발
+      while ((match = itemPattern.exec(xml)) !== null && count < limit) {
         const content = match[1];
         const titleM = content.match(/<title>([\s\S]*?)<\/title>/i);
         const linkM = content.match(/<link>([\s\S]*?)<\/link>/i);
@@ -367,6 +366,46 @@ async function fetchGoogleNewsResults(keyword) {
       }
     }
   } catch (e) {}
+  return items;
+}
+
+// 네이버 오픈API 블로그 검색 엔진 (키워드당 최신순 n개 수집)
+async function fetchNaverBlogSearchResults(clientId, clientSecret, keyword, limit = 5) {
+  const items = [];
+  if (!clientId || !clientSecret) return items;
+  try {
+    const encoded = encodeURIComponent(keyword);
+    const apiUrl = `https://openapi.naver.com/v1/search/blog.json?query=${encoded}&display=${limit}&start=1&sort=date`;
+    const res = await fetch(apiUrl, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret
+      }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const posts = Array.isArray(json.items) ? json.items : [];
+      for (const post of posts) {
+        const link = post.link && post.link.trim();
+        if (!link) continue;
+        items.push({
+          keyword,
+          type: '네이버 블로그',
+          title: cleanHtml(post.title),
+          description: cleanHtml(post.description),
+          link: convertToMobileBlogUrl(link),
+          bloggername: cleanHtml(post.bloggername || '네이버 블로거'),
+          pubDate: formatPostdate(post.postdate || ''),
+          sympathyCnt: 0,
+          commentCnt: 0
+        });
+      }
+    } else {
+      console.error(`  네이버 블로그 검색 실패 (${keyword}): HTTP ${res.status}`);
+    }
+  } catch (e) {
+    console.error(`  네이버 블로그 검색 예외 (${keyword}):`, e.message);
+  }
   return items;
 }
 
@@ -585,6 +624,89 @@ async function run() {
   }
 
   console.log(`=> 서로 다른 실시간 핫뉴스 최종 ${newsCandidates.length}개 선발 완료`);
+
+  // =============================================================
+  // [트랙 3] 고정 AI 키워드 기반 최신 뉴스/블로그 수집 (최근 2~3일 한정)
+  // =============================================================
+  const aiNews = config.aiNews || {};
+  const aiKeywords = Array.isArray(aiNews.keywords) && aiNews.keywords.length > 0
+    ? aiNews.keywords
+    : ['openai', 'claude', 'gemini', 'deepseek', 'qwen', 'github 오픈소스'];
+  const aiMaxAgeDays = aiNews.maxAgeDays ?? 3;
+  const aiMaxPerSource = aiNews.maxPerSource ?? 5;
+  const aiNaverEnabled = aiNews.sources?.naverBlog !== false;
+  const aiGoogleEnabled = aiNews.sources?.googleNews !== false;
+
+  if (aiNews.enabled !== false) {
+    console.log('\n=======================================');
+    console.log('[트랙 3] 고정 AI 키워드 최신 뉴스/블로그 수집 시작...');
+    console.log(`AI 키워드 (${aiKeywords.length}개):`, aiKeywords);
+    console.log(`날짜 제한: 오늘 기준 최근 ${aiMaxAgeDays}일 이내 글만 허용`);
+    console.log('=======================================');
+
+    const aiBlogCandidates = [];
+    const aiNewsCandidates = [];
+
+    for (const keyword of aiKeywords) {
+      console.log(`\n[AI 키워드: ${keyword}] 수집 중...`);
+
+      // 네이버 블로그 검색 (오픈API, 최신순)
+      if (aiNaverEnabled) {
+        try {
+          const blogItems = await fetchNaverBlogSearchResults(clientId, clientSecret, keyword, aiMaxPerSource);
+          for (const item of blogItems) {
+            if (!isRecentPost(item.pubDate, aiMaxAgeDays)) continue;
+            const cleanObj = calculateCleanScore(
+              { title: item.title, description: item.description },
+              customBlacklist,
+              true
+            );
+            if (cleanObj.score >= minCleanScore) {
+              aiBlogCandidates.push({ ...item, score: cleanObj.score, reasons: cleanObj.reasons });
+            }
+          }
+        } catch (e) {
+          console.error(`  AI 블로그 검색 예외 (${keyword}):`, e.message);
+        }
+      }
+
+      // 구글 뉴스 RSS 검색
+      if (aiGoogleEnabled) {
+        try {
+          const newsItems = await fetchGoogleNewsResults(keyword, aiMaxPerSource);
+          for (const item of newsItems) {
+            if (!isRecentPost(item.pubDate, aiMaxAgeDays)) continue;
+            const cleanObj = calculateCleanScore(
+              { title: item.title, description: item.description },
+              customBlacklist,
+              true
+            );
+            if (cleanObj.score >= minCleanScore) {
+              aiNewsCandidates.push({ ...item, score: cleanObj.score, reasons: cleanObj.reasons });
+            }
+          }
+        } catch (e) {
+          console.error(`  AI 뉴스 검색 예외 (${keyword}):`, e.message);
+        }
+      }
+    }
+
+    // AI 블로그 글: 공감/댓글 실시간 스크래핑 후 반응도 점수로 정렬
+    if (aiBlogCandidates.length > 0) {
+      await enrichCandidatesWithReactions(aiBlogCandidates);
+      const validAiBlogs = aiBlogCandidates
+        .filter(c => (c.engagementScore || 0) >= minEngagementScore)
+        .sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+      console.log(`  => AI 블로그 반응도 컷트라인 통과 ${validAiBlogs.length}개`);
+      selectedBlogs.push(...validAiBlogs);
+    }
+
+    // AI 뉴스: 최신순 상위 선발
+    const sortedAiNews = aiNewsCandidates
+      .sort((a, b) => (b.pubDate || '').localeCompare(a.pubDate || ''));
+    console.log(`  => AI 뉴스 최신순 선발 ${sortedAiNews.length}개`);
+    newsCandidates.push(...sortedAiNews);
+  }
 
   // =============================================================
   // [통합] 최종 선발 및 중복 제거
