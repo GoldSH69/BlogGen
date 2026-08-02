@@ -71,6 +71,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [aiKeywords, setAiKeywords] = useState(["openai", "claude", "gemini", "deepseek", "qwen", "github 오픈소스"]);
   const [newAiKeyword, setNewAiKeyword] = useState('');
   const [aiMaxAgeDays, setAiMaxAgeDays] = useState(3);
+  const [aiMaxPerSource, setAiMaxPerSource] = useState(2);
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -104,6 +105,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           setAiEnabled(an.enabled !== false);
           setAiKeywords(Array.isArray(an.keywords) && an.keywords.length > 0 ? an.keywords : ["openai", "claude", "gemini", "deepseek", "qwen", "github 오픈소스"]);
           setAiMaxAgeDays(an.maxAgeDays ?? 3);
+          setAiMaxPerSource(an.maxPerSource ?? 2);
         }
       } catch (err) {
         console.error(err);
@@ -171,8 +173,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         enabled: aiEnabled,
         maxAgeDays: aiMaxAgeDays,
         keywords: aiKeywords,
-        sources: { naverBlog: true, googleNews: true },
-        maxPerSource: 5
+        sources: { naverBlog: true, googleNews: false },
+        maxPerSource: aiMaxPerSource
       },
       scheduler: { intervalHours }
     };
@@ -447,7 +449,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
               {/* 4. AI Keywords Search */}
               <div>
-                <h4 style={sectionTitleStyle}>4. AI 최신 뉴스/블로그 키워드 수집</h4>
+                <h4 style={sectionTitleStyle}>4. AI 최신 블로그 키워드 수집 (구글 뉴스 수집 제외)</h4>
                 <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>
@@ -457,7 +459,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                       onChange={(e) => setAiEnabled(e.target.checked)}
                       style={{ accentColor: 'var(--color-violet)', width: '15px', height: '15px', cursor: 'pointer' }}
                     />
-                    고정 AI 키워드 기반 최신 수집 사용 (openai, claude, gemini, deepseek 등)
+                    고정 AI 키워드 기반 최신 블로그 수집 사용 (openai, claude, gemini, deepseek 등)
                   </label>
 
                   <div style={{ marginBottom: '12px' }}>
@@ -472,6 +474,23 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                           style={{ padding: '6px 12px', fontSize: '0.76rem', fontWeight: '600' }}
                         >
                           최근 {days}일
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>🔢 키워드당 최대 수집 개수 (반응도 높은 순, 없으면 0개)</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {[1, 2, 3].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setAiMaxPerSource(n)}
+                          className={aiMaxPerSource === n ? "btn-neon" : "btn-secondary"}
+                          style={{ padding: '6px 12px', fontSize: '0.76rem', fontWeight: '600' }}
+                        >
+                          최대 {n}개
                         </button>
                       ))}
                     </div>

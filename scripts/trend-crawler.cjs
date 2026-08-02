@@ -9,6 +9,14 @@ const path = require('path');
 // Constants
 const CONFIG_PATH = path.join(__dirname, '../trend-rules.json');
 
+// 크롤러 전역 오류 수집 버퍼 (실패한 수집 단위를 모아 최종 오류 리포트 이슈로 발행)
+const crawlErrors = [];
+function recordError(context, err) {
+  const message = (err && err.message) ? err.message : String(err || '알수없는 오류');
+  crawlErrors.push({ time: getKSTDate().toISOString(), context, message });
+  console.error(`  ❌ [${context}] 오류: ${message}`);
+}
+
 // HTML tag cleaner helper
 function cleanHtml(text) {
   if (!text) return '';
@@ -325,7 +333,7 @@ async function fetchGoogleTrendingKeywords(limitCount = 9) {
     }
     console.log(`  => 구글 실시간 급상승 키워드 ${keywords.length}개 추출 완료:`, keywords);
   } catch (e) {
-    console.error('  구글 트렌드 키워드 수집 실패:', e.message);
+    recordError('구글 실시간 급상승 키워드 수집', e);
   }
   return keywords;
 }
@@ -365,7 +373,9 @@ async function fetchGoogleNewsResults(keyword, limit = 1) {
         }
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    recordError(`구글 뉴스 검색 (${keyword})`, e);
+  }
   return items;
 }
 
@@ -401,10 +411,10 @@ async function fetchNaverBlogSearchResults(clientId, clientSecret, keyword, limi
         });
       }
     } else {
-      console.error(`  네이버 블로그 검색 실패 (${keyword}): HTTP ${res.status}`);
+      recordError(`네이버 블로그 검색 (${keyword})`, new Error(`HTTP ${res.status}`));
     }
   } catch (e) {
-    console.error(`  네이버 블로그 검색 예외 (${keyword}):`, e.message);
+    recordError(`네이버 블로그 검색 (${keyword})`, e);
   }
   return items;
 }
@@ -591,7 +601,7 @@ async function run() {
         selectedBlogs.push(...top3ForCategory);
       }
     } catch (e) {
-      console.error(`  카테고리 "${catName}" 수집 예외:`, e.message);
+      recordError(`카테고리 "${catName}" 수집`, e);
     }
   }
 
@@ -619,41 +629,40 @@ async function run() {
         }
       }
     } catch (e) {
-      console.error(`실시간 뉴스 수집 예외 (${keyword}):`, e.message);
+      recordError(`실시간 뉴스 수집 (${keyword})`, e);
     }
   }
 
   console.log(`=> 서로 다른 실시간 핫뉴스 최종 ${newsCandidates.length}개 선발 완료`);
 
   // =============================================================
-  // [트랙 3] 고정 AI 키워드 기반 최신 뉴스/블로그 수집 (최근 2~3일 한정)
+  // [트랙 3] 고정 AI 키워드 기반 최신 블로그 수집 (키워드당 반응도 상위 최대 2개)
   // =============================================================
   const aiNews = config.aiNews || {};
   const aiKeywords = Array.isArray(aiNews.keywords) && aiNews.keywords.length > 0
     ? aiNews.keywords
     : ['openai', 'claude', 'gemini', 'deepseek', 'qwen', 'github 오픈소스'];
   const aiMaxAgeDays = aiNews.maxAgeDays ?? 3;
-  const aiMaxPerSource = aiNews.maxPerSource ?? 5;
+  const aiMaxPerSource = aiNews.maxPerSource ?? 2;
   const aiNaverEnabled = aiNews.sources?.naverBlog !== false;
-  const aiGoogleEnabled = aiNews.sources?.googleNews !== false;
 
   if (aiNews.enabled !== false) {
     console.log('\n=======================================');
-    console.log('[트랙 3] 고정 AI 키워드 최신 뉴스/블로그 수집 시작...');
+    console.log('[트랙 3] 고정 AI 키워드 최신 블로그 수집 시작...');
     console.log(`AI 키워드 (${aiKeywords.length}개):`, aiKeywords);
     console.log(`날짜 제한: 오늘 기준 최근 ${aiMaxAgeDays}일 이내 글만 허용`);
+    console.log(`키워드당 반응도(공감×1+댓글×2) 상위 ${aiMaxPerSource}개 이하만 선발 (AI 구글 뉴스 수집은 중단됨)`);
     console.log('=======================================');
 
     const aiBlogCandidates = [];
-    const aiNewsCandidates = [];
 
     for (const keyword of aiKeywords) {
       console.log(`\n[AI 키워드: ${keyword}] 수집 중...`);
 
-      // 네이버 블로그 검색 (오픈API, 최신순)
+      // 네이버 블로그 검색 (오픈API, 최신순 → 반응도 정렬 후 키워드당 상위 선발)
       if (aiNaverEnabled) {
         try {
-          const blogItems = await fetchNaverBlogSearchResults(clientId, clientSecret, keyword, aiMaxPerSource);
+          const blogItems = await fetchNaverBlogSearchResults(clientId, clientSecret, keyword, aiMaxPerSource * 3);
           for (const item of blogItems) {
             if (!isRecentPost(item.pubDate, aiMaxAgeDays)) continue;
             const cleanObj = calculateCleanScore(
@@ -666,46 +675,31 @@ async function run() {
             }
           }
         } catch (e) {
-          console.error(`  AI 블로그 검색 예외 (${keyword}):`, e.message);
-        }
-      }
-
-      // 구글 뉴스 RSS 검색
-      if (aiGoogleEnabled) {
-        try {
-          const newsItems = await fetchGoogleNewsResults(keyword, aiMaxPerSource);
-          for (const item of newsItems) {
-            if (!isRecentPost(item.pubDate, aiMaxAgeDays)) continue;
-            const cleanObj = calculateCleanScore(
-              { title: item.title, description: item.description },
-              customBlacklist,
-              true
-            );
-            if (cleanObj.score >= minCleanScore) {
-              aiNewsCandidates.push({ ...item, score: cleanObj.score, reasons: cleanObj.reasons });
-            }
-          }
-        } catch (e) {
-          console.error(`  AI 뉴스 검색 예외 (${keyword}):`, e.message);
+          recordError(`AI 블로그 검색 (${keyword})`, e);
         }
       }
     }
 
-    // AI 블로그 글: 공감/댓글 실시간 스크래핑 후 반응도 점수로 정렬
+    // AI 블로그 글: 공감/댓글 실시간 스크래핑 후 반응도 점수로 키워드별 상위 선발 (없으면 0개)
     if (aiBlogCandidates.length > 0) {
       await enrichCandidatesWithReactions(aiBlogCandidates);
-      const validAiBlogs = aiBlogCandidates
-        .filter(c => (c.engagementScore || 0) >= minEngagementScore)
-        .sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
-      console.log(`  => AI 블로그 반응도 컷트라인 통과 ${validAiBlogs.length}개`);
-      selectedBlogs.push(...validAiBlogs);
-    }
 
-    // AI 뉴스: 최신순 상위 선발
-    const sortedAiNews = aiNewsCandidates
-      .sort((a, b) => (b.pubDate || '').localeCompare(a.pubDate || ''));
-    console.log(`  => AI 뉴스 최신순 선발 ${sortedAiNews.length}개`);
-    newsCandidates.push(...sortedAiNews);
+      const perKeywordMap = new Map();
+      for (const cand of aiBlogCandidates) {
+        if ((cand.engagementScore || 0) < minEngagementScore) continue;
+        const key = cand.keyword || '기타';
+        if (!perKeywordMap.has(key)) perKeywordMap.set(key, []);
+        perKeywordMap.get(key).push(cand);
+      }
+
+      const selectedAiBlogs = [];
+      for (const arr of perKeywordMap.values()) {
+        arr.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+        selectedAiBlogs.push(...arr.slice(0, aiMaxPerSource));
+      }
+      console.log(`  => AI 키워드별 반응도 상위 ${aiMaxPerSource}개 이하 선발: ${selectedAiBlogs.length}개`);
+      selectedBlogs.push(...selectedAiBlogs);
+    }
   }
 
   // =============================================================
@@ -735,6 +729,7 @@ async function run() {
 
   // Existing Issue Check & Github Issue Creation
   let existingIssueTitles = new Set();
+  const existingErrorReportIssues = []; // 이미 열려있는 크롤러 오류 리포트 이슈 { number, title }
   try {
     const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=open&per_page=100`;
     const res = await fetch(issuesUrl, {
@@ -746,9 +741,16 @@ async function run() {
     });
     if (res.ok) {
       const data = await res.json();
-      data.forEach(issue => existingIssueTitles.add(issue.title.trim()));
+      data.forEach(issue => {
+        existingIssueTitles.add(issue.title.trim());
+        if (issue.title.trim().startsWith('[크롤러 오류')) {
+          existingErrorReportIssues.push({ number: issue.number, title: issue.title.trim() });
+        }
+      });
     }
-  } catch (e) {}
+  } catch (e) {
+    recordError('기존 트렌드 이슈 조회', e);
+  }
 
   for (const trend of finalUniqueTrends) {
     const issueTitle = `[트렌드] ${trend.keyword}: ${trend.title}`;
@@ -792,7 +794,70 @@ ${trend.description}
           labels: ['trend-candidate']
         })
       });
-    } catch (e) {}
+    } catch (e) {
+      recordError(`트렌드 이슈 등록 (${issueTitle})`, e);
+    }
+  }
+
+  // =============================================================
+  // [오류 리포트] 이번 실행 중 수집 오류가 있다면 전용 리포트 이슈 1개 발행
+  // =============================================================
+  if (crawlErrors.length > 0) {
+    const reportTitle = `[크롤러 오류 리포트] ${getKSTDate().toISOString().slice(0, 16).replace('T', ' ')} (${crawlErrors.length}건)`;
+
+    // 이전에 남아있는 오픈 오류 리포트 이슈는 먼저 닫아서 항상 최신 1개만 유지
+    for (const ex of existingErrorReportIssues) {
+      try {
+        await fetch(`https://api.github.com/repos/${repository}/issues/${ex.number}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${githubToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'TCCG-Trend-Crawler-Agent'
+          },
+          body: JSON.stringify({ state: 'closed' })
+        });
+        console.log(`이전 오류 리포트 이슈 닫음: #${ex.number} ${ex.title}`);
+      } catch (e) {
+        console.error(`이전 오류 리포트 이슈 닫기 실패 (#${ex.number}):`, e.message);
+      }
+    }
+
+    const reportBody = [
+      '### ⚠️ 트렌드 크롤러 수집 오류 리포트',
+      '',
+      `- **실행 시각**: \`${getKSTDate().toISOString()}\``,
+      `- **총 오류 건수**: \`${crawlErrors.length}건\``,
+      '',
+      '| # | 발생 시각 | 발생 지점 | 오류 메시지 |',
+      '|---|-----------|-----------|-------------|',
+      ...crawlErrors.map((e, i) => `| ${i + 1} | ${e.time} | ${e.context} | ${e.message.replace(/\|/g, '\\|')} |`),
+      '',
+      '---',
+      '*해당 수집 지점을 점검하여 다음 실행에서 정상 수집되도록 조치해 주세요.*'
+    ].join('\n');
+
+    try {
+      const createReportUrl = `https://api.github.com/repos/${repository}/issues`;
+      await fetch(createReportUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'TCCG-Trend-Crawler-Agent'
+        },
+        body: JSON.stringify({
+          title: reportTitle,
+          body: reportBody,
+          labels: ['trend-candidate']
+        })
+      });
+      console.log('크롤러 오류 리포트 이슈 등록 완료:', reportTitle);
+    } catch (e) {
+      console.error('오류 리포트 이슈 등록 실패:', e.message);
+    }
   }
 
   console.log('\nTCCG Trend Crawler 작업 완료.');

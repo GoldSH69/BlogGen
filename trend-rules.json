@@ -54,9 +54,9 @@
     ],
     "sources": {
       "naverBlog": true,
-      "googleNews": true
+      "googleNews": false
     },
-    "maxPerSource": 5
+    "maxPerSource": 2
   },
   "scheduler": {
     "intervalHours": 24

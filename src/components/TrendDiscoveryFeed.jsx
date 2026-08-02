@@ -4,6 +4,7 @@ import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflo
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
+  const [crawlerErrors, setCrawlerErrors] = useState([]);
   const [sortMode, setSortMode] = useState('engagement'); // 'engagement' vs 'category'
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -49,6 +50,32 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     }
   };
 
+  const handleDismissCrawlerErrors = async () => {
+    if (crawlerErrors.length === 0) return;
+    try {
+      const issueNumbers = crawlerErrors.map(item => item.number);
+      await closeMultipleTrendIssuesOnGithub(issueNumbers);
+      setCrawlerErrors([]);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || '오류 리포트 이슈 닫기에 실패했습니다.');
+    }
+  };
+
+  // 크롤러 오류 리포트 이슈 본문에서 오류 목록(표 행) 파싱
+  const parseCrawlerErrorRows = (issue) => {
+    const body = issue?.body || '';
+    return body
+      .split('\n')
+      .filter(line => /^\|\s*\d+\s*\|/.test(line))
+      .map(line => {
+        const cols = line.split('|').map(c => c.trim());
+        const context = cols[3] || '알수없음';
+        const message = cols[4] || '';
+        return { context, message };
+      });
+  };
+
   const handleTriggerWorkflow = async () => {
     setIsTriggering(true);
     setTriggerStatus('서버 가동 신호 전송 중...');
@@ -91,7 +118,9 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       }
       
       const openIssues = await fetchTrendIssuesFromGithub();
-      setTrends(openIssues || []);
+      const errorIssues = (openIssues || []).filter(issue => (issue.title || '').trim().startsWith('[크롤러 오류'));
+      setCrawlerErrors(errorIssues);
+      setTrends((openIssues || []).filter(issue => !(issue.title || '').trim().startsWith('[크롤러 오류')));
     } catch (err) {
       console.error(err);
       setErrorMsg('GitHub에서 트렌드 피드를 불러오는 도중 오류가 발생했습니다.');
@@ -360,6 +389,38 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       </div>
 
       <div style={feedBodyStyle}>
+        {crawlerErrors.length > 0 && (
+          <div style={crawlerErrorContainerStyle}>
+            <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: '800', fontSize: '0.82rem', marginBottom: '6px' }}>
+                크롤러 수집 오류 리포트 {crawlerErrors.length}건 감지
+              </div>
+              {crawlerErrors.map((issue) => {
+                const rows = parseCrawlerErrorRows(issue);
+                const title = (issue.title || '').replace(/^\[크롤러 오류 리포트\]\s*/, '');
+                return (
+                  <div key={issue.id} style={{ marginBottom: rows.length ? '10px' : 0 }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>#{issue.number} {title}</div>
+                    {rows.map((row, idx) => (
+                      <div key={idx} style={{ fontSize: '0.72rem', marginTop: '3px', opacity: 0.85, wordBreak: 'break-word' }}>
+                        · [{row.context}] {row.message}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleDismissCrawlerErrors}
+              className="btn-secondary"
+              style={{ flexShrink: 0, padding: '5px 12px', fontSize: '0.72rem', fontWeight: '700' }}
+            >
+              오류 확인
+            </button>
+          </div>
+        )}
+
         {errorMsg && (
           <div style={errorContainerStyle}>
             <AlertTriangle size={16} />
@@ -797,6 +858,20 @@ const errorContainerStyle = {
   color: 'var(--color-rose)',
   fontSize: '0.8rem',
   lineHeight: '1.4',
+  marginBottom: '20px',
+};
+
+const crawlerErrorContainerStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '10px',
+  padding: '14px 16px',
+  borderRadius: 'var(--radius-sm)',
+  background: 'rgba(251, 191, 36, 0.06)',
+  border: '1px solid rgba(251, 191, 36, 0.3)',
+  color: '#f59e0b',
+  fontSize: '0.8rem',
+  lineHeight: '1.5',
   marginBottom: '20px',
 };
 
