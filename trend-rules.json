@@ -40,7 +40,7 @@
     }
   },
   "aiNews": {
-    "enabled": true,
+    "enabled": false,
     "maxAgeDays": 3,
     "keywords": [
       "openai",
