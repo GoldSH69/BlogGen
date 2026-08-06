@@ -226,6 +226,27 @@ async function enrichCandidatesWithReactions(candidates) {
   }));
 }
 
+// 네이버 홈판/큐레이션 적합도 점수 계산 엔진 (0 ~ 100점)
+function calculateHomeBoardScore(post) {
+  let score = 50; // 기본점수
+
+  // 1. 반응도 지표 가산점 (최대 +25점)
+  const eng = post.engagementScore || 0;
+  if (eng >= 20) score += 25;
+  else if (eng >= 10) score += 20;
+  else if (eng >= 5) score += 15;
+  else if (eng >= 1) score += 10;
+
+  // 2. 큐레이션 & 스펙 비교 관련 제목/본문 정규식 패턴 가산점 (최대 +25점)
+  const textToTest = `${post.title || ''} ${post.description || ''}`;
+  const curationRegex = /비교|추천|선택|가이드|장단점|스펙|체크리스트|총정리|종합|차이|순위|베스트|분석/i;
+  if (curationRegex.test(textToTest)) {
+    score += 25;
+  }
+
+  return Math.min(100, Math.max(0, score));
+}
+
 // Full Text Scraper Engine (Zero-Dependency)
 async function scrapeFullText(link, type) {
   let url = link;
@@ -503,6 +524,9 @@ async function run() {
   const minCleanScore = unified.filtering?.minCleanScore ?? 75;
   const customBlacklist = unified.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"];
   const minEngagementScore = unified.engagementRules?.minEngagementScore ?? 1; // Block 0-engagement posts!
+  const homeBoardFilterConfig = unified.homeBoardFilter || { enabled: true, minHomeBoardScore: 60 };
+  const isHomeBoardFilterEnabled = homeBoardFilterConfig.enabled !== false;
+  const minHomeBoardScore = homeBoardFilterConfig.minHomeBoardScore ?? 60;
   const MAX_AGE_DAYS = 5; // 오늘 기준 최근 5일 이내 작성글만 허용
 
   const categoryMap = {
@@ -717,13 +741,27 @@ async function run() {
 
   console.log(`\n최종 수집 완료: 총 ${finalUniqueTrends.length}개 (블로그 ${selectedBlogs.length}개, 뉴스 ${newsCandidates.length}개)`);
 
-  // 원본 전체 본문 스크래핑
-  console.log('\n--- 원본 본문 스크래핑 시작 ---');
+  // 원본 전체 본문 스크래핑 및 홈판 적합도 스코어링
+  console.log('\n--- 원본 본문 스크래핑 & 홈판 적합도 분석 시작 ---');
   for (const trend of finalUniqueTrends) {
-    if (trend.type === '구글 뉴스') continue;
-    const fullText = await scrapeFullText(trend.link, trend.type);
-    if (fullText) {
-      trend.description = fullText;
+    if (trend.type !== '구글 뉴스') {
+      const fullText = await scrapeFullText(trend.link, trend.type);
+      if (fullText) {
+        trend.description = fullText;
+      }
+    }
+    trend.homeBoardScore = calculateHomeBoardScore(trend);
+  }
+
+  let finalCandidatesToPublish = finalUniqueTrends;
+  if (isHomeBoardFilterEnabled) {
+    console.log(`\n- [홈판 필터가동] 홈판 적합도 점수 ${minHomeBoardScore}점 이상만 우수 선별 중...`);
+    finalCandidatesToPublish = finalUniqueTrends.filter(t => (t.homeBoardScore || 0) >= minHomeBoardScore);
+    console.log(`  => 홈판 필터링 결과: 총 ${finalUniqueTrends.length}개 중 ${finalCandidatesToPublish.length}개 최종 선발 완료`);
+    if (finalCandidatesToPublish.length === 0 && finalUniqueTrends.length > 0) {
+      console.log('  ⚠️ 최소 적합도 점수 통과 포스트가 없어 상위 적합도 포스트를 보존합니다.');
+      finalUniqueTrends.sort((a, b) => (b.homeBoardScore || 0) - (a.homeBoardScore || 0));
+      finalCandidatesToPublish = finalUniqueTrends.slice(0, 5);
     }
   }
 
@@ -752,7 +790,7 @@ async function run() {
     recordError('기존 트렌드 이슈 조회', e);
   }
 
-  for (const trend of finalUniqueTrends) {
+  for (const trend of finalCandidatesToPublish) {
     const issueTitle = `[트렌드] ${trend.keyword}: ${trend.title}`;
 
     if (existingIssueTitles.has(issueTitle)) {
@@ -769,6 +807,7 @@ async function run() {
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
 - **반응도 스코어**: \`${trend.engagementScore || 0}점 (공감 ${trend.sympathyCnt || 0}개 / 댓글 ${trend.commentCnt || 0}개)\`
+- **홈판 적합도 점수**: \`🏆 ${trend.homeBoardScore || 80}점 (큐레이션 추천)\`
 
 ### 📝 원본 정보 및 원고 소스 텍스트
 <!-- TREND_SOURCE_START -->

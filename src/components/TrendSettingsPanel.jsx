@@ -72,6 +72,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [newAiKeyword, setNewAiKeyword] = useState('');
   const [aiMaxAgeDays, setAiMaxAgeDays] = useState(3);
   const [aiMaxPerSource, setAiMaxPerSource] = useState(2);
+  const [homeBoardEnabled, setHomeBoardEnabled] = useState(true);
+  const [minHomeBoardScore, setMinHomeBoardScore] = useState(60);
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -100,6 +102,9 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
           setCommentWeight(ut.engagementRules?.commentWeight ?? 2.0);
           setMinCleanScore(ut.filtering?.minCleanScore ?? 80);
           setCustomBlacklist(ut.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
+          const hb = ut.homeBoardFilter || {};
+          setHomeBoardEnabled(hb.enabled !== false);
+          setMinHomeBoardScore(hb.minHomeBoardScore ?? 60);
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
           const an = cloudConfig.aiNews || {};
           setAiEnabled(an.enabled !== false);
@@ -167,7 +172,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         categories,
         sources: { naverBlog: true, googleNews: true },
         engagementRules: { sympathyWeight, commentWeight, minEngagementScore: 1 },
-        filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 }
+        filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 },
+        homeBoardFilter: { enabled: homeBoardEnabled, minHomeBoardScore }
       },
       aiNews: {
         enabled: aiEnabled,
@@ -425,9 +431,51 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 3. Crawler Schedule Interval */}
+              {/* 3. Home Board Filter Option */}
               <div>
-                <h4 style={sectionTitleStyle}>3. 크롤러 자동 수집 주기 (Interval)</h4>
+                <h4 style={sectionTitleStyle}>3. 🏆 네이버 홈판 적합도 필터 설정</h4>
+                <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <label style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: '600' }}>
+                      네이버 홈판(큐레이션판) 필터링 가동
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--color-violet)' }}>
+                      <input
+                        type="checkbox"
+                        checked={homeBoardEnabled}
+                        onChange={(e) => setHomeBoardEnabled(e.target.checked)}
+                        style={{ accentColor: 'var(--color-violet)', width: '16px', height: '16px' }}
+                      />
+                      <span>{homeBoardEnabled ? '활성화 (홈판 우수글만 선별)' : '비활성화'}</span>
+                    </label>
+                  </div>
+
+                  {homeBoardEnabled && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>최소 홈판 적합도 점수 기준</span>
+                        <span style={{ fontWeight: '700', color: 'var(--color-cyan)' }}>{minHomeBoardScore}점 이상</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="40" 
+                        max="90" 
+                        step="5"
+                        value={minHomeBoardScore}
+                        onChange={(e) => setMinHomeBoardScore(parseInt(e.target.value, 10))}
+                        style={{ width: '100%', accentColor: 'var(--color-cyan)', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                        💡 3인칭 비교 분석 구조, 반응도 지표, 큐레이션 키워드가 우수한 포스트를 선별합니다.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Crawler Schedule Interval */}
+              <div>
+                <h4 style={sectionTitleStyle}>4. 크롤러 자동 수집 주기 (Interval)</h4>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[3, 6, 12, 24].map((hours) => (
                     <button
@@ -447,9 +495,9 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 4. AI Keywords Search */}
+              {/* 5. AI Keywords Search */}
               <div>
-                <h4 style={sectionTitleStyle}>4. AI 최신 블로그 키워드 수집 (구글 뉴스 수집 제외)</h4>
+                <h4 style={sectionTitleStyle}>5. AI 최신 블로그 키워드 수집 (구글 뉴스 수집 제외)</h4>
                 <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>

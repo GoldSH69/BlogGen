@@ -237,10 +237,19 @@ const disclaimers = {
 - 첫 문장은 강한 훅(의문, 감탄, 반전)으로 시작하고 감정이 담긴 서사로 자연스럽게 이어가십시오.
 - 다소 자극적이거나 반전 있는 표현으로 클릭을 유도하되, 사실은 과장하지 마십시오.
 - 본문 끝에는 댓글·이웃 추가·공유를 자연스럽게 유도하는 소통 CTA를 넣으십시오.
+`,
+    'curation': `
+[🏆 네이버 홈판 큐레이션 모드 가이드라인 (3인칭 팩트/비교/큐레이션 최적화)]:
+- 1인칭 가짜 사용/구매/체험 후기("내가 직접 써보니", "직접 구매했다") 작성을 절대로 금지하고, 100% 3인칭 전문 큐레이터 시점으로 작성하십시오.
+- 글 서두에는 바쁜 독자 및 네이버 AI 브리핑 시스템을 만족시키는 [3줄 핵심 요약] 박스를 상단에 반드시 배치하십시오.
+- 본문 첫 영역에는 "실사용자 100여 명 평점 및 반응 종합 분석" 형태의 3인칭 메타 큐레이션 섹션을 구성하십시오.
+- 본문 중반에는 주제/제품의 객관적 스펙, 가격, 특징을 한눈에 비교할 수 있는 [마크다운 비교 표(Table)]와 [구매 전 체크리스트 3가지]를 포함하십시오.
+- 소제목은 의문/질문형 H2로 구획하고, 소제목 바로 아래 1~2문장으로 명확한 두괄식 결론을 우선 제시하십시오.
+- 본문 하단에는 실질적 판단을 돕는 두괄식 Q&A/FAQ 3선과 이웃추가/공감 소통 CTA 문구를 수록하십시오.
 `
   };
 
-  const seoInstruction = naverSeoInstructions[naverSeoType] || naverSeoInstructions['info'];
+  const seoInstruction = naverSeoInstructions[naverSeoType] || naverSeoInstructions['curation'] || naverSeoInstructions['info'];
 
   // Experience / Humanization instructions
   const personaInstruction = humanPersonaEnabled && humanPersonaExperience.trim() !== ''

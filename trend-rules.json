@@ -37,6 +37,10 @@
         "추천인"
       ],
       "maxAgeDays": 10
+    },
+    "homeBoardFilter": {
+      "enabled": true,
+      "minHomeBoardScore": 60
     }
   },
   "aiNews": {

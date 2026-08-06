@@ -15,7 +15,7 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   const [disclaimerType, setDisclaimerType] = useState('auto');
 
   // Naver Blog specific states
-  const [naverSeoType, setNaverSeoType] = useState('info');
+  const [naverSeoType, setNaverSeoType] = useState('curation');
   const [humanPersonaEnabled, setHumanPersonaEnabled] = useState(false);
   const [humanPersonaExperience, setHumanPersonaExperience] = useState('');
   const [imgCount, setImgCount] = useState(5);
@@ -261,11 +261,12 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
               onChange={(e) => setNaverSeoType(e.target.value)}
               style={selectFieldStyle}
             >
-              <option value="info">정보성 SEO (검색 유입 최적화) — 추천</option>
+              <option value="curation">🏆 네이버 홈판 큐레이션 (3인칭 팩트&비교 최적화) — 강력 추천</option>
+              <option value="info">정보성 SEO (검색 유입 최적화)</option>
               <option value="story">감성 스토리 (홈피드 추천 최적화)</option>
             </select>
             <span style={helpTextStyle}>
-              💡 정보성 = 검색 노출/체류시간에 유리, 감성 = 네이버 홈피드 추천 노출에 유리
+              💡 큐레이션 = 홈판/AI 브리핑 노출 최적화 (1인칭 후기 없이 3인칭 비교 분석), 정보성 = 키워드 검색 노출, 감성 = 홈피드 추천
             </span>
           </div>
 

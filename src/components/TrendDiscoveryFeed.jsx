@@ -144,6 +144,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const groupMatch = body.match(/-\s*\*\*수집\s*그룹\*\*:\s*`?([^\n\r]+)/i);
     const pubDateMatch = body.match(/-\s*\*\*원글\s*발행\s*시간\*\*:\s*`?([^\n\r]+)/i);
     const engagementMatch = body.match(/-\s*\*\*반응도\s*스코어\*\*:\s*`?([^\n\r]+)/i);
+    const homeBoardMatch = body.match(/-\s*\*\*홈판\s*적합도\s*점수\*\*:\s*`?([^\n\r]+)/i);
     const contentBlockMatch = body.match(/<!-- TREND_SOURCE_START -->([\s\S]*?)<!-- TREND_SOURCE_END -->/);
 
     const parsedType = channelMatch ? channelMatch[1].replace(/`/g, '').trim() : '네이버 블로그';
@@ -152,6 +153,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     const parsedLink = linkMatch ? linkMatch[1].trim() : '#';
     const parsedGroup = groupMatch ? groupMatch[1].replace(/`/g, '').trim() : '통합 트렌드';
     const parsedPubDate = pubDateMatch ? pubDateMatch[1].replace(/`/g, '').trim() : '';
+    const parsedHomeBoardScore = homeBoardMatch ? (homeBoardMatch[1].match(/(\d+)/)?.[1] || '80') : null;
     
     // Parse engagement numbers
     let sympathyCnt = 0;
@@ -184,6 +186,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       sympathyCnt,
       commentCnt,
       engagementScore,
+      homeBoardScore: parsedHomeBoardScore,
       categoryName,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
@@ -506,6 +509,22 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                           }}>
                             🔥 반응도: {displayScore}점
                           </span>
+                          {parsed.homeBoardScore && (
+                            <span style={{
+                              fontSize: '0.73rem',
+                              fontWeight: '800',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              🏆 홈판 {parsed.homeBoardScore}점
+                            </span>
+                          )}
                         </>
                       )}
                       <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
