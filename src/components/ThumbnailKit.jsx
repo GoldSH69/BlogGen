@@ -117,7 +117,7 @@ export default function ThumbnailKit({ prompt }) {
         <div style={kitColStyle}>
           <div style={sectionLabelStyle}>1. AI 썸네일 생성 프롬프트</div>
           <p style={helpTextStyle}>
-            아래의 프롬프트를 복사하여 Midjourney 혹은 Dall-E 3에 입력하면 본문과 딱 맞는 **글자 없는(No Text)** 초고화질 이미지를 생성합니다.
+            아래의 프롬프트를 복사하여 **Nano Banana 2 (Gemini 이미지)** 나 이미지 생성 AI에 입력하면 본문과 딱 맞는 **글자 없는(No Text)** 초고화질 이미지를 생성합니다.
           </p>
           <div style={promptBoxStyle}>
             <pre style={promptPreStyle}>{prompt || '본문 분석 후 매력적인 썸네일 프롬프트를 자동으로 구성해 드립니다.'}</pre>

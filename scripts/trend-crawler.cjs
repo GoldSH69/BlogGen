@@ -227,19 +227,32 @@ async function enrichCandidatesWithReactions(candidates) {
 }
 
 // 네이버 홈판/큐레이션 적합도 점수 계산 엔진 (0 ~ 100점)
+// - 반응도(공감/댓글), 실제 본문 충실도, 큐레이션/비교 키워드를 균형 있게 반영
+// - 점수 설계상 임계값(기본 60점)이 의미 있게 동작하도록(우수 블로그글만 통과) 최소 임계를 잡음
 function calculateHomeBoardScore(post) {
-  let score = 50; // 기본점수
-
-  // 1. 반응도 지표 가산점 (최대 +25점)
   const eng = post.engagementScore || 0;
-  if (eng >= 20) score += 25;
-  else if (eng >= 10) score += 20;
-  else if (eng >= 5) score += 15;
-  else if (eng >= 1) score += 10;
+  const titleText = post.title || '';
+  const descText = post.description || '';
 
-  // 2. 큐레이션 & 스펙 비교 관련 제목/본문 정규식 패턴 가산점 (최대 +25점)
-  const textToTest = `${post.title || ''} ${post.description || ''}`;
-  const curationRegex = /비교|추천|선택|가이드|장단점|스펙|체크리스트|총정리|종합|차이|순위|베스트|분석/i;
+  // 1. 기본점수 (모든 후보에 최소 인정)
+  let score = 10;
+
+  // 2. 반응도 지표 가산점 (최대 +40점) — 홈판은 실사용 반응이 높은 글이 유리
+  if (eng >= 20) score += 40;
+  else if (eng >= 12) score += 32;
+  else if (eng >= 5) score += 24;
+  else if (eng >= 1) score += 12;
+
+  // 3. 실제 본문 충실도 가산점 (최대 +25점) — 요약만 있는 뉴스/빈약 글은 배제
+  const len = descText.trim().length;
+  if (len >= 1500) score += 25;
+  else if (len >= 800) score += 20;
+  else if (len >= 300) score += 15;
+  else if (len >= 100) score += 8;
+
+  // 4. 큐레이션/비교 계열 키워드 가산점 (최대 +25점)
+  const textToTest = `${titleText} ${descText}`;
+  const curationRegex = /비교|추천|선택|가이드|장단점|스펙|체크리스트|총정리|종합|차이|순위|베스트|분석|꿀팁|후기/i;
   if (curationRegex.test(textToTest)) {
     score += 25;
   }
@@ -755,13 +768,15 @@ async function run() {
 
   let finalCandidatesToPublish = finalUniqueTrends;
   if (isHomeBoardFilterEnabled) {
-    console.log(`\n- [홈판 필터가동] 홈판 적합도 점수 ${minHomeBoardScore}점 이상만 우수 선별 중...`);
-    finalCandidatesToPublish = finalUniqueTrends.filter(t => (t.homeBoardScore || 0) >= minHomeBoardScore);
+    // 홈판(네이버 블로그 큐레이션판)은 실사용 반응 + 실질 본문이 있는 블로그 글이 대상.
+    // 구글 실시간 뉴스는 반응도/본문 스코어가 낮아 홈판 적합도 필터에서 자연 탈락됨(홈판용으로 부적합).
+    console.log(`\n- [홈판 필터가동] 홈판 적합도 점수 ${minHomeBoardScore}점 이상이며 블로그 글만 우수 선별 중...`);
+    finalCandidatesToPublish = finalUniqueTrends.filter(t => t.type !== '구글 뉴스' && (t.homeBoardScore || 0) >= minHomeBoardScore);
     console.log(`  => 홈판 필터링 결과: 총 ${finalUniqueTrends.length}개 중 ${finalCandidatesToPublish.length}개 최종 선발 완료`);
-    if (finalCandidatesToPublish.length === 0 && finalUniqueTrends.length > 0) {
-      console.log('  ⚠️ 최소 적합도 점수 통과 포스트가 없어 상위 적합도 포스트를 보존합니다.');
-      finalUniqueTrends.sort((a, b) => (b.homeBoardScore || 0) - (a.homeBoardScore || 0));
-      finalCandidatesToPublish = finalUniqueTrends.slice(0, 5);
+    if (finalCandidatesToPublish.length === 0) {
+      // 모든 후보가 임계값 미달 → 필터 의미를 지키기 위해 발행하지 않고 경고만 기록
+      console.log('  ⚠️ 최소 적합도 점수를 통과한 포스트가 없습니다. 발행을 중단하고 수집 결과를 보존합니다(필터 임계값 확인 필요).');
+      console.log('     참고: 뉴스는 홈판 전용 수집에서는 제외되며, 홈판 대상은 네이버 블로그 원고만 게시됩니다.');
     }
   }
 
@@ -807,7 +822,7 @@ async function run() {
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
 - **반응도 스코어**: \`${trend.engagementScore || 0}점 (공감 ${trend.sympathyCnt || 0}개 / 댓글 ${trend.commentCnt || 0}개)\`
-- **홈판 적합도 점수**: \`🏆 ${trend.homeBoardScore || 80}점 (큐레이션 추천)\`
+- **홈판 적합도 점수**: \`🏆 ${trend.homeBoardScore ?? 0}점 (큐레이션 추천)\`
 
 ### 📝 원본 정보 및 원고 소스 텍스트
 <!-- TREND_SOURCE_START -->

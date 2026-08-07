@@ -5,7 +5,7 @@ import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflo
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [trends, setTrends] = useState([]);
   const [crawlerErrors, setCrawlerErrors] = useState([]);
-  const [sortMode, setSortMode] = useState('engagement'); // 'engagement' vs 'category'
+  const [sortMode, setSortMode] = useState('home'); // 'home' vs 'engagement' vs 'category'
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
@@ -242,7 +242,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       blogList.sort((a, b) => {
         const catCompare = a.parsed.categoryName.localeCompare(b.parsed.categoryName, 'ko-KR');
         if (catCompare !== 0) return catCompare;
-        return b.parsed.engagementScore - a.parsed.engagementScore;
+        return (Number(b.parsed.homeBoardScore) || 0) - (Number(a.parsed.homeBoardScore) || 0);
+      });
+    } else if (sortMode === 'home') { // 'home' (🏆 네이버 홈판 적합도순, 홈판용 추천)
+      blogList.sort((a, b) => {
+        const aHome = Number(a.parsed.homeBoardScore) || 0;
+        const bHome = Number(b.parsed.homeBoardScore) || 0;
+        if (aHome !== bHome) return bHome - aHome;
+        return b.parsed.engagementScore - a.parsed.engagementScore; // 동점 시 반응도 우선
       });
     } else { // 'engagement' (default)
       blogList.sort((a, b) => b.parsed.engagementScore - a.parsed.engagementScore);
@@ -346,6 +353,26 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
         {/* Sort Mode Toggle Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-solid)', padding: '3px 4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+          <button
+            onClick={() => setSortMode('home')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              background: sortMode === 'home' ? 'var(--color-cyan)' : 'transparent',
+              color: sortMode === 'home' ? '#fff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="네이버 홈판(큐레이션판) 적합도 점수가 높은 블로그 글 순서대로 정렬합니다."
+          >
+            🏆 홈판점수
+          </button>
           <button
             onClick={() => setSortMode('engagement')}
             style={{
