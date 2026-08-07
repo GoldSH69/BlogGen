@@ -39,7 +39,7 @@
       "maxAgeDays": 10
     },
     "homeBoardFilter": {
-      "enabled": true,
+      "enabled": false,
       "minHomeBoardScore": 60
     }
   },
