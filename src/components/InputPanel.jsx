@@ -261,12 +261,12 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
               onChange={(e) => setNaverSeoType(e.target.value)}
               style={selectFieldStyle}
             >
-              <option value="curation">🏆 네이버 홈판 큐레이션 (3인칭 팩트&비교 최적화) — 강력 추천</option>
-              <option value="info">정보성 SEO (검색 유입 최적화)</option>
-              <option value="story">감성 스토리 (홈피드 추천 최적화)</option>
+              <option value="curation">🏆 네이버 홈판 & 스마트블록 큐레이션 (0.9초 3줄 요약 + 비교표) — 강력 추천</option>
+              <option value="info">🔍 검색 유입 정보성 SEO (D.I.A.+ 질문형 소제목 & FAQ)</option>
+              <option value="story">✨ 감성 스토리 (개인화 홈피드 스토리텔링 추천)</option>
             </select>
             <span style={helpTextStyle}>
-              💡 큐레이션 = 홈판/AI 브리핑 노출 최적화 (1인칭 후기 없이 3인칭 비교 분석), 정보성 = 키워드 검색 노출, 감성 = 홈피드 추천
+              💡 큐레이션 = 홈판/스마트블록 노출 극대화 (0.9초 3줄 요약, 비교 표, 팩트 수치화), 정보성 = 검색 유입, 감성 = 홈피드 추천
             </span>
           </div>
 

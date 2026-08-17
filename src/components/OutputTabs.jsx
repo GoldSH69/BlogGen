@@ -201,6 +201,33 @@ const renderSegmentedText = (text) => {
     if (seg.type === 'text' && !seg.content.trim()) {
       return null;
     }
+
+    const content = seg.content;
+    const isSummaryBox = content.includes('[📌 3줄 핵심 요약 브리핑]') || content.includes('[3줄 핵심 요약]');
+
+    if (isSummaryBox) {
+      return (
+        <div 
+          key={idx} 
+          style={{ 
+            whiteSpace: 'pre-wrap', 
+            fontFamily: 'inherit', 
+            lineHeight: '1.7', 
+            color: 'var(--text-primary)',
+            fontSize: '0.82rem',
+            margin: '14px 0',
+            padding: '14px 18px',
+            background: 'var(--bg-surface-solid)',
+            borderLeft: '4px solid #03c75a',
+            borderRadius: '6px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+        >
+          {content}
+        </div>
+      );
+    }
+
     return (
       <div 
         key={idx} 
@@ -213,7 +240,7 @@ const renderSegmentedText = (text) => {
           margin: '8px 0'
         }}
       >
-        {seg.content}
+        {content}
       </div>
     );
   });
@@ -223,15 +250,15 @@ const convertNaverBlogToHtml = (platformData) => {
   let html = '';
   
   if (platformData.titleProposals && platformData.titleProposals.length > 0) {
-    html += `<h3>[제목 후보]</h3>`;
+    html += `<h3 style="color: #03c75a; font-size: 16px; font-weight: bold; margin-bottom: 8px;">[💡 추천 블로그 제목]</h3>`;
     platformData.titleProposals.forEach(title => {
-      html += `<p>${title}</p>`;
+      html += `<p style="margin: 4px 0; font-size: 14px; color: #333;">• ${title}</p>`;
     });
     html += `<br/>`;
   }
   
   if (platformData.content) {
-    html += `<h3>[본문]</h3>`;
+    html += `<h3 style="color: #03c75a; font-size: 16px; font-weight: bold; margin-bottom: 12px;">[본문]</h3>`;
     const cleanContent = platformData.content.replace(/<br\s*\/?>/gi, '\n');
     const segments = parseTextAndTables(cleanContent);
     segments.forEach(seg => {
@@ -239,35 +266,78 @@ const convertNaverBlogToHtml = (platformData) => {
         html += renderMarkdownTableToHtml(seg.content);
       } else {
         const lines = seg.content.split('\n');
-        lines.forEach(line => {
+        let inSummaryBox = false;
+        let summaryLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
           const trimmed = line.trim();
+
+          if (trimmed.includes('[📌 3줄 핵심 요약 브리핑]') || trimmed.includes('[3줄 핵심 요약]')) {
+            inSummaryBox = true;
+            summaryLines = [trimmed];
+            continue;
+          }
+
+          if (inSummaryBox) {
+            if (trimmed.startsWith('-') || trimmed.startsWith('•') || trimmed.startsWith('1.') || trimmed.startsWith('2.') || trimmed.startsWith('3.')) {
+              summaryLines.push(trimmed);
+              continue;
+            } else if (!trimmed && summaryLines.length <= 4) {
+              continue;
+            } else {
+              // 요약 박스 끝
+              html += `<div style="background-color: #f8fafc; border-left: 4px solid #03c75a; padding: 14px 18px; margin: 16px 0; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #2d3748;">`;
+              summaryLines.forEach(sLine => {
+                html += `<p style="margin: 4px 0; font-weight: ${sLine.includes('요약') ? 'bold' : 'normal'}; color: ${sLine.includes('요약') ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
+              });
+              html += `</div><br/>`;
+              inSummaryBox = false;
+              summaryLines = [];
+            }
+          }
+
           if (trimmed) {
-            html += `<p>${trimmed}</p>`;
+            if (trimmed.startsWith('📌') || trimmed.startsWith('【') || trimmed.startsWith('💡') || trimmed.startsWith('⚠️')) {
+              html += `<p style="font-size: 16px; font-weight: bold; color: #1e293b; margin: 16px 0 8px 0;">${trimmed}</p>`;
+            } else {
+              html += `<p style="font-size: 14px; line-height: 1.7; color: #334155; margin: 4px 0;">${trimmed}</p>`;
+            }
           } else {
             html += `<br/>`;
           }
-        });
+        }
+
+        if (inSummaryBox && summaryLines.length > 0) {
+          html += `<div style="background-color: #f8fafc; border-left: 4px solid #03c75a; padding: 14px 18px; margin: 16px 0; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #2d3748;">`;
+          summaryLines.forEach(sLine => {
+            html += `<p style="margin: 4px 0; font-weight: ${sLine.includes('요약') ? 'bold' : 'normal'}; color: ${sLine.includes('요약') ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
+          });
+          html += `</div><br/>`;
+        }
       }
     });
     html += `<br/>`;
   }
   
   if (platformData.faq && platformData.faq.length > 0) {
-    html += `<h3>[자주 묻는 질문 (FAQ)]</h3>`;
+    html += `<h3 style="color: #03c75a; font-size: 16px; font-weight: bold; margin-bottom: 8px;">[자주 묻는 질문 (FAQ)]</h3>`;
     platformData.faq.forEach(item => {
-      html += `<p><b>Q. ${item.q}</b></p>`;
-      html += `<p>A. ${item.a}</p>`;
-      html += `<br/>`;
+      html += `<div style="background-color: #f8fafc; padding: 10px 14px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">`;
+      html += `<p style="margin: 2px 0; font-weight: bold; color: #0f172a; font-size: 14px;">Q. ${item.q}</p>`;
+      html += `<p style="margin: 4px 0 2px 0; color: #475569; font-size: 13.5px; line-height: 1.5;">A. ${item.a}</p>`;
+      html += `</div>`;
     });
+    html += `<br/>`;
   }
 
   if (platformData.hashtags && platformData.hashtags.length > 0) {
-    html += `<h3>[태그]</h3>`;
+    html += `<h3 style="color: #03c75a; font-size: 15px; font-weight: bold; margin-bottom: 6px;">[태그]</h3>`;
     const formattedTags = platformData.hashtags.map(t => {
       const trimmed = t.trim();
       return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
     }).join(' ');
-    html += `<p>${formattedTags}</p>`;
+    html += `<p style="color: #0ea5e9; font-size: 13px; font-weight: 500;">${formattedTags}</p>`;
   }
 
   return html;

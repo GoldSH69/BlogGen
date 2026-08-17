@@ -1,16 +1,46 @@
-# React + Vite
+# 🚀 AffiliWrite AI (BlogGen)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **네이버 블로그 홈판 피드 & 스마트블록 상위노출 최적화 멀티 플랫폼 AI 콘텐츠 자동 생성기**
 
-Currently, two official plugins are available:
+AffiliWrite AI는 제휴 마케팅 기획자, 전문 블로거, 콘텐츠 크리에이터를 위한 AI 원고 생성 및 트렌드 디스커버리 플랫폼입니다.
+단 한 번의 원문/키워드 입력으로 2026년 최신 네이버 D.I.A.+, 스마트블록, 홈피드 추천 알고리즘을 완벽하게 만족하는 고품질 원고와 숏폼(Shorts, Reels, TikTok), 인스타그램, 애드센스 승인용 MDX 원고를 즉시 생성합니다.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ✨ 핵심 기능
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **🏆 2026 네이버 홈판 피드 & 스마트블록 큐레이션 최적화**:
+   - **0.9초 룰 & 초반 3초 이탈 방어**: 서두 최상단에 `[📌 3줄 핵심 요약 브리핑]` 박스 강제 배치.
+   - **스마트블록 의도 역추적**: 독자의 4대 질문(기능, 가격/가성비, 장단점, 주의사항) 기반 H2 질문형 소제목 설계.
+   - **구체적 수치/상황 표현화**: '좋아요/추천해요' 대신 구체적 스펙(데시벨, 배터리 지속시간, 무게, 금액) 자동 구체화.
+   - **스마트에디터 ONE 원클릭 복사**: 3줄 요약 박스, 마크다운 비교 표(Table), 두괄식 FAQ가 깨짐 없이 깔끔한 네이버 공식 템플릿 스타일로 자동 클립보드 복사.
+2. **📈 실시간 트렌드 & 카테고리 인기글 디스커버리 Feed**:
+   - 네이버 공식 4대 대분류 및 31개 중분류 카테고리별 실시간 최상위 트래픽 글 자동 수집 및 클린 필터링.
+3. **🔮 Gemini Nano Banana 2 영문 서술형 이미지 프롬프트 생성**:
+   - 사진 구도, 피사체, 조명, 색감, 와이드 비율, 무텍스트 규칙을 완벽 준수한 고화질 썸네일/본문 이미지 프롬프트 자동 생성.
+4. **🛡️ 100% 무료 플랜(Free Tier) 다단계 자동 폴백 체인**:
+   - API 부하나 Rate Limit 발생 시 `gemini-3.6-flash` ➡️ `gemini-3.5-flash` ➡️ `gemini-3.5-flash-lite` ➡️ `gemini-2.5-flash` 순으로 무중단 자동 전환.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ 기술 스택
+
+- **Frontend**: React, Vite, Vanilla CSS Tokens
+- **Icons**: Lucide React
+- **AI Engine**: Google Gemini API (v1beta)
+- **Deployment**: GitHub Pages (gh-pages)
+
+---
+
+## 🚀 시작하기
+
+```bash
+# 의존성 설치
+npm install
+
+# 로컬 개발 서버 실행
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+```

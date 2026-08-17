@@ -24,4 +24,11 @@
   - The AI agent **MUST NEVER** make assumptions, guess variable values, or give answers based on memory without FIRST reading and empirically inspecting the actual source files using code search or view tools.
   - Every answer provided to the user must be verified directly against the latest raw code, schemas, and runtime configurations.
 
+- **Mandatory Pre-Conversation Git Pull Rule**:
+  - The AI agent **MUST ALWAYS** run `git pull` to synchronize with the latest remote changes at the start of a conversation or before beginning any analysis and code task.
+
+- **Mandatory Pre-Push Documentation Update Rule**:
+  - The AI agent **MUST ALWAYS** update relevant project documentation (e.g., `README.md`, changelogs, or `project-*.md`) to accurately reflect all changes, new features, and structural updates **BEFORE** performing any `git push`.
+
+
 
