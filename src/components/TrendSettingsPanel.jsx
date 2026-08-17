@@ -57,6 +57,8 @@ const NAVER_CATEGORIES = [
   }
 ];
 
+const ALL_CAT_SEQS = NAVER_CATEGORIES.flatMap(g => g.list.map(c => c.seq));
+
 const DATALAB_CATEGORIES = [
   { cid: '50000003', name: '디지털/가전' },
   { cid: '50000000', name: '패션의류' },

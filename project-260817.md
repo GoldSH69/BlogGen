@@ -60,4 +60,6 @@
 ---
 
 ## 🛠️ 검증 및 빌드 확인
-- `npm run build`를 실행하여 Vite 클라이언트 프로덕션 빌드 정상 통과(`✓ built in 334ms`) 확인 완료.
+- `TrendSettingsPanel.jsx`의 `ALL_CAT_SEQS` 변수 누락 복구 완료.
+- `npm run build`를 실행하여 Vite 클라이언트 프로덕션 빌드 정상 통과(`dist/assets/index-GxMCZeQR.js`, `✓ built in 347ms`) 확인 완료.
+- 번들 파싱 및 스코프 변수 무결성 테스트 스크립트 실행하여 런타임 ReferenceError 0건 정상 통과 검증 완료.
