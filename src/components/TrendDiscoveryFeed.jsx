@@ -171,9 +171,20 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
     // Extract categoryName from title [트렌드] (카테고리명): 제목
     let categoryName = '일반';
+    let isDataLab = false;
+    let dataLabRank = null;
+
     const titleCatMatch = title.match(/^\[트렌드\]\s*([^:]+):/i);
     if (titleCatMatch) {
       categoryName = titleCatMatch[1].trim();
+    }
+
+    if (parsedGroup.includes('데이터랩') || categoryName.includes('데이터랩') || title.includes('데이터랩')) {
+      isDataLab = true;
+      const rankMatch = (title + ' ' + parsedGroup + ' ' + categoryName).match(/(\d+)위/);
+      if (rankMatch) {
+        dataLabRank = parseInt(rankMatch[1], 10);
+      }
     }
 
     return {
@@ -188,6 +199,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       engagementScore,
       homeBoardScore: parsedHomeBoardScore,
       categoryName,
+      isDataLab,
+      dataLabRank,
       content: contentBlockMatch ? contentBlockMatch[1].trim() : body
     };
   };
@@ -221,7 +234,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   // Sort and Deduplicate trends:
   // 1. Separate Blogs and News
   // 2. Deduplicate News (keep 1 unique news item per distinct news topic)
-  // 3. Sort Blogs according to sortMode ('engagement' vs 'category')
+  // 3. Sort Blogs according to sortMode ('home' vs 'datalab' vs 'engagement' vs 'category')
   // 4. Combine: Blogs FIRST, News ALWAYS LAST at bottom!
   const getProcessedTrends = () => {
     const blogList = [];
@@ -238,7 +251,16 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
 
     // Sort Blog Posts
-    if (sortMode === 'category') {
+    if (sortMode === 'datalab') { // 📊 데이터랩 순위 우선 정렬
+      blogList.sort((a, b) => {
+        if (a.parsed.isDataLab && !b.parsed.isDataLab) return -1;
+        if (!a.parsed.isDataLab && b.parsed.isDataLab) return 1;
+        if (a.parsed.isDataLab && b.parsed.isDataLab) {
+          return (a.parsed.dataLabRank || 99) - (b.parsed.dataLabRank || 99);
+        }
+        return b.parsed.engagementScore - a.parsed.engagementScore;
+      });
+    } else if (sortMode === 'category') {
       blogList.sort((a, b) => {
         const catCompare = a.parsed.categoryName.localeCompare(b.parsed.categoryName, 'ko-KR');
         if (catCompare !== 0) return catCompare;
@@ -372,6 +394,26 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
             title="네이버 홈판(큐레이션판) 적합도 점수가 높은 블로그 글 순서대로 정렬합니다."
           >
             🏆 홈판점수
+          </button>
+          <button
+            onClick={() => setSortMode('datalab')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              background: sortMode === 'datalab' ? 'var(--color-emerald, #10b981)' : 'transparent',
+              color: sortMode === 'datalab' ? '#fff' : 'var(--text-muted)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="네이버 데이터랩 실시간 인기 검색어 1~5위 기반 포스트를 최우선으로 정렬합니다."
+          >
+            📊 데이터랩순
           </button>
           <button
             onClick={() => setSortMode('engagement')}
@@ -508,20 +550,37 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                         </span>
                       ) : (
                         <>
-                          <span style={{
-                            fontSize: '0.73rem',
-                            fontWeight: '800',
-                            padding: '3px 10px',
-                            borderRadius: '12px',
-                            background: 'rgba(168, 85, 247, 0.15)',
-                            color: '#c084fc',
-                            border: '1px solid rgba(168, 85, 247, 0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            📂 {parsed.categoryName}
-                          </span>
+                          {parsed.isDataLab ? (
+                            <span style={{
+                              fontSize: '0.73rem',
+                              fontWeight: '800',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              background: 'rgba(16, 185, 129, 0.18)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.35)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              📊 데이터랩 {parsed.dataLabRank ? `${parsed.dataLabRank}위` : 'TOP 5'}
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.73rem',
+                              fontWeight: '800',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              background: 'rgba(168, 85, 247, 0.15)',
+                              color: '#c084fc',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              📂 {parsed.categoryName}
+                            </span>
+                          )}
                           <span style={{
                             fontSize: '0.73rem',
                             fontWeight: '800',

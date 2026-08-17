@@ -57,7 +57,19 @@ const NAVER_CATEGORIES = [
   }
 ];
 
-const ALL_CAT_SEQS = NAVER_CATEGORIES.flatMap(g => g.list.map(c => c.seq));
+const DATALAB_CATEGORIES = [
+  { cid: '50000003', name: '디지털/가전' },
+  { cid: '50000000', name: '패션의류' },
+  { cid: '50000001', name: '패션잡화' },
+  { cid: '50000002', name: '화장품/미용' },
+  { cid: '50000004', name: '가구/인테리어' },
+  { cid: '50000005', name: '출산/육아' },
+  { cid: '50000006', name: '식품' },
+  { cid: '50000007', name: '스포츠/레저' },
+  { cid: '50000008', name: '생활/건강' }
+];
+
+const ALL_DATALAB_CIDS = DATALAB_CATEGORIES.map(c => c.cid);
 
 export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [categories, setCategories] = useState(ALL_CAT_SEQS);
@@ -74,6 +86,12 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [aiMaxPerSource, setAiMaxPerSource] = useState(2);
   const [homeBoardEnabled, setHomeBoardEnabled] = useState(true);
   const [minHomeBoardScore, setMinHomeBoardScore] = useState(60);
+
+  // DataLab Trend States
+  const [dataLabEnabled, setDataLabEnabled] = useState(true);
+  const [dataLabTopRankLimit, setDataLabTopRankLimit] = useState(5);
+  const [dataLabCategories, setDataLabCategories] = useState(['50000003', '50000000', '50000002', '50000006', '50000008']);
+  const [dataLabMaxPerKeyword, setDataLabMaxPerKeyword] = useState(1);
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -95,17 +113,29 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
-        if (cloudConfig && cloudConfig.unifiedTrend) {
-          const ut = cloudConfig.unifiedTrend;
-          setCategories(ut.categories || [30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25]);
-          setSympathyWeight(ut.engagementRules?.sympathyWeight ?? 1.0);
-          setCommentWeight(ut.engagementRules?.commentWeight ?? 2.0);
-          setMinCleanScore(ut.filtering?.minCleanScore ?? 80);
-          setCustomBlacklist(ut.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
-          const hb = ut.homeBoardFilter || {};
-          setHomeBoardEnabled(hb.enabled !== false);
-          setMinHomeBoardScore(hb.minHomeBoardScore ?? 60);
+        if (cloudConfig) {
+          if (cloudConfig.unifiedTrend) {
+            const ut = cloudConfig.unifiedTrend;
+            setCategories(ut.categories || [30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25]);
+            setSympathyWeight(ut.engagementRules?.sympathyWeight ?? 1.0);
+            setCommentWeight(ut.engagementRules?.commentWeight ?? 2.0);
+            setMinCleanScore(ut.filtering?.minCleanScore ?? 80);
+            setCustomBlacklist(ut.filtering?.customBlacklist || ["광고", "체험단", "협찬문의", "제공받아", "공구", "추천인"]);
+            const hb = ut.homeBoardFilter || {};
+            setHomeBoardEnabled(hb.enabled !== false);
+            setMinHomeBoardScore(hb.minHomeBoardScore ?? 60);
+          }
+
+          if (cloudConfig.dataLabTrend) {
+            const dt = cloudConfig.dataLabTrend;
+            setDataLabEnabled(dt.enabled !== false);
+            setDataLabTopRankLimit(dt.topRankLimit || 5);
+            setDataLabCategories(Array.isArray(dt.categories) && dt.categories.length > 0 ? dt.categories : ['50000003', '50000000', '50000002', '50000006', '50000008']);
+            setDataLabMaxPerKeyword(dt.maxPerKeyword || 1);
+          }
+
           setIntervalHours(cloudConfig.scheduler?.intervalHours || 6);
+
           const an = cloudConfig.aiNews || {};
           setAiEnabled(an.enabled !== false);
           setAiKeywords(Array.isArray(an.keywords) && an.keywords.length > 0 ? an.keywords : ["openai", "claude", "gemini", "deepseek", "qwen", "github 오픈소스"]);
@@ -127,6 +157,14 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       setCategories(prev => prev.filter(id => id !== seq));
     } else {
       setCategories(prev => [...prev, seq]);
+    }
+  };
+
+  const handleToggleDataLabCategory = (cid) => {
+    if (dataLabCategories.includes(cid)) {
+      setDataLabCategories(prev => prev.filter(id => id !== cid));
+    } else {
+      setDataLabCategories(prev => [...prev, cid]);
     }
   };
 
@@ -157,8 +195,8 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
   };
 
   const handleSave = async () => {
-    if (categories.length === 0) {
-      setErrorMsg('수집할 네이버 카테고리를 최소 1개 이상 선택해 주세요.');
+    if (categories.length === 0 && (!dataLabEnabled || dataLabCategories.length === 0)) {
+      setErrorMsg('수집할 네이버 카테고리 또는 데이터랩 분야를 최소 1개 이상 선택해 주세요.');
       return;
     }
 
@@ -175,6 +213,13 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
         filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 },
         homeBoardFilter: { enabled: homeBoardEnabled, minHomeBoardScore }
       },
+      dataLabTrend: {
+        enabled: dataLabEnabled,
+        topRankLimit: dataLabTopRankLimit,
+        categories: dataLabCategories,
+        maxPerKeyword: dataLabMaxPerKeyword,
+        minCleanScore
+      },
       aiNews: {
         enabled: aiEnabled,
         maxAgeDays: aiMaxAgeDays,
@@ -187,7 +232,7 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
     try {
       await saveTrendConfigToGithub(configObj);
-      setStatusMsg('무키워드 수집 환경설정이 성공적으로 저장되었습니다!');
+      setStatusMsg('트렌드 & 데이터랩 수집 환경설정이 성공적으로 저장되었습니다!');
       setTimeout(() => {
         setStatusMsg('');
         onClose();
@@ -473,9 +518,117 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 4. Crawler Schedule Interval */}
+              {/* 4. Naver DataLab TOP Keywords Option */}
               <div>
-                <h4 style={sectionTitleStyle}>4. 크롤러 자동 수집 주기 (Interval)</h4>
+                <h4 style={sectionTitleStyle}>4. 📊 네이버 데이터랩(DataLab) 인기 검색어 TOP 1~5위 수집</h4>
+                <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <label style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: '600' }}>
+                      데이터랩 실시간/일간 급상승 인기 키워드 기반 블로그 수집
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--color-violet)' }}>
+                      <input
+                        type="checkbox"
+                        checked={dataLabEnabled}
+                        onChange={(e) => setDataLabEnabled(e.target.checked)}
+                        style={{ accentColor: 'var(--color-violet)', width: '16px', height: '16px' }}
+                      />
+                      <span>{dataLabEnabled ? '수집 활성화' : '비활성화'}</span>
+                    </label>
+                  </div>
+
+                  {dataLabEnabled && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          🎯 수집할 인기 검색어 순위 범위 (1위 ~ N위)
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[3, 5, 10].map((limit) => (
+                            <button
+                              key={limit}
+                              type="button"
+                              onClick={() => setDataLabTopRankLimit(limit)}
+                              className={dataLabTopRankLimit === limit ? "btn-neon" : "btn-secondary"}
+                              style={{ padding: '5px 12px', fontSize: '0.74rem', fontWeight: '600' }}
+                            >
+                              TOP {limit}위까지
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          📂 데이터랩 대상 쇼핑/트렌드 분야 선택 ({dataLabCategories.length}개 선택됨)
+                        </label>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: '6px',
+                          background: 'var(--bg-surface-solid)',
+                          padding: '10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border-color)'
+                        }}>
+                          {DATALAB_CATEGORIES.map((cat) => {
+                            const isChecked = dataLabCategories.includes(cat.cid);
+                            return (
+                              <label
+                                key={cat.cid}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontSize: '0.74rem',
+                                  color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  padding: '4px 6px',
+                                  borderRadius: '4px',
+                                  background: isChecked ? 'var(--color-violet-glow)' : 'transparent',
+                                  border: isChecked ? '1px solid var(--border-color)' : '1px solid transparent',
+                                  transition: 'all var(--transition-fast)'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleToggleDataLabCategory(cat.cid)}
+                                  style={{ accentColor: 'var(--color-violet)', width: '14px', height: '14px', cursor: 'pointer' }}
+                                />
+                                {cat.name}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                          🔢 키워드당 상위 블로그 수집 개수
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[1, 2].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => setDataLabMaxPerKeyword(num)}
+                              className={dataLabMaxPerKeyword === num ? "btn-neon" : "btn-secondary"}
+                              style={{ padding: '5px 12px', fontSize: '0.74rem', fontWeight: '600' }}
+                            >
+                              키워드당 {num}개씩
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Crawler Schedule Interval */}
+              <div>
+                <h4 style={sectionTitleStyle}>5. 크롤러 자동 수집 주기 (Interval)</h4>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[3, 6, 12, 24].map((hours) => (
                     <button
@@ -495,9 +648,9 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 5. AI Keywords Search */}
+              {/* 6. AI Keywords Search */}
               <div>
-                <h4 style={sectionTitleStyle}>5. AI 최신 블로그 키워드 수집 (구글 뉴스 수집 제외)</h4>
+                <h4 style={sectionTitleStyle}>6. AI 최신 블로그 키워드 수집 (구글 뉴스 수집 제외)</h4>
                 <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: '12px' }}>

@@ -453,6 +453,64 @@ async function fetchNaverBlogSearchResults(clientId, clientSecret, keyword, limi
   return items;
 }
 
+// 네이버 데이터랩 쇼핑인사이트 분야별 실시간 인기 검색어 1~topRankLimit위 추출 함수
+async function fetchDataLabTopKeywords(categories = ['50000003', '50000000', '50000002', '50000006', '50000008'], topRankLimit = 5) {
+  const results = [];
+  const now = getKSTDate();
+  const endDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const datalabCategoryMap = {
+    '50000003': '디지털/가전',
+    '50000000': '패션의류',
+    '50000001': '패션잡화',
+    '50000002': '화장품/미용',
+    '50000004': '가구/인테리어',
+    '50000005': '출산/육아',
+    '50000006': '식품',
+    '50000007': '스포츠/레저',
+    '50000008': '생활/건강'
+  };
+
+  console.log(`\n- [데이터랩 파서] 최근 일주일(${startDate} ~ ${endDate}) 기준 ${categories.length}개 분야 상위 ${topRankLimit}위 인기 키워드 수집 중...`);
+
+  for (const cid of categories) {
+    const catName = datalabCategoryMap[cid] || `분야 ${cid}`;
+    try {
+      const res = await fetch('https://datalab.naver.com/shoppingInsight/getCategoryKeywordRank.naver', {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://datalab.naver.com/shoppingInsight/sCategory.naver',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: `cid=${cid}&timeUnit=date&startDate=${startDate}&endDate=${endDate}&age=&gender=&device=&page=1&count=${topRankLimit}`
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const ranks = Array.isArray(data.ranks) ? data.ranks : [];
+        for (const item of ranks.slice(0, topRankLimit)) {
+          if (item.keyword && item.keyword.trim()) {
+            results.push({
+              cid,
+              categoryName: catName,
+              rank: item.rank || (results.filter(r => r.cid === cid).length + 1),
+              keyword: item.keyword.trim()
+            });
+          }
+        }
+      }
+    } catch (e) {
+      recordError(`데이터랩 인기검색어 수집 (${catName})`, e);
+    }
+  }
+
+  console.log(`  => 네이버 데이터랩 인기 검색어 총 ${results.length}개 추출 완료`);
+  return results;
+}
+
+
 // 3-Stage Clean Filter Algorithm
 function calculateCleanScore(item, blacklistWords, checkAdRegex) {
   const title = cleanHtml(item.title);
@@ -740,6 +798,82 @@ async function run() {
   }
 
   // =============================================================
+  // [트랙 4] 네이버 데이터랩(DataLab) 인기 검색어 TOP 1~5위 기반 블로그 수집
+  // =============================================================
+  const dataLabTrend = config.dataLabTrend || {};
+  const isDataLabEnabled = dataLabTrend.enabled !== false;
+  const dataLabCategories = Array.isArray(dataLabTrend.categories) && dataLabTrend.categories.length > 0
+    ? dataLabTrend.categories
+    : ['50000003', '50000000', '50000002', '50000006', '50000008'];
+  const dataLabTopRankLimit = dataLabTrend.topRankLimit || 5;
+  const dataLabMaxPerKeyword = dataLabTrend.maxPerKeyword || 1;
+  const dataLabMinCleanScore = dataLabTrend.minCleanScore || minCleanScore;
+
+  if (isDataLabEnabled) {
+    console.log('\n=======================================');
+    console.log('[트랙 4] 네이버 데이터랩(DataLab) 인기 검색어 TOP 1~5위 블로그 수집 시작...');
+    console.log(`대상 분야 (${dataLabCategories.length}개):`, dataLabCategories);
+    console.log(`순위 범위: 1위 ~ ${dataLabTopRankLimit}위 (키워드당 상위 ${dataLabMaxPerKeyword}개)`);
+    console.log('=======================================');
+
+    try {
+      const topKeywords = await fetchDataLabTopKeywords(dataLabCategories, dataLabTopRankLimit);
+      const dataLabCandidates = [];
+
+      for (const kwInfo of topKeywords) {
+        console.log(`\n[데이터랩 ${kwInfo.categoryName} ${kwInfo.rank}위: "${kwInfo.keyword}"] 검색 중...`);
+        try {
+          const blogItems = await fetchNaverBlogSearchResults(clientId, clientSecret, kwInfo.keyword, dataLabMaxPerKeyword * 3);
+          for (const item of blogItems) {
+            if (!isRecentPost(item.pubDate, MAX_AGE_DAYS)) continue;
+            const cleanObj = calculateCleanScore(
+              { title: item.title, description: item.description },
+              customBlacklist,
+              true
+            );
+            if (cleanObj.score >= dataLabMinCleanScore) {
+              dataLabCandidates.push({
+                ...item,
+                keyword: `데이터랩 ${kwInfo.categoryName} ${kwInfo.rank}위 (${kwInfo.keyword})`,
+                group: '📊 네이버 데이터랩 TOP 5',
+                dataLabRank: kwInfo.rank,
+                dataLabCategory: kwInfo.categoryName,
+                dataLabKeyword: kwInfo.keyword,
+                score: cleanObj.score,
+                reasons: cleanObj.reasons
+              });
+            }
+          }
+        } catch (e) {
+          recordError(`데이터랩 블로그 검색 (${kwInfo.keyword})`, e);
+        }
+      }
+
+      if (dataLabCandidates.length > 0) {
+        await enrichCandidatesWithReactions(dataLabCandidates);
+
+        const perKeywordMap = new Map();
+        for (const cand of dataLabCandidates) {
+          if ((cand.engagementScore || 0) < minEngagementScore) continue;
+          const key = cand.dataLabKeyword || cand.keyword;
+          if (!perKeywordMap.has(key)) perKeywordMap.set(key, []);
+          perKeywordMap.get(key).push(cand);
+        }
+
+        const selectedDataLabBlogs = [];
+        for (const arr of perKeywordMap.values()) {
+          arr.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+          selectedDataLabBlogs.push(...arr.slice(0, dataLabMaxPerKeyword));
+        }
+        console.log(`  => 데이터랩 인기 키워드 기반 상위 블로그 선발: 총 ${selectedDataLabBlogs.length}개`);
+        selectedBlogs.push(...selectedDataLabBlogs);
+      }
+    } catch (e) {
+      recordError('네이버 데이터랩 수집 파이프라인', e);
+    }
+  }
+
+  // =============================================================
   // [통합] 최종 선발 및 중복 제거
   // =============================================================
   const topTrends = [...selectedBlogs, ...newsCandidates];
@@ -817,6 +951,7 @@ async function run() {
 
     const issueBody = `### 📌 탐지된 트렌드 핫템 소스
 - **수집 채널**: \`${trend.type}\`
+- **수집 그룹**: \`${trend.group || '📈 네이버 카테고리 인기글'}\`
 - **카테고리/키워드**: \`${trend.keyword}\`
 - **원글 발행 시간**: \`${trend.pubDate || ''}\`
 - **수집처/작성자**: \`${trend.bloggername}\`

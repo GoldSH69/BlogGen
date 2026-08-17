@@ -42,6 +42,19 @@
       "minHomeBoardScore": 60
     }
   },
+  "dataLabTrend": {
+    "enabled": true,
+    "topRankLimit": 5,
+    "categories": [
+      "50000003",
+      "50000000",
+      "50000002",
+      "50000006",
+      "50000008"
+    ],
+    "maxPerKeyword": 1,
+    "minCleanScore": 75
+  },
   "aiNews": {
     "enabled": false,
     "maxAgeDays": 3,
