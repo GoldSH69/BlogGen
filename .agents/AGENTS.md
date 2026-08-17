@@ -5,35 +5,24 @@
   - No code changes (adds, edits, or deletes) should be executed without the user's explicit confirmation.
   - Always explain the proposed changes clearly and wait for the user to say "Proceed" or give approval before editing files or running modification commands.
 
-- **Mandatory Holistic Impact Analysis & Coherence Rule**:
-  - NEVER make piecemeal or partial modifications when a feature or architectural change is requested.
-  - BEFORE writing code, the AI agent MUST analyze the FULL end-to-end impact across ALL project layers:
+- **Mandatory Holistic Impact Analysis & Regression Prevention Rule**:
+  - NEVER make piecemeal or partial modifications when a feature, bug fix, or architectural change is requested.
+  - BEFORE writing or editing any code, the AI agent MUST perform a strict end-to-end impact analysis across all layers:
     1. Configuration / Rule Schemas (`trend-rules.json`)
     2. Crawler / Backend Engines (`scripts/trend-crawler.cjs`)
     3. Frontend Component Layouts & Tabs (`src/components/TrendDiscoveryFeed.jsx`)
     4. Settings Modal UI (`src/components/TrendSettingsPanel.jsx`)
     5. Card Badge Labels & Metrics (e.g. `🔥 반응도 점수` instead of `클린지수`)
-  - All layers MUST be updated together in a single coherent step, ensuring no leftover old tabs, old forms, or wrong badge labels remain anywhere in the UI or codebase.
-  - Always verify that the UI components (tabs, forms, badges, labels) completely reflect the new backend logic before declaring completion.
+  - When editing existing files, the agent MUST explicitly verify that existing constant declarations, helper functions, and scope variables (e.g., `ALL_CAT_SEQS`, `NAVER_CATEGORIES`) are NOT accidentally removed, shadowed, or broken.
+  - Check all downstream/upstream imports and callers to prevent regression across components.
 
-- **Mandatory Direct Answer First Rule**:
-  - Whenever the user asks a question or raises an issue, the AI agent **MUST** provide a clear, direct natural language answer and explanation **FIRST** before taking action, running commands, or modifying code.
-  - Never jump straight to executing tool calls or code edits without answering the user's inquiry first.
-
-- **Mandatory Empirical Code Verification Before Answering Rule**:
-  - The AI agent **MUST NEVER** make assumptions, guess variable values, or give answers based on memory without FIRST reading and empirically inspecting the actual source files using code search or view tools.
-  - Every answer provided to the user must be verified directly against the latest raw code, schemas, and runtime configurations.
-
-- **Mandatory Pre-Conversation Git Pull Rule**:
-  - The AI agent **MUST ALWAYS** run `git pull` to synchronize with the latest remote changes at the start of a conversation or before beginning any analysis and code task.
-
-- **Mandatory Pre-Push Documentation Update Rule**:
-  - The AI agent **MUST ALWAYS** update relevant project documentation (e.g., `README.md`, changelogs, or `project-*.md`) to accurately reflect all changes, new features, and structural updates **BEFORE** performing any `git push`.
-
-- **Mandatory Pre-Push Code & Runtime Verification Rule**:
-  - The AI agent **MUST ALWAYS** thoroughly test and verify build and runtime integrity (checking scope variables, undefined references, component imports, and syntax) BEFORE executing any `git push`.
-  - Never push code blindly based on assumptions; ensure zero build warnings or runtime crashes.
+- **Mandatory Multi-Stage Testing & Runtime Verification Rule (BEFORE Push)**:
+  - The AI agent **MUST ALWAYS** run and pass a multi-stage verification process before executing any `git push`:
+    1. **Stage 1 (Build Integrity)**: Run `npm run build` and ensure zero build errors or warnings.
+    2. **Stage 2 (Runtime & Scope Verification)**: Statically or programmatically inspect the bundled output and raw source to ensure NO missing global/scope variables (`ReferenceError`), missing imports, or undefined property access (`TypeError`).
+    3. **Stage 3 (State & Data Flow Integrity)**: Verify that initial states, fallback values, and event handlers work cleanly even when cloud/local data is empty or malformed.
+  - Never push code blindly based on assumptions; any failure in verification blocks the push until resolved and re-tested.
 
 - **Mandatory No-Live-API-Call Testing Rule**:
   - Do NOT make live/external API calls (e.g., Gemini AI API, live billing endpoints) purely for testing purposes to prevent quota consumption or unintended token costs.
-  - Rely on static analysis, structural verification, unit checks, and mock validation instead of firing live API calls during verification.
+  - Rely on static analysis, structural verification, bundle inspections, and mock validation instead of firing live API calls during testing.

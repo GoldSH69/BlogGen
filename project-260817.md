@@ -55,9 +55,10 @@
 
 ### 5. 프로젝트 규칙 지침 갱신 (`.agents/AGENTS.md`)
 - **대화 시작 시 사전 `git pull` 필수 규칙 (Mandatory Pre-Conversation Git Pull Rule)** 정식 등록.
+- **수정 시 전 계층 영향도 분석 및 회귀 방지 의무 (Mandatory Holistic Impact Analysis & Regression Prevention Rule)** 보강.
+- **푸시 전 다단계 런타임/빌드 철저한 무결성 테스트 필수 규칙 (Mandatory Multi-Stage Testing & Runtime Verification Rule)** 강화.
+- **테스트 시 실제 API 호출 금지 규칙 (Mandatory No-Live-API-Call Testing Rule)** 정식 등록.
 - **푸시 전 프로젝트 문서 업데이트 필수 규칙 (Mandatory Pre-Push Documentation Update Rule)** 정식 등록.
-- **푸시 전 런타임/빌드 철저한 무결성 테스트 필수 규칙 (Mandatory Pre-Push Code & Runtime Verification Rule)** 정식 등록.
-- **테스트 시 실제 API 호출 금지 규칙 (Mandatory No-Live-API-Call Testing Rule)** 정식 등록 (토큰/쿼터 소모 방지 및 구조/정적 검증 중심).
 
 ---
 
