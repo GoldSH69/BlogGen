@@ -30,5 +30,10 @@
 - **Mandatory Pre-Push Documentation Update Rule**:
   - The AI agent **MUST ALWAYS** update relevant project documentation (e.g., `README.md`, changelogs, or `project-*.md`) to accurately reflect all changes, new features, and structural updates **BEFORE** performing any `git push`.
 
+- **Mandatory Pre-Push Code & Runtime Verification Rule**:
+  - The AI agent **MUST ALWAYS** thoroughly test and verify build and runtime integrity (checking scope variables, undefined references, component imports, and syntax) BEFORE executing any `git push`.
+  - Never push code blindly based on assumptions; ensure zero build warnings or runtime crashes.
 
-
+- **Mandatory No-Live-API-Call Testing Rule**:
+  - Do NOT make live/external API calls (e.g., Gemini AI API, live billing endpoints) purely for testing purposes to prevent quota consumption or unintended token costs.
+  - Rely on static analysis, structural verification, unit checks, and mock validation instead of firing live API calls during verification.
