@@ -251,14 +251,19 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
 
     // Sort Blog Posts
-    if (sortMode === 'datalab') { // 📊 데이터랩 순위 우선 정렬
+    if (sortMode === 'datalab') { // 📊 데이터랩 포스트 우선 + 반응도 점수 높은 순 최상단 정렬
       blogList.sort((a, b) => {
         if (a.parsed.isDataLab && !b.parsed.isDataLab) return -1;
         if (!a.parsed.isDataLab && b.parsed.isDataLab) return 1;
         if (a.parsed.isDataLab && b.parsed.isDataLab) {
+          // 1순위: 반응도 점수(공감/댓글) 높은 순 (내림차순)
+          if ((b.parsed.engagementScore || 0) !== (a.parsed.engagementScore || 0)) {
+            return (b.parsed.engagementScore || 0) - (a.parsed.engagementScore || 0);
+          }
+          // 2순위: 반응도 동점 시 데이터랩 랭킹 순위(1위~5위) 오름차순
           return (a.parsed.dataLabRank || 99) - (b.parsed.dataLabRank || 99);
         }
-        return b.parsed.engagementScore - a.parsed.engagementScore;
+        return (b.parsed.engagementScore || 0) - (a.parsed.engagementScore || 0);
       });
     } else if (sortMode === 'category') {
       blogList.sort((a, b) => {
@@ -411,7 +416,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
               alignItems: 'center',
               gap: '4px'
             }}
-            title="네이버 데이터랩 실시간 인기 검색어 1~5위 기반 포스트를 최우선으로 정렬합니다."
+            title="네이버 데이터랩 수집 글 중 실시간 반응도(공감/댓글) 점수가 가장 높은 글을 최상단으로 정렬합니다."
           >
             📊 데이터랩순
           </button>

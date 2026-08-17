@@ -20,7 +20,7 @@
 - **설정 제어 센터 연동 (`src/components/TrendSettingsPanel.jsx` & `trend-rules.json`)**:
   - `dataLabTrend` 설정 객체 지원 (수집 활성화 여부, 1~5위/10위 순위 범위 선택, 9개 대상 분야 체크박스 선택, 키워드당 수집 글 수 1~2개 설정).
 - **피드 UI 렌더링 & 정렬 (`src/components/TrendDiscoveryFeed.jsx`)**:
-  - 피드 탭에 `📊 데이터랩순` 정렬 모드 추가.
+  - 피드 탭에 `📊 데이터랩순` 정렬 모드 추가: 데이터랩 수집 글 중 **실시간 반응도 점수(공감/댓글)가 가장 높은 글을 최상단으로 정렬** (동점 시 1~5위 순위 순).
   - 카드 배지에 `📊 데이터랩 1위~5위` 고유 에메랄드 배지 자동 렌더링.
   - 원클릭으로 글쓰기 에디터에 원문 본문 자동 주입.
 
@@ -63,6 +63,7 @@
 ---
 
 ## 🛠️ 검증 및 빌드 확인
-- `TrendSettingsPanel.jsx`의 `ALL_CAT_SEQS` 변수 누락 복구 완료.
-- `npm run build`를 실행하여 Vite 클라이언트 프로덕션 빌드 정상 통과(`dist/assets/index-GxMCZeQR.js`, `✓ built in 347ms`) 확인 완료.
-- 번들 파싱 및 스코프 변수 무결성 테스트 스크립트 실행하여 런타임 ReferenceError 0건 정상 통과 검증 완료.
+- `TrendSettingsPanel.jsx`의 `ALL_CAT_SEQS` 변수 누락 복구 및 정합성 검증 완료.
+- `TrendDiscoveryFeed.jsx` 데이터랩 반응도 최우선 정렬 로직 및 툴팁 갱신 완료.
+- `npm run build`를 실행하여 Vite 클라이언트 프로덕션 빌드 정상 통과(`dist/assets/index-BnJA1RFw.js`, `✓ built in 316ms`) 확인 완료.
+- Acorn AST 번들 문법 검증 및 데이터랩 정렬 로직 단위 테스트 스크립트 실행하여 런타임 0 에러 통과 확인.
