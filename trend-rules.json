@@ -43,7 +43,7 @@
     }
   },
   "dataLabTrend": {
-    "enabled": true,
+    "enabled": false,
     "topRankLimit": 10,
     "categories": [
       "50000003",
