@@ -712,7 +712,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                             onClick={() => handleCopyBlock(block.prompt, block.id)}
                             style={segmentedCopyBtnStyle(copiedBlockId === block.id)}
                           >
-                            {copiedBlockId === block.id ? '프롬프트 복사 완료! ✅' : '나나바나2 프롬프트 복사 🔮'}
+                            {copiedBlockId === block.id ? '프롬프트 복사 완료! ✅' : '나노바나나2 프롬프트 복사 🔮'}
                           </button>
                         )}
                       </div>
