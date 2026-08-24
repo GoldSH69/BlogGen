@@ -1,5 +1,9 @@
 # Project Rules & Guidelines
 
+- **Mandatory Session-Start Git Pull Rule (대화 세션 시작 시 1회 Git Pull 필수 원칙)**:
+  - The AI agent **MUST** run `git pull` **only once at the very start of a new conversation session** to synchronize local files with the remote repository.
+  - Do NOT repeatedly run `git pull` on every single message turn within an ongoing conversation session.
+
 - **Code Modification Approval Rule**: 
   - Before modifying any source code in this project, the AI agent **must** create an implementation plan (under `implementation_plan.md` or as a direct proposal) and obtain explicit user approval.
   - No code changes (adds, edits, or deletes) should be executed without the user's explicit confirmation.

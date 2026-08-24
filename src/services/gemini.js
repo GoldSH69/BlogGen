@@ -352,19 +352,24 @@ const disclaimers = {
    - **모바일 가독성 개행**: 사용자가 스마트폰으로 포스팅을 볼 때 이탈률을 최소화하고 체류 시간(Retention)을 보장하기 위해 한 문단은 최대 3문장 이내로만 구성하고, 단락 사이에 2~3줄의 넉넉한 여백(빈 공백 라인)을 자동 삽입하십시오.
    - **시선강탈 훅 도입 및 댓글 소통 유도 (모드 연동)**: 첫 문장의 훅은 선택된 SEO 모드에 맞춰 작성하십시오. 큐레이션(홈판) 모드에서는 1인칭 감성/감탄 훅을 쓰지 않고 팩트 기반 두괄식 훅으로 시작하십시오. 스토리 모드는 주제에 특화된 훅을 매번 새로 창작하되, '이거 진짜 몰랐는데' 같은 고정 문구를 반복 베이스로 쓰지 마십시오. 결론 마지막 부분은 항상 독자와의 정겨운 소통을 유도하는 질문과 당부('여러분은 어떠신가요? 댓글로 편하게 나누어 주세요!')로 유려하게 매듭지으십시오.
 
-   - **구글 애드센스 승인(애드고시) 및 기타 규칙 (MDX에 추가 적용)**:
-     - **타겟 날짜 제약**: 본 콘텐츠 작성 기준일은 ${kstDateOnlyString}입니다. 콘텐츠의 모든 날짜 관련 정보(최신 정보임을 암시하는 서술 등)는 이 기준일에 맞춰 작성하십시오.
-     - **외부 링크 생성 절대 금지 (No Outbound Links)**: 본문, 출처 표기, 참고 문헌 등 그 어떤 형태의 외부 웹사이트 URL이나 하이퍼링크도 본문에 절대 포함하지 마십시오. 오직 텍스트 정보로만 완결성을 가질 것. (예외: 사용자가 명시적으로 전달한 제휴 마케팅 링크는 사용자가 원한 경우에만 최소한으로 본문에 텍스트 앵커 형태로 자연스럽게 녹여내고, 그 외의 불필요한 링크는 철저히 배제)
-     - **키워드 반복 및 도배 금지**: 타겟 검색어(주요 키워드)를 문장 내에서 기계적으로 연속 반복하지 마십시오. 문장마다 어순을 바꾸거나, 동의어 및 문맥적 연관어(LSI 키워드)로 자연스럽게 전환할 것. (예: '식단 관리' -> '영양 섭취 방식', '균형 잡힌 식사 구성' 등)
-     - **불필요한 인트로/아웃트로 생략**: 독자가 검색 후 유입되었을 때 즉시 정보를 얻을 수 있도록 "안녕하세요", "반갑습니다", "오늘 알아볼 내용은" 같은 블로그 인사말이나 소감은 일절 배제하고 바로 제목과 본론으로 들어갈 것.
-     - **이모지 및 특수문자 라인 사용 금지**: 구글 봇이 텍스트의 전문성을 오판하지 않도록 본문 내 이모티콘이나 문단 구분용 특수문자 선(예: ---, ***)은 일절 사용하지 마십시오. (단, MDX의 YAML frontmatter 구분선인 맨 위/아래의 ---는 시스템 구동을 위해 유지함)
-     - **글자수 분량**: 공백 제외 최소 1,500자 ~ 2,000자 이상의 깊이 있는 정보성 글로 작성하되, 의미 없는 수식어나 미사여구로 분량을 채우지 말 것 (Thin Content 방지).
-     - **구조화**: H2(소제목, 마크다운 ##), H3(하위 소제목, 마크다운 ###)의 명확한 계층 구조를 갖추어 논리적으로 작성하십시오. 한 단락은 독자의 가독성을 위해 3~4문장 단위로 줄바꿈을 할 것.
-     - **전개 방식**:
-       - 서론: 독자가 겪는 현실적인 문제 제기 및 본문에서 얻을 수 있는 해결책 제시
-       - 본론 1, 2, 3 (H2, H3): 주제와 관련된 원인 분석, 구체적인 실행 지침(행동 가능한 팁과 수치 포함), 흔히 하는 실수나 주의사항 기술
-       - 결론 (H2): 본문 내용을 다른 어휘로 자연스럽게 요약하며 신뢰감을 주는 당부의 말로 마무리
-       - **면책 고지 자동 삽입 (구글 E-E-A-T 신뢰도 강화)**: ${disclaimerText ? `본문 맨 마지막 라인에는 신뢰성 확보 및 구글의 정보성 기준을 충족하기 위해, 다음 면책 문구를 마크다운 인용구(>) 형태로 완전히 토씨 하나 틀리지 않고 그대로 본문 끝에 반드시 포함하십시오.\n      ${disclaimerText}` : `이 포스팅에는 별도의 면책 문구를 본문 끝에 포함하지 마십시오.`}
+   - **구글 애드센스 승인(애드고시) 통과 및 고품질 콘텐츠 엔지니어링 규칙 (MDX 필수 적용)**:
+     - **단일 독립 완결 문서 원칙**: 모든 글은 그 자체로 100% 완결된 독립 문서여야 합니다. 파일명 및 슬러그에 'ep01-', 'EP01-' 등 회차성 접두사를 일체 사용하지 말고(예: ${kstDateOnlyString}-vibecoding-security-check.mdx), 제목에 '[EP01]', '(1편)', '1부:' 등의 회차 표기를 절대 넣지 마십시오. 본문 내에서도 '다음 편에서는...', '지난 1편에서...', '다음 편에 계속...' 같은 의존적 연결 문구를 완전히 배제하십시오.
+     - **4단계 통과형 글쓰기 아키텍처 (엄격 준수)**:
+       * 1단계: 첫 문단 (문제 제기 → 해결 방향 → 저자의 실제 경험/실행 배경 제시). '안녕하세요', '오늘 알아볼 내용은' 같은 모호한 인사말 대신, 실제 프로젝트나 실무 협업 중 마주친 구체적 문제와 오류 경험을 3~5줄 안에 제시하여 심사관의 첫 문단 스캔을 즉시 통과하십시오.
+       * 2단계: 본문 (2개 이상의 H2 대주제, 2개 이상의 H3 하위 항목, 1개 이상의 표준 마크다운 비교 표(Table) 필수 포함, 실전 코드/프롬프트 스니펫). 줄글만으로 가득 찬 글은 감점 대상이므로 핵심 스펙/특징/대안을 비교한 표준 마크다운 표(| 항목 | 내용 |\n| --- | --- |)를 반드시 구성하십시오.
+       * 3단계: [도구/이론의 한계점과 주의사항 (Caveats) 필수 섹션] (E-E-A-T 극대화). 구글 평가관이 사람이 쓴 진짜 글로 판정하는 핵심 구간입니다. '이 도구/방법이 만능은 아니며, ~한 상황에서는 메모리 누수나 오류가 발생할 수 있으므로 ~한 보완책이 필요하다'는 비판적/반성적 시각을 반드시 1개 섹션(H2 또는 H3)으로 포함하십시오.
+       * 4단계: 실전 적용 가이드 (글마다 맞춤화된 고유 소제목 작성). '오늘 바로 시도해볼 것 3가지' 같은 템플릿 복제형 소제목은 스팸 판정을 받으므로, 해당 주제에 특화된 고유한 소제목(예: '## 좋은 프롬프트 작성을 위한 실천 가이드', '## AI 코드 리뷰 실전 3대 수칙')으로 작성하십시오.
+     - **Anti-AI 5대 금기 및 교정 사전 (AI 생성 흔적 100% 소거)**:
+       * 🚫 금기 1: 도식적 가상 인물 표기 완전 금지. '마케터 A씨', '데이터 분석가 B씨', '디자이너 C씨', '영업팀 김 대리' 등의 표현을 절대 쓰지 말고, '비개발 직군 동료와 협업했던 프로젝트에서', '실무 데이터 가공 업무를 진행하면서', '실제 고객 응대 시스템을 구축할 때'처럼 실제 프로젝트 맥락으로 서술하십시오.
+       * 🚫 금기 2: AI 번역투/오타/깨진 어휘 전수 차단 사전. '신비주의를 좆는'❌→'좇는'⭕, '바위 코딩'❌→'바이브 코딩'⭕, '지계는 명확합니다'❌→'한계는 명확합니다'⭕, '열안'❌→'열어보세요'⭕, '자연스럽게 풀서'❌→'풀어서'⭕, '실패을 겪는'❌→'실패를 겪는'⭕, '일석이조, 지평을 넓히다' 같은 진부한 AI 클리셰 관용구를 일체 배제하십시오.
+       * 🚫 금기 3: 미출시 미래 버전/환각 버전 단정 금지. 실존하지 않거나 미출시된 모델 버전을 기정사실처럼 단정하지 말고 범용적/실존 명칭을 사용하십시오.
+       * 🚫 금기 4: MDX 본문 내 2중 중복 면책 문구 작성 금지. 사이트 컴포넌트(AuthorBox)가 모든 포스트 하단에 법적 면책 고지를 공통 자동 렌더링하므로, MDX 본문 끝에 수동으로 면책 문구를 넣지 마십시오.
+       * 🚫 금기 5: 모호한 감상을 정량적 수치 데이터로 치환. '생산성이 크게 향상되었습니다' 대신 '초기 프로토타입 제작 시간이 3일에서 4시간으로 약 80% 단축되었습니다', '월 20달러 수준으로 절감했습니다' 등 구체적 수치와 근거를 제시하십시오.
+     - **타겟 날짜 제약**: 본 콘텐츠 작성 기준일은 ${kstDateOnlyString}입니다.
+     - **외부 링크 생성 절대 금지 (No Outbound Links)**: 본문, 출처 표기 등 그 어떤 형태의 외부 URL도 본문에 포함하지 마십시오.
+     - **이모지 및 특수문자 라인 금지**: MDX 본문 텍스트 내 이모티콘이나 구분선(---, ***)은 일절 사용하지 마십시오. (단, 상단 YAML frontmatter를 감싸는 ---는 필수)
+     - **분량**: 공백 제외 최소 1,800자 ~ 2,500자 이상의 깊이 있는 전문 정보성 글로 작성하십시오.
+     - **동적 카드 썸네일 규격**: 마인드그라운드의 동적 카드 ISR 렌더러와 완벽 연동되도록, frontmatter의 thumbnail 필드는 반드시 '/thumbnails/${kstDateOnlyString}-영문슬러그' 포맷으로 지정하십시오. 본문 내 무의미한 무료 스톡 이미지는 지양하고 비교 표와 코드/프롬프트 박스로 밀도를 높이십시오.
 
 5. **쌍따옴표 사용 절대 금지 (JSON 구조 파싱 오류 원천 차단)**: 모든 본문 원고(content, caption, audio 등) 내에서 인용, 대화, 강조, 앵커 텍스트 링크 표시 등을 적을 때 일반 영어 쌍따옴표를 절대 직접 사용하지 마십시오. 강조나 앵커 텍스트 표시가 필요한 경우 반드시 싱글 따옴표('), 한국식 홑/겹따옴표(「 」, 『 』) 또는 유니코드 스마트 쌍따옴표(“ ”)를 사용하십시오.
 
@@ -382,7 +387,7 @@ ${selectedPlatforms.includes('naverBlog') ? `   - naverBlog: 네이버 블로그
 ${selectedPlatforms.includes('shorts') ? `   - shorts: 유튜브 쇼츠 대본. 3초 시선강탈 훅, 비주얼 가이드와 대사가 포함된 타임라인 스크립트, CTA 포함.` : ''}
 ${selectedPlatforms.includes('instagram') ? `   - instagram: 인스타그램 피드용 가독성 높은 캡션, 해시태그 묶음, 카드뉴스 표지/본문 문구 4페이지분량 가이드 포함.` : ''}
 ${selectedPlatforms.includes('tiktok') ? `   - tiktok: 틱톡 대본. 역동적 연출가이드, 틱톡 자막 텍스트, 빠른 나레이션 대사, CTA 포함.` : ''}
-${selectedPlatforms.includes('mdx') ? `   - mdx: 구글 애드센스 승인 기준을 엄격히 준수한 개인 블로그용 MDX 포맷. YAML Frontmatter(아래 제공된 필수 키 목록 준수)로 시작하고 마크다운 본문만을 포함한 고품질 원고.` : ''}
+${selectedPlatforms.includes('mdx') ? `   - mdx: 구글 애드센스 승인 기준(CONTENT_GUIDELINES.md)을 엄격히 준수한 마인드그라운드 블로그용 MDX 포맷. YAML Frontmatter로 시작하고 마크다운 본문만을 포함한 고품질 완결형 원고.` : ''}
 
 ---
 [기사 원문/상품 정보/주제]
@@ -459,19 +464,20 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     "cta": "프로필 링크 클릭 유도"
   }` : `null`},
   "mdx": ${selectedPlatforms.includes('mdx') ? `{
-    "filename": "${kstDateOnlyString}-영문슬러그.mdx 형태로 작성하되 영문 슬러그는 글 주제를 나타내는 2~4개 영단어를 하이픈으로 연결하여 소문자로만 생성하시오 (예: ${kstDateOnlyString}-dark-psychology-jade.mdx)",
+    "filename": "${kstDateOnlyString}-영문슬러그.mdx 형태로 작성하되 영문 슬러그는 글 주제를 나타내는 2~4개 영단어를 하이픈으로 연결하여 소문자로만 생성하시오 (회차 epXX 금지, 예: ${kstDateOnlyString}-vibecoding-security-check.mdx)",
     "frontmatter": {
-      "title": "글 제목 (애드센스 SEO 최적화 직관적 제목)",
-      "description": "글 전체를 명확히 요약해 주는 1~2문장의 핵심 설명",
+      "title": "구체적 문제와 해결책이 드러나는 명확한 제목 (35~45자 내외, 회차 표기 금지)",
+      "description": "핵심 검색 키워드 2~3개를 포함하여 글의 가치를 요약한 설명문 (100~130자 내외)",
       "date": "${kstDateTimeString}",
-      "category": "주제와 관련된 적절한 영문 소문자 카테고리 (예: mind, health, tech, study, life 등)",
-      "tags": ["태그1", "태그2", "태그3", "태그4", "태그5"],
+      "category": "ai-tech 또는 mind 중 주제에 부합하는 카테고리 1개",
+      "tags": ["핵심키워드1", "핵심키워드2", "핵심키워드3", "실무가이드"],
       "keywords": "키워드1, 키워드2, 키워드3, 키워드4, 키워드5",
-      "thumbnail": "/images/blog/${randomNum}.webp",
+      "thumbnail": "/thumbnails/${kstDateOnlyString}-영문슬러그",
       "author": "Insight Retreat",
-      "published": false
+      "lastReviewed": "${kstDateOnlyString}",
+      "published": true
     },
-    "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 완벽하게 구조화하여 최소 1,500자에서 2,000자 사이의 사람이 직접 쓴 듯 깊이 있는 정보글로 작성하시오. 하단 대가성 법적 고지 문구 및 무분별한 외부 링크는 구글 애드센스 감점을 피하기 위해 절대 포함하지 마십시오. ${disclaimerText ? `단, 본문 맨 마지막 라인에는 구글 E-E-A-T 신뢰도 확보를 위해 다음의 면책 고지 문구를 마크다운 인용구 형태로 반드시 포함해 주십시오. [문구: ${disclaimerText}]` : `별도의 면책 고지 문구는 본문에 포함하지 마십시오.`}"
+    "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 구조화하여 1,800자~2,500자 사이의 깊이 있는 정보성 글로 작성하시오. [1단계: 구체적 문제 및 경험 도입] → [2단계: H2/H3 본문 + 1개 이상의 마크다운 비교 표(| 항목 | 내용 |) + 코드/프롬프트 스니펫] → [3단계: 도구/이론의 한계점과 주의사항(Caveats) 필수 섹션] → [4단계: 주제 맞춤형 고유 실천 가이드 소제목] 순서로 전개하십시오. 가상 인물(A씨, B씨, 김 대리 등) 표기를 100% 금지하고 실제 프로젝트 협업 사례로 서술하십시오. 하단 대가성 법적 고지 문구 및 외부 링크는 구글 애드센스 기준 준수를 위해 절대 포함하지 마십시오."
   }` : `null`},
   "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·사진 스타일(사실적 썸네일/광고 이미지)·가로형 전체 비율(wide landscape)·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인(Korean, East Asian) 묘사 단어를 포함. --ar 나 --no 같은 파라미터 접미사 금지. 벡터/사진 여부는 주제에 맞게 설명으로 표현."` : `null`}
 }
@@ -480,7 +486,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
 
   try {
     const parsed = await executeWithFallback(apiKey, prompt, { responseMimeType: 'application/json', temperature: 0.7 });
-    return processMdxFrontmatter(parsed);
+    return processMdxFrontmatter(parsed, kstDateOnlyString);
   } catch (error) {
     console.error('Gemini Generation Error:', error);
     throw error;
@@ -537,20 +543,39 @@ ${JSON.stringify(existingData, null, 2)}
 /**
  * Helper to dynamically format mdx.frontmatter object into valid YAML string if returned as object
  */
-function processMdxFrontmatter(parsed) {
-  if (parsed && parsed.mdx && parsed.mdx.frontmatter && typeof parsed.mdx.frontmatter === 'object') {
-    const fm = parsed.mdx.frontmatter;
-    parsed.mdx.frontmatter = Object.entries(fm)
-      .map(([k, v]) => {
-        if (Array.isArray(v)) {
-          return `${k}: [${v.map(x => `"${x}"`).join(', ')}]`;
-        }
-        if (typeof v === 'boolean') {
-          return `${k}: ${v}`;
-        }
-        return `${k}: "${String(v).replace(/"/g, '\\"')}"`;
-      })
-      .join('\n');
+function processMdxFrontmatter(parsed, defaultDateStr = '') {
+  if (parsed && parsed.mdx) {
+    let slug = 'untitled-post';
+    if (parsed.mdx.filename) {
+      slug = parsed.mdx.filename.replace(/\.mdx$/i, '').replace(/^\d{4}-\d{2}-\d{2}-/, '');
+    }
+
+    if (parsed.mdx.frontmatter && typeof parsed.mdx.frontmatter === 'object') {
+      const fm = parsed.mdx.frontmatter;
+      
+      // AuthorBox 규격 보장
+      if (!fm.author) fm.author = 'Insight Retreat';
+      if (!fm.lastReviewed && defaultDateStr) fm.lastReviewed = defaultDateStr;
+      if (fm.published === undefined) fm.published = true;
+      
+      // 동적 카드 썸네일 경로 보장
+      if (fm.thumbnail && (fm.thumbnail.includes('/images/blog/') || !fm.thumbnail.startsWith('/thumbnails/'))) {
+        const datePrefix = defaultDateStr || (typeof fm.date === 'string' ? fm.date.split(' ')[0] : '2026-08-24');
+        fm.thumbnail = `/thumbnails/${datePrefix}-${slug}`;
+      }
+
+      parsed.mdx.frontmatter = Object.entries(fm)
+        .map(([k, v]) => {
+          if (Array.isArray(v)) {
+            return `${k}: [${v.map(x => `"${x}"`).join(', ')}]`;
+          }
+          if (typeof v === 'boolean') {
+            return `${k}: ${v}`;
+          }
+          return `${k}: "${String(v).replace(/"/g, '\\"')}"`;
+        })
+        .join('\n');
+    }
   }
   return parsed;
 }

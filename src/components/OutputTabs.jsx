@@ -203,7 +203,7 @@ const renderSegmentedText = (text) => {
     }
 
     const content = seg.content;
-    const isSummaryBox = content.includes('[📌 3줄 핵심 요약 브리핑]') || content.includes('[3줄 핵심 요약]');
+    const isSummaryBox = /(?:\[|【).*?(?:요약|브리핑).*?(?:\]|】)/i.test(content) || content.includes('[3줄 핵심 요약]');
 
     if (isSummaryBox) {
       return (
@@ -273,7 +273,7 @@ const convertNaverBlogToHtml = (platformData) => {
           const line = lines[i];
           const trimmed = line.trim();
 
-          if (trimmed.includes('[📌 3줄 핵심 요약 브리핑]') || trimmed.includes('[3줄 핵심 요약]')) {
+          if (/(?:\[|【).*?(?:요약|브리핑).*?(?:\]|】)/i.test(trimmed) || trimmed.includes('[3줄 핵심 요약]')) {
             inSummaryBox = true;
             summaryLines = [trimmed];
             continue;
@@ -289,7 +289,7 @@ const convertNaverBlogToHtml = (platformData) => {
               // 요약 박스 끝
               html += `<div style="background-color: #f8fafc; border-left: 4px solid #03c75a; padding: 14px 18px; margin: 16px 0; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #2d3748;">`;
               summaryLines.forEach(sLine => {
-                html += `<p style="margin: 4px 0; font-weight: ${sLine.includes('요약') ? 'bold' : 'normal'}; color: ${sLine.includes('요약') ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
+                html += `<p style="margin: 4px 0; font-weight: ${/(?:요약|브리핑)/.test(sLine) ? 'bold' : 'normal'}; color: ${/(?:요약|브리핑)/.test(sLine) ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
               });
               html += `</div><br/>`;
               inSummaryBox = false;
@@ -311,7 +311,7 @@ const convertNaverBlogToHtml = (platformData) => {
         if (inSummaryBox && summaryLines.length > 0) {
           html += `<div style="background-color: #f8fafc; border-left: 4px solid #03c75a; padding: 14px 18px; margin: 16px 0; border-radius: 4px; font-size: 14px; line-height: 1.6; color: #2d3748;">`;
           summaryLines.forEach(sLine => {
-            html += `<p style="margin: 4px 0; font-weight: ${sLine.includes('요약') ? 'bold' : 'normal'}; color: ${sLine.includes('요약') ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
+            html += `<p style="margin: 4px 0; font-weight: ${/(?:요약|브리핑)/.test(sLine) ? 'bold' : 'normal'}; color: ${/(?:요약|브리핑)/.test(sLine) ? '#03c75a' : '#2d3748'};">${sLine}</p>`;
           });
           html += `</div><br/>`;
         }
