@@ -20,6 +20,11 @@
   - When editing existing files, the agent MUST explicitly verify that existing constant declarations, helper functions, and scope variables (e.g., `ALL_CAT_SEQS`, `NAVER_CATEGORIES`) are NOT accidentally removed, shadowed, or broken.
   - Check all downstream/upstream imports and callers to prevent regression across components.
 
+- **Mandatory Pre-Push Documentation Rule (푸시 전 작업 내용 문서화 필수 원칙)**:
+  - The AI agent **MUST ALWAYS** document all work contents, decisions, modifications, and state updates in the project documentation (e.g., `docs/PROJECT_STATE.md`, `README.md`, or relevant project docs) **BEFORE** executing any `git commit` and `git push`.
+  - Every push must include the documented history of what was changed, why, and how it was tested.
+  - Never push code changes without updating the project documentation first.
+
 - **Mandatory Multi-Stage Testing & Runtime Verification Rule (BEFORE Push)**:
   - The AI agent **MUST ALWAYS** run and pass a multi-stage verification process before executing any `git push`:
     1. **Stage 1 (Build Integrity)**: Run `npm run build` and ensure zero build errors or warnings.
