@@ -35,3 +35,12 @@
 - **Mandatory No-Live-API-Call Testing Rule**:
   - Do NOT make live/external API calls (e.g., Gemini AI API, live billing endpoints) purely for testing purposes to prevent quota consumption or unintended token costs.
   - Rely on static analysis, structural verification, bundle inspections, and mock validation instead of firing live API calls during testing.
+
+- **Mandatory Ground-Truth Integrity & No-Fake-Metrics Rule (가짜/더미 데이터 및 AI 환각 수치 제공 절대 금지 원칙)**:
+  - The AI agent **MUST NEVER** use hardcoded mock data, fabricated numbers, or AI-generated hallucinations in place of real statistical/analytical metrics (such as search volume, document counts, analytics metrics, keyword opportunity indices, or ranking numbers).
+  - If a user requests a feature that requires external API credentials, licensed data feeds (e.g., Naver Search Ads API, Naver Blog Search API), or server-side infrastructure that is currently absent or unavailable:
+    1. The AI agent **MUST explicitly and transparently state the exact technical limitations and prerequisites UPFRONT** before proposing or writing any code.
+    2. The AI agent **MUST NEVER** build superficial UI shells with fake, hardcoded, or AI-hallucinated numbers to simulate functionality.
+    3. The AI agent **MUST NOT** waste the user's valuable tokens and time on non-functional mock data.
+  - Every analytical metric shown to the user MUST be backed by genuine, verified, real-time ground-truth API/crawler data. If the required ground-truth API/credential does not exist, the agent must decline the simulation and clearly explain why.
+
