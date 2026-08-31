@@ -6,7 +6,6 @@ import SNSPreviewPane from './components/SNSPreviewPane';
 import SettingsPanel from './components/SettingsPanel';
 import TrendDiscoveryFeed from './components/TrendDiscoveryFeed';
 import TrendSettingsPanel from './components/TrendSettingsPanel';
-import KeywordOpportunityFeed from './components/KeywordOpportunityFeed';
 import { generateContent, getApiKey } from './services/gemini';
 import { getGithubConfig, fetchHistoryFromGithub, saveHistoryToGithub } from './services/github';
 
@@ -39,11 +38,6 @@ export default function App() {
 
   const handleSelectTrend = (trendData) => {
     setPrefilledTrend(trendData);
-    setCurrentTab('generator');
-  };
-
-  const handleSelectKeyword = (keywordData) => {
-    setPrefilledTrend(keywordData);
     setCurrentTab('generator');
   };
 
@@ -283,26 +277,6 @@ export default function App() {
             <TrendingUp size={14} />
             트렌드 피드
           </button>
-          <button 
-            onClick={() => setCurrentTab('keywords')}
-            style={{ 
-              background: currentTab === 'keywords' ? 'rgba(251, 191, 36, 0.18)' : 'none',
-              border: 'none',
-              color: currentTab === 'keywords' ? '#fbbf24' : 'var(--text-secondary)',
-              padding: '6px 12px',
-              fontSize: '0.78rem',
-              fontWeight: '600',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all var(--transition-fast)'
-            }}
-          >
-            <Award size={14} />
-            황금 키워드
-          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -456,17 +430,11 @@ export default function App() {
             </div>
           </section>
         </main>
-      ) : currentTab === 'trend' ? (
+      ) : (
         <main style={{ padding: '30px 5%', flex: 1, display: 'flex' }}>
           <TrendDiscoveryFeed 
             onSelectTrend={handleSelectTrend} 
             activeTab={currentTab} 
-          />
-        </main>
-      ) : (
-        <main style={{ padding: '30px 5%', flex: 1, display: 'flex' }}>
-          <KeywordOpportunityFeed 
-            onSelectKeyword={handleSelectKeyword} 
           />
         </main>
       )}
