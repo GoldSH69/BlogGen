@@ -1,11 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { Sparkles, Copy, Check, Upload, Image as ImageIcon, Download, AlertCircle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Sparkles, Copy, Check, Upload, Download, AlertCircle, Loader2, RotateCw, Wand2 } from 'lucide-react';
+import { generateFreeImageBlob, convertBlobToWebP, downloadDataUrl } from '../services/imageGen';
 
 export default function ThumbnailKit({ prompt }) {
   const [copied, setCopied] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genError, setGenError] = useState('');
+  const [hasGenerated, setHasGenerated] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleCopyPrompt = () => {
@@ -13,6 +17,25 @@ export default function ThumbnailKit({ prompt }) {
     navigator.clipboard.writeText(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateAi = async () => {
+    if (!prompt || isGenerating) return;
+    setIsGenerating(true);
+    setGenError('');
+    const newSeed = Math.floor(Math.random() * 10000000);
+    try {
+      const blob = await generateFreeImageBlob(prompt, { width: 1200, height: 514, seed: newSeed });
+      const { webpUrl } = await convertBlobToWebP(blob, 1200, 514, 0.88);
+      setPreviewUrl(webpUrl);
+      setSelectedFile({ name: `blog_thumbnail_${Date.now()}.webp` });
+      setHasGenerated(true);
+    } catch (err) {
+      console.error(err);
+      setGenError(err.message || 'AI 썸네일 생성에 실패했습니다.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -81,8 +104,6 @@ export default function ThumbnailKit({ prompt }) {
 
   const handleDownload = () => {
     if (!previewUrl) return;
-    const link = document.createElement('a');
-    link.href = previewUrl;
     
     let downloadName = `blog_thumbnail_${Date.now()}.webp`;
     if (selectedFile && selectedFile.name) {
@@ -95,10 +116,7 @@ export default function ThumbnailKit({ prompt }) {
       }
     }
     
-    link.download = downloadName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadDataUrl(previewUrl, downloadName);
   };
 
   const triggerFileInput = () => {
@@ -117,24 +135,55 @@ export default function ThumbnailKit({ prompt }) {
         <div style={kitColStyle}>
           <div style={sectionLabelStyle}>1. AI 썸네일 생성 프롬프트</div>
           <p style={helpTextStyle}>
-            아래의 프롬프트를 복사하여 **Nano Banana 2 (Gemini 이미지)** 나 이미지 생성 AI에 입력하면 본문과 딱 맞는 **글자 없는(No Text)** 초고화질 이미지를 생성합니다.
+            아래 프롬프트를 확인하고 **[무료 AI 썸네일 생성 🎨]** 버튼을 누르면 100% 무료 FLUX.1 엔진으로 **글자 없는(No Text)** 1200x514 고화질 썸네일을 즉시 제작합니다.
           </p>
           <div style={promptBoxStyle}>
             <pre style={promptPreStyle}>{prompt || '본문 분석 후 매력적인 썸네일 프롬프트를 자동으로 구성해 드립니다.'}</pre>
             {prompt && (
-              <button onClick={handleCopyPrompt} style={copyBtnStyle(copied)}>
-                {copied ? (
-                  <>
-                    <Check size={14} />
-                    복사 완료!
-                  </>
-                ) : (
-                  <>
-                    <Copy size={14} />
-                    프롬프트 복사
-                  </>
-                )}
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end', flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button onClick={handleCopyPrompt} style={copyBtnStyle(copied)}>
+                  {copied ? (
+                    <>
+                      <Check size={14} />
+                      프롬프트 복사 완료!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      프롬프트 복사
+                    </>
+                  )}
+                </button>
+                <button 
+                  onClick={handleGenerateAi} 
+                  disabled={isGenerating}
+                  style={aiGenBtnStyle(isGenerating, hasGenerated)}
+                  title="FLUX.1 무료 오픈 엔진으로 1200x514 썸네일을 생성합니다."
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      AI 썸네일 생성 중 (약 10~15초)...
+                    </>
+                  ) : hasGenerated ? (
+                    <>
+                      <RotateCw size={14} />
+                      다른 스타일로 다시 생성 🔄
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={14} />
+                      무료 AI 썸네일 생성 🎨
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            {genError && (
+              <div style={errorBannerStyle}>
+                <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                <span>{genError}</span>
+              </div>
             )}
           </div>
         </div>
@@ -355,3 +404,37 @@ const downloadBtnStyle = {
   justifyContent: 'center',
   marginTop: '8px',
 };
+
+const aiGenBtnStyle = (isGenerating, hasGenerated) => ({
+  background: isGenerating 
+    ? 'rgba(147, 51, 234, 0.15)' 
+    : hasGenerated 
+      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))' 
+      : 'linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.25))',
+  color: isGenerating ? 'var(--text-muted)' : '#c084fc',
+  border: '1px solid rgba(168, 85, 247, 0.4)',
+  borderRadius: '4px',
+  padding: '5px 10px',
+  fontSize: '0.68rem',
+  fontWeight: '700',
+  cursor: isGenerating ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  transition: 'all var(--transition-fast)',
+  boxShadow: isGenerating ? 'none' : '0 0 10px rgba(168, 85, 247, 0.15)',
+});
+
+const errorBannerStyle = {
+  fontSize: '0.68rem',
+  color: '#f87171',
+  background: 'rgba(239, 68, 68, 0.1)',
+  border: '1px solid rgba(239, 68, 68, 0.25)',
+  borderRadius: '4px',
+  padding: '6px 8px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  marginTop: '6px',
+};
+

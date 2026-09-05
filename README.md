@@ -24,6 +24,9 @@ AffiliWrite AI는 제휴 마케팅 기획자, 전문 블로거, 콘텐츠 크리
    - 사진 구도, 피사체, 조명, 색감, 와이드 비율, 무텍스트 규칙을 완벽 준수한 고화질 썸네일/본문 이미지 프롬프트 자동 생성.
 5. **🛡️ 100% 무료 플랜(Free Tier) 다단계 자동 폴백 체인**:
    - API 부하나 Rate Limit 발생 시 `gemini-3.6-flash` ➡️ `gemini-3.5-flash` ➡️ `gemini-3.5-flash-lite` ➡️ `gemini-2.5-flash` 순으로 무중단 자동 전환.
+6. **🎨 완전 무료 AI 이미지 생성(FLUX.1) & WebP 원클릭 저장**:
+   - 회원가입이나 유료 API 키 없이 100% 무료 오픈 엔진(FLUX.1)으로 1200x514 썸네일 및 1024x768 본문 이미지 즉시 생성.
+   - 브라우저 HTML5 Canvas 기반 Center Cover 크롭 및 네이버 블로그 SEO 최적화 WebP 초압축 원클릭 다운로드.
 
 ---
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Copy, Check, FileText, Sparkles, AlertCircle, Send } from 'lucide-react';
+import { Copy, Check, FileText, Sparkles, AlertCircle, Send, Download, Loader2, RotateCw, Wand2 } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
+import { generateFreeImageBlob, convertBlobToWebP, downloadDataUrl } from '../services/imageGen';
 import ThumbnailKit from './ThumbnailKit';
 
 const PLATFORM_LABELS = {
@@ -354,6 +355,9 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
   // Individual copy feedback state
   const [copiedBlockId, setCopiedBlockId] = useState(null);
 
+  // In-body AI generated images state: { [blockId]: { isGenerating, previewUrl, error, seed } }
+  const [inbodyImages, setInbodyImages] = useState({});
+
   const handleCopyFilename = (filename) => {
     if (!filename) return;
     navigator.clipboard.writeText(filename);
@@ -530,6 +534,39 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     setTimeout(() => setCopiedBlockId(null), 2000);
   };
 
+  const handleGenerateInbodyImage = async (blockId, prompt) => {
+    if (!prompt) return;
+    const current = inbodyImages[blockId] || {};
+    if (current.isGenerating) return;
+
+    const newSeed = Math.floor(Math.random() * 10000000);
+    setInbodyImages(prev => ({
+      ...prev,
+      [blockId]: { ...current, isGenerating: true, error: null, seed: newSeed }
+    }));
+
+    try {
+      const blob = await generateFreeImageBlob(prompt, { width: 1024, height: 768, seed: newSeed });
+      const { webpUrl } = await convertBlobToWebP(blob, 1024, 768, 0.88);
+      setInbodyImages(prev => ({
+        ...prev,
+        [blockId]: { isGenerating: false, previewUrl: webpUrl, error: null, seed: newSeed }
+      }));
+    } catch (err) {
+      console.error(err);
+      setInbodyImages(prev => ({
+        ...prev,
+        [blockId]: { ...current, isGenerating: false, error: err.message || '이미지 생성에 실패했습니다.' }
+      }));
+    }
+  };
+
+  const handleDownloadInbodyImage = (blockId, blockNum) => {
+    const item = inbodyImages[blockId];
+    if (!item?.previewUrl) return;
+    downloadDataUrl(item.previewUrl, `naver_blog_img_${blockNum}.webp`);
+  };
+
   const handleSendTelegram = async () => {
     const token = localStorage.getItem('affiliwrite_telegram_bot_token') || import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
     const chatId = localStorage.getItem('affiliwrite_telegram_chat_id') || import.meta.env.VITE_TELEGRAM_CHAT_ID;
@@ -703,24 +740,83 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
               <strong style={subLabelStyle}>📋 스마트에디터 원고 붙여넣기 도우미 (순서대로 복사하여 에디터에 붙여넣으세요):</strong>
               {blocks.map((block) => {
                 if (block.type === 'image') {
+                  const imgState = inbodyImages[block.id] || {};
                   return (
                     <div key={block.id} style={segmentedImageBlockStyle}>
                       <div style={segmentedBlockHeaderStyle}>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--color-cyan)', fontWeight: '700' }}>📷 권장 이미지 {block.num} 삽입 위치</span>
-                        {block.prompt && (
-                          <button 
-                            onClick={() => handleCopyBlock(block.prompt, block.id)}
-                            style={segmentedCopyBtnStyle(copiedBlockId === block.id)}
-                          >
-                            {copiedBlockId === block.id ? '프롬프트 복사 완료! ✅' : '나노바나나2 프롬프트 복사 🔮'}
-                          </button>
-                        )}
+                        <span style={{ fontSize: '0.74rem', color: 'var(--color-cyan)', fontWeight: '700' }}>
+                          📷 권장 이미지 {block.num} 삽입 위치
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          {block.prompt && (
+                            <>
+                              <button 
+                                onClick={() => handleCopyBlock(block.prompt, block.id)}
+                                style={segmentedCopyBtnStyle(copiedBlockId === block.id)}
+                              >
+                                {copiedBlockId === block.id ? '프롬프트 복사 완료! ✅' : '나노바나나2 프롬프트 복사 🔮'}
+                              </button>
+                              <button
+                                onClick={() => handleGenerateInbodyImage(block.id, block.prompt)}
+                                disabled={imgState.isGenerating}
+                                style={inbodyAiBtnStyle(imgState.isGenerating, !!imgState.previewUrl)}
+                                title="FLUX.1 무료 오픈 엔진으로 1024x768 WebP 이미지를 생성합니다."
+                              >
+                                {imgState.isGenerating ? (
+                                  <>
+                                    <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                                    생성 중 (약 10~15초)...
+                                  </>
+                                ) : imgState.previewUrl ? (
+                                  <>
+                                    <RotateCw size={12} />
+                                    다시 생성 🔄
+                                  </>
+                                ) : (
+                                  <>
+                                    <Wand2 size={12} />
+                                    무료 AI 이미지 생성 🎨
+                                  </>
+                                )}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div><strong>가이드:</strong> {block.desc}</div>
                         {block.prompt && (
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', background: 'var(--bg-base)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', fontFamily: 'monospace', wordBreak: 'break-all', marginTop: '4px' }}>
                             {block.prompt}
+                          </div>
+                        )}
+                        {imgState.error && (
+                          <div style={{ fontSize: '0.68rem', color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.25)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <AlertCircle size={12} />
+                            <span>{imgState.error}</span>
+                          </div>
+                        )}
+                        {imgState.previewUrl && (
+                          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg-base)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ position: 'relative', width: '100%', maxHeight: '240px', overflow: 'hidden', borderRadius: '4px', background: '#000' }}>
+                              <img 
+                                src={imgState.previewUrl} 
+                                alt={`Inbody Image ${block.num}`} 
+                                style={{ width: '100%', height: 'auto', maxHeight: '240px', objectFit: 'contain', display: 'block', margin: '0 auto' }} 
+                              />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>
+                                ✨ 1024x768 WebP 자동 최적화 완료
+                              </span>
+                              <button
+                                onClick={() => handleDownloadInbodyImage(block.id, block.num)}
+                                style={inbodyDownloadBtnStyle}
+                              >
+                                <Download size={12} />
+                                WebP 다운로드 💾
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1908,3 +2004,38 @@ const modalBlockquoteStyle = {
   fontStyle: 'italic',
   textAlign: 'justify',
 };
+
+const inbodyAiBtnStyle = (isGenerating, hasGenerated) => ({
+  background: isGenerating 
+    ? 'rgba(147, 51, 234, 0.15)' 
+    : hasGenerated 
+      ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2))' 
+      : 'linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.25))',
+  color: isGenerating ? 'var(--text-muted)' : '#c084fc',
+  border: '1px solid rgba(168, 85, 247, 0.4)',
+  borderRadius: '4px',
+  padding: '4px 8px',
+  fontSize: '0.68rem',
+  fontWeight: '700',
+  cursor: isGenerating ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  transition: 'all var(--transition-fast)',
+});
+
+const inbodyDownloadBtnStyle = {
+  background: 'rgba(16, 185, 129, 0.15)',
+  color: '#34d399',
+  border: '1px solid rgba(16, 185, 129, 0.35)',
+  borderRadius: '4px',
+  padding: '4px 10px',
+  fontSize: '0.68rem',
+  fontWeight: '700',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+  transition: 'all var(--transition-fast)',
+};
+
