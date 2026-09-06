@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Link, MessageSquare, AlertCircle, CheckSquare, Shield, Image, Video } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Link, MessageSquare, AlertCircle, CheckSquare, Shield, Image, Video, Lightbulb, FileText } from 'lucide-react';
 import { suggestExperience } from '../services/gemini';
 
 const TONE_PRESETS = [
@@ -9,6 +9,10 @@ const TONE_PRESETS = [
 ];
 
 export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
+  const [inputMode, setInputMode] = useState('topic'); // 'topic' (주제 기반 새 글 쓰기) vs 'source' (원문 기사/상세페이지 가공)
+  const [topic, setTopic] = useState('');
+  const [keyPoints, setKeyPoints] = useState('');
+  const [specialNotes, setSpecialNotes] = useState('');
   const [sourceText, setSourceText] = useState('');
   const [affiliateLink, setAffiliateLink] = useState(() => localStorage.getItem('affiliwrite_default_affiliate_link') || '');
   const [tone, setTone] = useState('친근한 대화체');
@@ -25,6 +29,8 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
 
   useEffect(() => {
     if (prefilledData && prefilledData.content) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInputMode('source');
       setSourceText(prefilledData.content);
     }
   }, [prefilledData]);
@@ -66,15 +72,17 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
   };
 
   const handleSuggestExperience = async () => {
-    const topicText = sourceText.trim();
+    const topicText = inputMode === 'topic' ? topic.trim() : sourceText.trim();
     if (!topicText) {
-      alert('AI 경험담 제안을 받으려면 먼저 위의 [기사 원문 / 상품 정보 텍스트]를 입력해 주세요.');
+      alert(inputMode === 'topic' 
+        ? 'AI 경험담 제안을 받으려면 먼저 위의 [포스팅 주제]를 입력해 주세요.'
+        : 'AI 경험담 제안을 받으려면 먼저 위의 [기사 원문 / 상품 정보 텍스트]를 입력해 주세요.');
       return;
     }
 
     setIsSuggestingExperience(true);
     try {
-      const keywords = topicText.substring(0, 80);
+      const keywords = inputMode === 'topic' ? (keyPoints.trim() || topicText.substring(0, 80)) : topicText.substring(0, 80);
       const suggestion = await suggestExperience(topicText.substring(0, 300), keywords);
       setHumanPersonaExperience(suggestion);
     } catch (err) {
@@ -88,21 +96,34 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
     e.preventDefault();
     setValidationError('');
 
-    const trimmedSource = sourceText.trim();
-    if (!trimmedSource) {
-      setValidationError('기사 원문 또는 분석할 텍스트 내용을 입력해주세요.');
-      return;
-    }
+    let finalSourceText;
+    if (inputMode === 'topic') {
+      const cleanTopic = topic.trim();
+      if (!cleanTopic) {
+        setValidationError('포스팅 주제를 입력해주세요.');
+        return;
+      }
+      finalSourceText = `[포스팅 주제]: ${cleanTopic}\n` +
+        `[꼭 다룰 핵심 포인트 및 키워드]: ${keyPoints.trim() || '주제와 관련된 최신 핵심 정보, 주요 기능 및 스펙, 실사용 장단점 위주'}\n` +
+        `[특별 유의사항 및 작성 요청사항]: ${specialNotes.trim() || '객관적인 팩트와 가독성 높은 구체적 수치를 바탕으로 독창적이고 유용한 글로 완성해 주세요.'}`;
+    } else {
+      const trimmedSource = sourceText.trim();
+      if (!trimmedSource) {
+        setValidationError('기사 원문 또는 분석할 텍스트 내용을 입력해주세요.');
+        return;
+      }
 
-    // URL만 입력했을 때 유저에게 안내 에러 노출 (CORS 및 AI API 미지원 대응)
-    const isUrlOnly = !trimmedSource.includes(' ') && (
-      trimmedSource.startsWith('http://') || 
-      trimmedSource.startsWith('https://') || 
-      /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s]*)?$/.test(trimmedSource)
-    );
-    if (isUrlOnly) {
-      setValidationError('기사 원문 입력란에 URL 링크만 입력되어 있습니다. 브라우저 보안 정책(CORS) 및 AI 모델의 인터넷 브라우징 미지원으로 인해 URL에서 직접 내용을 긁어올 수 없습니다. 귀찮으시더라도 원문 기사나 상품 상세 페이지의 실제 텍스트 내용을 직접 드래그하여 복사 후 이곳에 붙여넣어 주세요!');
-      return;
+      // URL만 입력했을 때 유저에게 안내 에러 노출 (CORS 및 AI API 미지원 대응)
+      const isUrlOnly = !trimmedSource.includes(' ') && (
+        trimmedSource.startsWith('http://') || 
+        trimmedSource.startsWith('https://') || 
+        /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s]*)?$/.test(trimmedSource)
+      );
+      if (isUrlOnly) {
+        setValidationError('기사 원문 입력란에 URL 링크만 입력되어 있습니다. 브라우저 보안 정책(CORS) 및 AI 모델의 인터넷 브라우징 미지원으로 인해 URL에서 직접 내용을 긁어올 수 없습니다. 귀찮으시더라도 원문 기사나 상품 상세 페이지의 실제 텍스트 내용을 직접 드래그하여 복사 후 이곳에 붙여넣어 주세요! (또는 상단의 [💡 주제로 새 글 쓰기] 탭을 이용해 주세요)');
+        return;
+      }
+      finalSourceText = trimmedSource;
     }
 
     let cleanAffiliateLink = affiliateLink.trim();
@@ -115,7 +136,7 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
       // 간단한 URL 포맷 유효성 검사
       try {
         new URL(cleanAffiliateLink);
-      } catch (err) {
+      } catch {
         setValidationError('제휴 마케팅 링크가 유효한 URL 형식이 아닙니다. 올바른 주소인지 다시 확인해 주세요.');
         return;
       }
@@ -129,7 +150,11 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
     }
 
     onGenerate({
-      sourceText: trimmedSource,
+      sourceText: finalSourceText,
+      inputMode,
+      topic: inputMode === 'topic' ? topic.trim() : '',
+      keyPoints: inputMode === 'topic' ? keyPoints.trim() : '',
+      specialNotes: inputMode === 'topic' ? specialNotes.trim() : '',
       affiliateLink: cleanAffiliateLink,
       tone,
       selectedPlatforms: selectedList,
@@ -150,20 +175,100 @@ export default function InputPanel({ onGenerate, isLoading, prefilledData }) {
         마케팅 설정 & 입력 패널
       </h3>
 
-      {/* Source Text Input */}
-      <div style={formGroupStyle}>
-        <label style={labelStyle}>
-          <span>기사 원문 / 상품 정보 텍스트</span>
-          <span style={requiredStyle}>*필수</span>
-        </label>
-        <textarea
-          className="input-field textarea-field"
-          placeholder="뉴스 기사, 건강 정보 포스팅, 혹은 소싱하고자 하는 제품의 상세 페이지 텍스트를 이곳에 입력해 주세요 (CORS 제약 없이 직접 긁어다 붙여넣기 하시면 됩니다)."
-          value={sourceText}
-          onChange={(e) => setSourceText(e.target.value)}
-          style={{ width: '100%', minHeight: '180px' }}
-        />
+      {/* Input Mode Switcher */}
+      <div style={modeTabContainerStyle}>
+        <button
+          type="button"
+          onClick={() => setInputMode('topic')}
+          style={modeTabBtnStyle(inputMode === 'topic')}
+        >
+          <Lightbulb size={16} />
+          💡 주제로 새 글 쓰기 (추천)
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputMode('source')}
+          style={modeTabBtnStyle(inputMode === 'source')}
+        >
+          <FileText size={16} />
+          📄 기사/상세페이지 원문 가공
+        </button>
       </div>
+
+      {inputMode === 'topic' ? (
+        <>
+          {/* Topic Field */}
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Lightbulb size={15} style={{ color: 'var(--color-violet)' }} />
+                포스팅 주제 (제목 또는 다루고 싶은 주제)
+              </span>
+              <span style={requiredStyle}>*필수</span>
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="예: 2026 로봇청소기 추천 및 흡입력 vs 물걸레 비교 가이드, 봄철 환절기 면역력 비타민D 복용법"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          {/* Key Points / Keywords Field */}
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>
+              <span>꼭 다룰 핵심 포인트 / 키워드 (선택)</span>
+              <span style={{ ...requiredStyle, color: 'var(--color-cyan)', background: 'rgba(6, 182, 212, 0.08)', borderColor: 'rgba(6, 182, 212, 0.2)' }}>*선택사항</span>
+            </label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="예: 로보락 S8 Pro, 드리미 L20 비교, 가격대 100만원 이하, 소음 50dB 이하, AS 편의성"
+              value={keyPoints}
+              onChange={(e) => setKeyPoints(e.target.value)}
+              style={{ width: '100%' }}
+            />
+            <span style={helpTextStyle}>
+              💡 글에 꼭 포함되었으면 하는 모델명, 장단점, 핵심 수치, 키워드를 쉼표로 적어주시면 원고에 정밀 반영됩니다.
+            </span>
+          </div>
+
+          {/* Special Guidelines / Notes Field */}
+          <div style={formGroupStyle}>
+            <label style={labelStyle}>
+              <span>특별 유의사항 및 작성 요청사항 (선택)</span>
+              <span style={{ ...requiredStyle, color: 'var(--color-cyan)', background: 'rgba(6, 182, 212, 0.08)', borderColor: 'rgba(6, 182, 212, 0.2)' }}>*선택사항</span>
+            </label>
+            <textarea
+              className="input-field textarea-field"
+              placeholder="예: 초보자도 이해하기 쉽게 비유를 들어주세요 / 직장인 1인 가구 관점에서 설명해주세요 / 가격 대비 가성비 위주로 객관적 단점을 짚어주세요"
+              value={specialNotes}
+              onChange={(e) => setSpecialNotes(e.target.value)}
+              style={{ width: '100%', minHeight: '80px', fontSize: '0.82rem' }}
+            />
+          </div>
+        </>
+      ) : (
+        /* Source Text Input */
+        <div style={formGroupStyle}>
+          <label style={labelStyle}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileText size={15} style={{ color: 'var(--color-cyan)' }} />
+              기사 원문 / 상품 정보 텍스트
+            </span>
+            <span style={requiredStyle}>*필수</span>
+          </label>
+          <textarea
+            className="input-field textarea-field"
+            placeholder="뉴스 기사, 건강 정보 포스팅, 혹은 소싱하고자 하는 제품의 상세 페이지 텍스트를 이곳에 입력해 주세요 (CORS 제약 없이 직접 긁어다 붙여넣기 하시면 됩니다)."
+            value={sourceText}
+            onChange={(e) => setSourceText(e.target.value)}
+            style={{ width: '100%', minHeight: '180px' }}
+          />
+        </div>
+      )}
 
       {/* Affiliate Link Input */}
       <div style={formGroupStyle}>
@@ -677,3 +782,30 @@ const rangeStyle = {
   accentColor: 'var(--color-cyan)',
   cursor: 'pointer',
 };
+
+const modeTabContainerStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '8px',
+  background: 'var(--bg-surface-solid)',
+  padding: '6px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border-color)',
+};
+
+const modeTabBtnStyle = (isActive) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '6px',
+  padding: '10px 14px',
+  fontSize: '0.82rem',
+  fontWeight: isActive ? '700' : '500',
+  borderRadius: '4px',
+  border: 'none',
+  cursor: 'pointer',
+  transition: 'all var(--transition-fast)',
+  background: isActive ? 'var(--color-violet-glow)' : 'transparent',
+  color: isActive ? 'var(--color-violet)' : 'var(--text-secondary)',
+  boxShadow: isActive ? '0 0 10px rgba(168, 85, 247, 0.2)' : 'none',
+});

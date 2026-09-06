@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Sparkles, Copy, Check, Upload, Download, AlertCircle, Loader2, RotateCw, Wand2 } from 'lucide-react';
-import { generateFreeImageBlob, convertBlobToWebP, downloadDataUrl } from '../services/imageGen';
+import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 
 export default function ThumbnailKit({ prompt }) {
   const [copied, setCopied] = useState(false);
@@ -23,10 +23,9 @@ export default function ThumbnailKit({ prompt }) {
     if (!prompt || isGenerating) return;
     setIsGenerating(true);
     setGenError('');
-    const newSeed = Math.floor(Math.random() * 10000000);
     try {
-      const blob = await generateFreeImageBlob(prompt, { width: 1200, height: 514, seed: newSeed });
-      const { webpUrl } = await convertBlobToWebP(blob, 1200, 514, 0.88);
+      const rawImage = await generateGeminiFlashImage(prompt);
+      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88);
       setPreviewUrl(webpUrl);
       setSelectedFile({ name: `blog_thumbnail_${Date.now()}.webp` });
       setHasGenerated(true);
@@ -135,7 +134,7 @@ export default function ThumbnailKit({ prompt }) {
         <div style={kitColStyle}>
           <div style={sectionLabelStyle}>1. AI 썸네일 생성 프롬프트</div>
           <p style={helpTextStyle}>
-            아래 프롬프트를 확인하고 **[무료 AI 썸네일 생성 🎨]** 버튼을 누르면 100% 무료 FLUX.1 엔진으로 **글자 없는(No Text)** 1200x514 고화질 썸네일을 즉시 제작합니다.
+            아래 프롬프트를 확인하고 **[나노바나나 AI 썸네일 생성 🎨]** 버튼을 누르면 구글 공식 Flash Image(나노바나나) 엔진으로 **글자 없는(No Text)** 1200x514 실사 썸네일을 안전하게 무료 제작합니다.
           </p>
           <div style={promptBoxStyle}>
             <pre style={promptPreStyle}>{prompt || '본문 분석 후 매력적인 썸네일 프롬프트를 자동으로 구성해 드립니다.'}</pre>
@@ -158,12 +157,12 @@ export default function ThumbnailKit({ prompt }) {
                   onClick={handleGenerateAi} 
                   disabled={isGenerating}
                   style={aiGenBtnStyle(isGenerating, hasGenerated)}
-                  title="FLUX.1 무료 오픈 엔진으로 1200x514 썸네일을 생성합니다."
+                  title="구글 공식 Flash Image(나노바나나) 무료 엔진으로 1200x514 썸네일을 생성합니다."
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                      AI 썸네일 생성 중 (약 10~15초)...
+                      나노바나나 생성 중 (약 5~10초)...
                     </>
                   ) : hasGenerated ? (
                     <>
@@ -173,7 +172,7 @@ export default function ThumbnailKit({ prompt }) {
                   ) : (
                     <>
                       <Wand2 size={14} />
-                      무료 AI 썸네일 생성 🎨
+                      나노바나나 AI 썸네일 생성 🎨
                     </>
                   )}
                 </button>

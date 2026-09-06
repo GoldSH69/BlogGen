@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Copy, Check, FileText, Sparkles, AlertCircle, Send, Download, Loader2, RotateCw, Wand2 } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
-import { generateFreeImageBlob, convertBlobToWebP, downloadDataUrl } from '../services/imageGen';
+import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 import ThumbnailKit from './ThumbnailKit';
 
 const PLATFORM_LABELS = {
@@ -539,18 +539,17 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     const current = inbodyImages[blockId] || {};
     if (current.isGenerating) return;
 
-    const newSeed = Math.floor(Math.random() * 10000000);
     setInbodyImages(prev => ({
       ...prev,
-      [blockId]: { ...current, isGenerating: true, error: null, seed: newSeed }
+      [blockId]: { ...current, isGenerating: true, error: null }
     }));
 
     try {
-      const blob = await generateFreeImageBlob(prompt, { width: 1024, height: 768, seed: newSeed });
-      const { webpUrl } = await convertBlobToWebP(blob, 1024, 768, 0.88);
+      const rawImage = await generateGeminiFlashImage(prompt);
+      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88);
       setInbodyImages(prev => ({
         ...prev,
-        [blockId]: { isGenerating: false, previewUrl: webpUrl, error: null, seed: newSeed }
+        [blockId]: { isGenerating: false, previewUrl: webpUrl, error: null }
       }));
     } catch (err) {
       console.error(err);
@@ -760,12 +759,12 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                                 onClick={() => handleGenerateInbodyImage(block.id, block.prompt)}
                                 disabled={imgState.isGenerating}
                                 style={inbodyAiBtnStyle(imgState.isGenerating, !!imgState.previewUrl)}
-                                title="FLUX.1 무료 오픈 엔진으로 1024x768 WebP 이미지를 생성합니다."
+                                title="구글 공식 Flash Image(나노바나나)로 1200x514 WebP 이미지를 안전하게 무료 생성합니다."
                               >
                                 {imgState.isGenerating ? (
                                   <>
                                     <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                                    생성 중 (약 10~15초)...
+                                    나노바나나 생성 중 (약 5~10초)...
                                   </>
                                 ) : imgState.previewUrl ? (
                                   <>
@@ -775,7 +774,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                                 ) : (
                                   <>
                                     <Wand2 size={12} />
-                                    무료 AI 이미지 생성 🎨
+                                    나노바나나 AI 이미지 생성 🎨
                                   </>
                                 )}
                               </button>
@@ -807,7 +806,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: '600' }}>
-                                ✨ 1024x768 WebP 자동 최적화 완료
+                                ✨ 1200x514 WebP 자동 최적화 완료
                               </span>
                               <button
                                 onClick={() => handleDownloadInbodyImage(block.id, block.num)}

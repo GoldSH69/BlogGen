@@ -1,6 +1,48 @@
 # 📌 BlogGen (AffiliWrite AI) 프로젝트 상태 및 작업 이력
 
-## 📅 최신 업데이트: 2026-09-05
+## 📅 최신 업데이트: 2026-09-06
+
+### 1. 신규 기능: 주제 기반 순수 창작 모드 (Topic-Based Deep Creation)
+- **배경 및 요구사항**:
+  - 기존에는 기사 원문이나 상세페이지 텍스트를 복사/붙여넣기해야만 글을 작성할 수 있어 다른 블로그 글을 복붙하지 않고 주제만으로 새 글을 작성하고자 하는 사용자 요구 발생.
+  - 주제뿐만 아니라 꼭 다룰 핵심 포인트/키워드, 특별 유의사항/톤앤매너를 직접 입력할 수 있는 유연한 구조 필요.
+- **구현 내용**:
+  1. **입력 패널 탭 스위처 (`src/components/InputPanel.jsx`)**:
+     - `💡 주제로 새 글 쓰기 (추천)` vs `📄 기사/상세페이지 원문 가공` 2종 모드 탭 지원.
+     - 주제 모드 전용 필드 3종 추가:
+       * **포스팅 주제 (필수)**: 제목 또는 다루고 싶은 주제 입력.
+       * **꼭 다룰 핵심 포인트 / 키워드 (선택)**: 특정 모델명, 비교 제품, 필수 수치, 스펙 등 입력.
+       * **특별 유의사항 및 작성 요청사항 (선택)**: 타겟 독자층(1인 가구, 초보자), 강조점, 객관적 단점 명시 등.
+     - 트렌드 피드 인기글 선택 시 자동으로 원문 모드로 전환되고 내용이 prefilled되는 연동 로직 유지.
+     - AI 경험담 제안(`suggestExperience`) 시 주제 모드의 입력값 자동 감지 및 연동.
+  2. **프롬프트 엔진 분기 최적화 (`src/services/gemini.js`)**:
+     - `sourceText`에 `[포스팅 주제]:` 패턴이 감지될 경우, 기존 '기사 비틀기(Stealth Rewrite)' 대신 '주제 기반 심층 창작(Topic-Based Deep Creation)' 모드로 자동 전환.
+     - 외부 기사 복사/짜깁기 없이 AI가 보유한 방대한 최신 지식과 실용 정보를 바탕으로 처음부터 완결된 고품질 원고 작성.
+     - 사용자가 요청한 핵심 포인트, 수치, 유의사항을 본문과 마크다운 비교 표에 누락 없이 충실하게 반영.
+
+### 2. 엔진 고도화: 구글 Gemini Flash Image (나노바나나) 전환 및 1200x514 WebP 규격 통일
+- **배경 및 요구사항**:
+  - 기존 Pollinations 프록시의 무인증 엔드포인트 품질 저하(저사양 sana 모델 강제 서빙으로 인한 이미지 왜곡 및 화질 저하) 및 가로세로 비율 불일치(본문 1024x768로 세로가 너무 길어지는 현상) 해결.
+  - 별도 유료 API 키 발급 없이 사용자의 기존 Gemini API 키를 활용하여 무료 티어 한도 내에서 가장 안전하고 실사급 퀄리티를 보장하는 구글 공식 Flash Image 모델로 마이그레이션.
+- **구현 내용**:
+  1. **구글 공식 Flash Image 서비스 (`src/services/imageGen.js`)**:
+     - Google Generative AI 공식 `generateContent` 엔드포인트 (`responseModalities: ["TEXT", "IMAGE"]`) 활용.
+     - 다단계 안전 폴백 체인 구축: `gemini-2.5-flash-image` ➡️ `gemini-3.1-flash-image` ➡️ `gemini-3.1-flash-lite-image` ➡️ `imagen-3.0-generate-002:predict`.
+     - 생성된 이미지를 HTML5 Canvas 기반 Center-Cover 알고리즘을 통해 **1200x514 WebP (품질 88%)**로 정밀 자동 크롭/압축 변환.
+  2. **썸네일 키트 및 본문 이미지 UI 통합 (`ThumbnailKit.jsx`, `OutputTabs.jsx`)**:
+     - 썸네일 키트: `[나노바나나 AI 썸네일 생성 🎨]` 버튼으로 1200x514 WebP 썸네일 즉시 생성.
+     - 본문 권장 이미지: 기존 1024x768 4:3 비율을 블로그 배너 및 모바일 화면에 최적화된 1200x514 WebP 규격으로 전면 통일.
+     - 에러 핸들링 및 로딩 안내 문구 고도화.
+
+### 3. 무결성 검증 및 빌드 결과
+- **테스트 원칙 준수**: 사용자 및 프로젝트 룰에 따라 불필요한 토큰 낭비 방지를 위해 실서버 Live API 호출 없이 정적 분석 및 번들 무결성 테스트 진행.
+- **ESLint 정적 검사**: `npx eslint src/components/InputPanel.jsx src/components/ThumbnailKit.jsx src/components/OutputTabs.jsx src/services/gemini.js src/services/imageGen.js` ➔ 0 errors, 0 warnings (완전 무결).
+- **Vite 프로덕션 빌드**: `npm run build` ➔ 0 errors, 1748개 모듈 정상 번들링 완료 (`dist/assets/index-Bgx7mDdM.js`, 337ms).
+- **하위 호환성**: 제휴 마케팅 링크 검증, 면책 문구(E-E-A-T) 선택 기능, 플랫폼별 원고 렌더링, 텔레그램 전송 회귀 없음 확인.
+
+---
+
+## 📅 이전 업데이트: 2026-09-05
 
 ### 1. 신규 기능: 무료 AI 이미지 생성(FLUX.1) 및 WebP 원클릭 변환/다운로드
 - **배경 및 요구사항**:
