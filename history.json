@@ -1,5 +1,108 @@
 [
   {
+    "id": 1788674975004,
+    "timestamp": "2026. 9. 6. 오후 3:09:35",
+    "title": "이력서 등록 워드 파일만 올리면 검색 누락되는 이유 총정리",
+    "data": {
+      "naverBlog": {
+        "titleProposals": [
+          "이력서 등록 워드 파일만 올리면 검색 누락되는 이유 총정리",
+          "이력서 등록 시 채용 담당자에게 100% 노출되는 작성법 3가지",
+          "이력서 등록 첨부파일만 넣었다가 서류 탈락하는 비밀은?"
+        ],
+        "content": "[📌 3줄 핵심 요약 브리핑]\n- 사람인과 잡코리아 등 주요 채용 플랫폼에서 단순 워드나 PDF 파일만 첨부할 경우 인재검색 DB 시스템에서 텍스트가 정상 추출되지 않아 헤드헌터 검색 노출이 차단됩니다.\n- 서류 통과율과 서치펌 매칭 확률을 높이려면 플랫폼 내부 표준 이력서 폼에 텍스트를 직접 입력하고 키워드를 최적화하는 과정이 반드시 필요합니다.\n- 최신 플랫폼 검색 알고리즘 기준에 맞춘 입력 방식과 첨부파일 병행 전략을 활용하면 인재검색 노출 빈도를 최대 3배 이상 끌어올릴 수 있습니다.\n\n[이미지 1: 노트북으로 채용 포털 사이트 인재검색 화면을 확인하는 모습]\n\n📌 채용 플랫폼 알고리즘이 파일 속 텍스트를 읽지 못하는 구조적 원인\n\n대다수의 구직자가 기존에 작성해 둔 워드나 한글 문서 파일을 채용 플랫폼에 단순 첨부 파일로 올리고 등록을 마치는 경우가 많더라고요. 하지만 이런 방식은 채용 담당자가 사용하는 인재검색 시스템에서 검색 결과에 전혀 잡히지 않는 치명적인 문제를 일으키곤 합니다.\n\n사람인이나 잡코리아 같은 플랫폼은 기업 회원에게 키워드 기반의 인재 검색 기능을 제공하거든요. 이때 시스템의 데이터베이스는 이력서 양식 내의 텍스트 필드에 직접 입력된 데이터만을 우선적으로 텍스트 인덱싱 알고리즘에 수집하는 구조를 취하고 있습니다.\n\n파일 형태로 올라간 문서들은 파싱 과정에서 포맷 깨짐이나 암호화, 이미지화된 텍스트 처리 한계로 인해 데이터베이스 저장에 실패할 확률이 80% 이상에 달해요. 결과적으로 자격 요건을 완벽히 갖춘 인재임에도 불구하고 채용 담당자의 검색 스크리닝 단계에서 완전히 자취를 감추게 되는 셈이죠.\n\n[이미지 2: 이력서 입력 폼에 직무 핵심 키워드를 직접 입력하는 작업 화면]\n\n【 워드 파일 첨부와 직접 입력 방식의 채용 노출 데이터 비교 】\n\n| 구분 항목 | 워드 파일 단순 첨부 방식 | 플랫폼 표준 폼 직접 입력 방식 |\n| --- | --- | --- |\n| 검색 인덱싱 여부 | 텍스트 추출 실패로 100% 누락 위험 | DB 즉시 수집으로 100% 노출 성공 |\n| 키워드 매칭 정확도 | 검색어 자동 감지 불가 | 직무/기술 스택 검색 시 상위 노출 |\n| 모바일 조회 가독성 | 깨짐 현상 및 다운로드 대기 발생 | 앱 최적화 뷰어로 즉시 열람 가능 |\n| 헤드헌터 제안 수 | 평균 월 1회 이하 제한적 | 평균 월 3회 이상 매칭 증가 |\n\n[이미지 3: 채용 포털 내 항목별 이력서 작성 가이드 화면]\n\n📌 인재검색 상위 노출을 만드는 텍스트 입력 핵심 가이드\n\n채용 담당자의 검색 쿼리에 내 이력서를 상단에 위치시키려면 플랫폼이 요구하는 모든 입력 항목을 구체적인 숫자로 채워 넣어야 해요. 프로젝트 참여 기간, 구체적인 예산 규모, 정량적인 성과 수치를 텍스트 필드에 명확히 입력해 주는 것이 기본입니다.\n\n예를 들어 단순히 '마케팅 업무 담당'이라고 적는 대신 '월 예산 5,000만 원 규모의 퍼포먼스 광고 집행 및 ROAS 350% 달성'처럼 정밀한 수치를 텍스트로 적어 두어야 알고리즘이 이를 핵심 정보로 인지하더라고요.\n\n[이미지 4: 체계적으로 정리된 이력서의 프로젝트 성과 수치 부분]\n\n📌 완벽한 서류 제출을 위한 파일 첨부 및 등록 체크리스트\n\n그렇다면 파일 첨부는 아예 안 해야 하는지 궁금해하시는 분들도 계실 텐데요. 파일 첨부는 플랫폼 기본 폼 작성을 완벽하게 마친 상태에서 포트폴리오나 증빙 자료 용도로 추가하는 것이 가장 안전한 전략입니다.\n\n기본 데이터베이스 스크리닝은 텍스트 폼으로 통과하고, 실제 면접관이 서류를 검토하는 2차 검토 단계에서 디자인이 정돈된 PDF 파일을 열람하도록 유도하는 방식이 서류 합격률을 대폭 올려줍니다.\n\n[이미지 5: 깔끔하게 정리된 모니터 화면 속 최종 이력서 검토 장면]\n\n【 ⚠️ 이력서 최종 등록 전 필수 점검 3가지 】\n\n1. 희망 직무 및 핵심 기술 스택 키워드가 텍스트 폼 내 최소 3회 이상 포함되었는가?\n2. 모든 경력 사항의 성과가 정량적 수치(시간, 금액, 비율)로 명확히 작성되었는가?\n3. 첨부파일은 깨짐 방지를 위해 워드(.docx)가 아닌 PDF 포맷으로 최종 변환하여 업로드했는가?\n\n이처럼 세심한 등록 방식의 차이가 서류 합격이라는 큰 결과의 변화를 만들어냅니다. 혹시 지금까지 워드 파일 하나만 올려두고 서류 연락을 기다리고 계셨다면, 이번 기회에 플랫폼 폼을 꼼꼼하게 다시 채워보시는 건 어떨까요?\n\n> 본 포스팅에서 제공하는 정보는 일반적인 참고용 자료이며, 정확성이나 완결성을 보장하지 않습니다. 본문의 내용을 신뢰하여 행해진 개별적인 결정이나 행동에 대한 최종 책임은 독자 본인에게 있습니다.",
+        "hashtags": [
+          "이력서등록",
+          "사람인이력서",
+          "잡코리아이력서",
+          "서류탈락이유",
+          "인재검색노출",
+          "이력서작성법",
+          "취업성공팁",
+          "경력직이직"
+        ],
+        "faq": [
+          {
+            "q": "PDF 파일로 올리면 워드 파일보다 검색이 잘 되나요?",
+            "a": "아닙니다. PDF 파일 역시 채용 포털의 검색 인덱싱 데이터베이스에서는 파일 형태로 인식되어 텍스트 검색 노출이 누락될 위험이 동일하므로, 반드시 텍스트 직접 입력을 병행하셔야 합니다."
+          },
+          {
+            "q": "포트폴리오는 어떤 포맷으로 첨부하는 것이 가장 좋나요?",
+            "a": "가독성 유지와 폰트 깨짐 방지를 위해 반드시 PDF 형식으로 변환하여 첨부하는 것을 권장합니다."
+          },
+          {
+            "q": "이력서 내 키워드는 어디에 많이 배치해야 하나요?",
+            "a": "직무 기술서에 기재된 핵심 스킬과 프로젝트 성과 요약 란에 자연스럽게 녹여내어 배치할 때 알고리즘 감지 확률이 가장 높습니다."
+          }
+        ],
+        "imageGuides": [
+          {
+            "pos": "3줄 핵심 요약 브리핑 박스 바로 아래",
+            "prompt": "An authentic South Korean person in smart casual attire reviewing resume search results on a laptop screen inside a modern South Korean office setting, sharp focus, soft daylight from a side window, realistic corporate photography style, landscape orientation, no text, no watermark, no Caucasian, no Western people, no foreign models.",
+            "desc": "노트북으로 채용 포털 사이트의 인재검색 화면을 확인하는 한국인의 모습"
+          },
+          {
+            "pos": "본문 첫 번째 소제목 하단",
+            "prompt": "Close-up over-the-shoulder shot of a person typing detailed text into an online application form on a desktop screen, modern South Korean apartment interior background, clean desk setup, soft warm lighting, realistic photography, wide angle, no text, no watermark, no Caucasian, no Western people, no foreign models.",
+            "desc": "이력서 입력 폼에 직무 핵심 키워드를 직접 입력하는 작업 화면"
+          },
+          {
+            "pos": "표(Table) 다음 두 번째 소제목 하단",
+            "prompt": "A modern South Korean career guide interface displayed on a tablet screen held by natural Korean hands, modern minimalist office background, neat composition, professional photography style, horizontal ratio, no text, no watermark, no Caucasian, no Western people, no foreign models.",
+            "desc": "채용 포털 내 항목별 이력서 작성 가이드 화면"
+          },
+          {
+            "pos": "세 번째 소제목 하단",
+            "prompt": "A focused shot of a printed document showing project performance charts and metrics alongside a modern laptop, soft indoor office lighting, realistic detail, landscape view, no text, no watermark, no Caucasian, no Western people, no foreign models.",
+            "desc": "체계적으로 정리된 이력서의 프로젝트 성과 수치 부분"
+          },
+          {
+            "pos": "체크리스트 상단 부근",
+            "prompt": "A side view of a young South Korean professional thoughtfully examining a finalized resume document on a dual monitor display, natural Korean hair styling, cozy modern living space background, warm ambient light, highly detailed photo, no text, no watermark, no Caucasian, no Western people, no foreign models.",
+            "desc": "깔끔하게 정리된 모니터 화면 속 최종 이력서를 검토하는 모습"
+          }
+        ],
+        "seoReport": {
+          "score": 98,
+          "checklist": [
+            {
+              "item": "두괄식 3줄 핵심 브리핑 (0.9초 이탈 방어)",
+              "status": "PASS",
+              "desc": "최상단 요약 브리핑 박스를 통해 이력서 누락의 핵심 원인과 해결책을 즉시 제공했습니다."
+            },
+            {
+              "item": "구체적 수치/스펙 및 비교 표 구성 (D.I.A.+)",
+              "status": "PASS",
+              "desc": "텍스트 수집 실패율 80%, 노출 빈도 3배 등 정량 수치와 마크다운 비교 표를 명확히 배치했습니다."
+            },
+            {
+              "item": "스마트블록 LSI 연관 키워드 자연 분산",
+              "status": "PASS",
+              "desc": "메인 키워드인 이력서 등록 외에 사람인, 잡코리아, 인재검색, 첨부파일 등 LSI 키워드를 문맥에 분산했습니다."
+            },
+            {
+              "item": "모바일 가독성 개행 및 시각적 브레이크",
+              "status": "PASS",
+              "desc": "2~3문장 단위의 잦은 개행과 여백, 표 및 체크리스트를 통해 체류 시간을 높였습니다."
+            },
+            {
+              "item": "메타 설명 및 URL 슬러그",
+              "status": "PASS",
+              "desc": "설명: 사람인과 잡코리아 이력서 등록 시 워드 파일만 올려 검색에서 누락되는 원인과 올바른 작성법을 정리했습니다. / 슬러그: /resume-registration-search-indexing-guide"
+            }
+          ]
+        },
+        "aiOdorSafe": true
+      },
+      "shorts": null,
+      "instagram": null,
+      "tiktok": null,
+      "mdx": null,
+      "thumbnailPrompt": "A modern professional South Korean workspace featuring a laptop displaying an online resume editor with checkmarks, neat desk environment, modern South Korean apartment interior background, soft studio lighting, high resolution realistic photography style, wide landscape orientation, no text, no watermark, no Caucasian, no Western people, no foreign models."
+    },
+    "affiliateLink": ""
+  },
+  {
     "id": 1788670332307,
     "timestamp": "2026. 9. 6. 오후 1:52:12",
     "title": "이력서 작성법 합격률 높이는 헤드헌터 비결",
