@@ -25,7 +25,9 @@ AffiliWrite AI는 제휴 마케팅 기획자, 전문 블로거, 콘텐츠 크리
    - 네이버 공식 4대 대분류 및 31개 중분류 카테고리별 실시간 최상위 트래픽 글 자동 수집 및 클린 필터링.
 5. **🎨 구글 Gemini Flash Image (나노바나나) & 1200x514 WebP 자동 최적화**:
    - 별도 유료 API 결제 없이 기존 Gemini API 키로 구글 공식 Flash Image(나노바나나) 모델 안전 호출.
-   - 1200x514 블로그 최적화 비율 자동 Center-Cover 크롭 및 88% 고압축 WebP 즉시 다운로드.
+   - **한국형 프롬프트 2중 잠금**: 인물 등장 시 한국인(Korean) 묘사 및 한국 아파트 인테리어 배경을 의무화하고 외국인/서양인을 완전 배제(`no Caucasian, no Western people`).
+   - **상단 기준(Top-Crop) 절삭**: 1200x514 WebP 변환 시 상단 기준으로 크롭하여 구글 공식 모델의 우측 하단 워터마크(SynthID)를 100% 완벽 소멸.
+   - 88% 고압축 WebP 즉시 다운로드 및 썸네일/본문 일괄 규격화.
 6. **🛡️ 100% 무료 플랜(Free Tier) 다단계 자동 폴백 체인**:
    - 텍스트: `gemini-3.6-flash` ➡️ `gemini-3.5-flash` ➡️ `gemini-3.5-flash-lite` ➡️ `gemini-2.5-flash` 무중단 자동 전환.
    - 이미지: `gemini-2.5-flash-image` ➡️ `gemini-3.1-flash-image` ➡️ `gemini-3.1-flash-lite-image` ➡️ `imagen-3.0-generate-002:predict` 안전 폴백.

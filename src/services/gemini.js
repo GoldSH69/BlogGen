@@ -19,7 +19,7 @@ const GEMINI_MODELS = [
 const NANO_BANANA_2_PROMPT_GUIDE = `
 - 이미지 생성 프롬프트는 반드시 **영문 자연어 서술문(Dense Description) 한 구절**로 작성하고, 단순 키워드 나열은 금지합니다.
 - 다음 요소를 자연스럽게 조합하십시오: ① 피사체와 구성(장면에 무엇이 놓여 있는지), ② 구도·카메라 앵글(예: 45도 오버헤드 컷, 클로즈업 등), ③ 조명(예: 부드러운 창가 자연광, 스튜디오 소프트박스), ④ 색감·무드(은은한 따뜻한 톤 등), ⑤ 스타일(사실적 제품/푸드 포토그래피 또는 미니멀 일러스트), ⑥ 가로형 전체 비율(wide/landscape), ⑦ 텍스트·워터마크·로고·자막이 전혀 없이 깔끔하게(no text, no watermark).
-- 사람이 등장하는 경우에는 항상 한국인(한국형 외모, Korean/East Asian)으로 묘사하도록 영문 단어를 포함하십시오.
+- **[🚨 한국인 및 한국 일상 환경 필수 적용 (서양인 완전 배제)]**: 네이버 블로그 국내 독자에게 최적화된 콘텐츠이므로, 사람이 등장할 때는 반드시 'authentic South Korean person(한국인)', 'natural Korean facial features and hair styling', 'contemporary Korean daily outfit'을 명시하고, 서양인이나 외국인이 절대 나오지 않도록 'no Caucasian, no Western people, no foreign models' 부정 지침을 필수 포함하십시오. 배경 또한 서양 주택이나 거리가 아닌 'modern South Korean apartment interior (한국 아파트 인테리어)', 'contemporary Korean living space' 등 국내 친화적 일상 환경으로 묘사하십시오.
 - Midjourney의 '--ar 1200:514', '--no xxx', 반복 키워드 덤프 같은 파라미터 표기를 절대 추가하지 마십시오(나노바나나2는 이를 무시함).`;
 
 /**
@@ -427,7 +427,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     "imageGuides": [
       {
         "pos": "이미지가 들어갈 본문 문맥 위치 설명 (예: 본론 1 시작 부근)",
-        "prompt": "해당 영역에 생성해 넣을 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·스타일·가로형 비율·무텍스트(no text)를 자연스러운 문장으로 조합 (키워드 나열이나 --ar 등 파라미터 금지)",
+        "prompt": "해당 영역에 생성해 넣을 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·스타일·가로형 비율·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인('authentic South Korean person', 'natural Korean facial features and hair styling') 및 한국 아파트/일상 배경을 명시하고 'no Caucasian, no Western people, no foreign models' 부정 지침 포함 (키워드 나열이나 --ar 등 파라미터 금지)",
         "desc": "어떤 사진을 삽입해야 하는지에 대한 한글 설명"
       }
     ],
@@ -494,7 +494,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     },
     "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 구조화하여 1,800자~2,500자 사이의 깊이 있는 정보성 글로 작성하시오. [1단계: 구체적 문제 및 경험 도입] → [2단계: H2/H3 본문 + 1개 이상의 마크다운 비교 표(| 항목 | 내용 |) + 코드/프롬프트 스니펫] → [3단계: 도구/이론의 한계점과 주의사항(Caveats) 필수 섹션] → [4단계: 주제 맞춤형 고유 실천 가이드 소제목] 순서로 전개하십시오. 가상 인물(A씨, B씨, 김 대리 등) 표기를 100% 금지하고 실제 프로젝트 협업 사례로 서술하십시오. 하단 대가성 법적 고지 문구 및 외부 링크는 구글 애드센스 기준 준수를 위해 절대 포함하지 마십시오."
   }` : `null`},
-  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·사진 스타일(사실적 썸네일/광고 이미지)·가로형 전체 비율(wide landscape)·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인(Korean, East Asian) 묘사 단어를 포함. --ar 나 --no 같은 파라미터 접미사 금지. 벡터/사진 여부는 주제에 맞게 설명으로 표현."` : `null`}
+  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·사진 스타일(사실적 썸네일/광고 이미지)·가로형 전체 비율(wide landscape)·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인('authentic South Korean person', 'natural Korean facial features and styling') 및 한국 일상/아파트 배경('modern South Korean apartment interior')을 명시하고 'no Caucasian, no Western people, no foreign models'을 필수 포함. --ar 나 --no 같은 파라미터 접미사 금지. 벡터/사진 여부는 주제에 맞게 설명으로 표현."` : `null`}
 }
 \`\`\`
 `;

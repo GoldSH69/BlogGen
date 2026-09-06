@@ -14,6 +14,48 @@ const FLASH_IMAGE_MODELS = [
 ];
 
 /**
+ * Automatically enhances image prompts to ensure authentic Korean demographic representation,
+ * domestic Korean environment/aesthetic, and strict avoidance of Western/foreigners.
+ *
+ * @param {string} prompt 
+ * @returns {string}
+ */
+export function enhancePromptForKoreanContext(prompt) {
+  if (!prompt || typeof prompt !== 'string') return '';
+  let p = prompt.trim();
+
+  // Check if human/person keywords exist
+  const hasHumanKeywords = /(?:person|woman|man|people|girl|boy|model|face|female|male|family|mother|father|parent|doctor|worker|expert|customer|user|blogger|creator|couple|human|portrait)/i.test(p);
+  const alreadyMentionsKorean = /(?:korean|south korea|seoul|east asian)/i.test(p);
+
+  const additions = [];
+
+  if (hasHumanKeywords) {
+    if (!alreadyMentionsKorean) {
+      additions.push('featuring authentic modern South Korean person with natural Korean facial features and hair styling');
+    }
+    additions.push('no Caucasian, no Western people, no foreign models');
+  }
+
+  // Ensure Korean domestic living context if setting/interior/lifestyle is mentioned
+  const hasSettingKeywords = /(?:room|kitchen|living|apartment|house|home|interior|office|store|cafe|shop|desk|table|indoor|lifestyle)/i.test(p);
+  if (hasSettingKeywords && !alreadyMentionsKorean) {
+    additions.push('contemporary South Korean apartment interior setting, clean Korean modern aesthetic');
+  }
+
+  // Ensure no watermark or text
+  if (!/(?:no watermark|no text)/i.test(p)) {
+    additions.push('clean composition, no text, no watermark, no logo');
+  }
+
+  if (additions.length > 0) {
+    p = `${p}, ${additions.join(', ')}`;
+  }
+
+  return p;
+}
+
+/**
  * Generates an image using Google's Flash Image (Nano Banana) models via Gemini API.
  * Employs automatic fallback across models to ensure maximum reliability and free tier safety.
  *
@@ -33,6 +75,7 @@ export async function generateGeminiFlashImage(prompt, options = {}) {
 
   const { timeoutMs = 60000 } = options;
   const cleanPrompt = prompt.trim();
+  const finalPrompt = enhancePromptForKoreanContext(cleanPrompt);
   let lastError = null;
 
   // 1. Try Google Gemini Flash Image (generateContent with responseModalities: ["TEXT", "IMAGE"])
@@ -46,7 +89,7 @@ export async function generateGeminiFlashImage(prompt, options = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: cleanPrompt }] }],
+          contents: [{ parts: [{ text: finalPrompt }] }],
           generationConfig: {
             responseModalities: ['TEXT', 'IMAGE']
           }
@@ -90,7 +133,7 @@ export async function generateGeminiFlashImage(prompt, options = {}) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt: cleanPrompt }],
+        instances: [{ prompt: finalPrompt }],
         parameters: {
           sampleCount: 1,
           aspectRatio: '16:9'
@@ -116,15 +159,17 @@ export async function generateGeminiFlashImage(prompt, options = {}) {
 }
 
 /**
- * Converts an image source (DataURL, Blob, or URL) into an optimized WebP DataURL with center-cover cropping.
+ * Converts an image source (DataURL, Blob, or URL) into an optimized WebP DataURL with top-aligned cropping.
+ * By default, crops from the top (sy = 0) to completely eliminate bottom-right watermarks.
  *
  * @param {Blob|string} imageSource - Image Blob, DataURL, or image URL
- * @param {number} targetWidth - Target width (e.g. 1200)
- * @param {number} targetHeight - Target height (e.g. 514)
+ * @param {number} targetWidth - Target width (default 1200)
+ * @param {number} targetHeight - Target height (default 514)
  * @param {number} quality - WebP quality 0.0 - 1.0 (default 0.88)
+ * @param {'top'|'center'} cropPosition - Cropping alignment ('top' cuts off bottom watermark, default 'top')
  * @returns {Promise<{ webpUrl: string, width: number, height: number }>}
  */
-export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight = 514, quality = 0.88) {
+export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight = 514, quality = 0.88, cropPosition = 'top') {
   return new Promise((resolve, reject) => {
     let objectUrl = null;
     const img = new Image();
@@ -149,13 +194,15 @@ export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight
         if (imgRatio > targetRatio) {
           sHeight = img.height;
           sWidth = img.height * targetRatio;
-          sx = (img.width - sWidth) / 2;
+          // When image is wider than target ratio, align left so the right edge (watermark) is sliced off
+          sx = cropPosition === 'top' ? 0 : (img.width - sWidth) / 2;
           sy = 0;
         } else {
           sWidth = img.width;
           sHeight = img.width / targetRatio;
           sx = 0;
-          sy = (img.height - sHeight) / 2;
+          // Top-aligned crop: sy = 0 cleanly eliminates the bottom 190~500px containing the watermark
+          sy = cropPosition === 'top' ? 0 : (img.height - sHeight) / 2;
         }
 
         ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);

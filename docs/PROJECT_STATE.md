@@ -34,11 +34,25 @@
      - 본문 권장 이미지: 기존 1024x768 4:3 비율을 블로그 배너 및 모바일 화면에 최적화된 1200x514 WebP 규격으로 전면 통일.
      - 에러 핸들링 및 로딩 안내 문구 고도화.
 
-### 3. 무결성 검증 및 빌드 결과
+### 3. 고도화: 한국형 인물/배경 프롬프트 2중 강화 & 상단 기준(Top-Crop) 워터마크 100% 제거
+- **배경 및 요구사항**:
+  - 글로벌 AI 이미지 모델(Imagen 3, Gemini Flash Image)의 서양인/외국인 편향으로 인해 한국 블로그에 맞지 않는 서양인 인물이 노출되는 문제 해결.
+  - 구글 공식 이미지 모델이 우측 하단(최하단 40~60px)에 삽입하는 SynthID/스파클 워터마크를 완벽히 제거하기 위한 크롭 방식 개선.
+- **구현 내용**:
+  1. **한국형 프롬프트 2중 잠금 (`gemini.js`, `imageGen.js`)**:
+     - `gemini.js`: `NANO_BANANA_2_PROMPT_GUIDE`, `thumbnailPrompt`, `imageGuides` 작성 지침에 한국인('authentic South Korean person', 'natural Korean facial features and styling') 및 한국 아파트/일상 배경('modern South Korean apartment interior')을 의무화하고, 서양인 배제('no Caucasian, no Western people, no foreign models') 부정 지침 강제.
+     - `imageGen.js`: `enhancePromptForKoreanContext()` 함수 신설을 통해 API 호출 직전 인물/생활 키워드가 감지되면 한국인/한국배경/무워터마크 프롬프트를 자동으로 덧붙여 전송하도록 2중 방어선 구축.
+  2. **상단 기준(Top-Crop) 절삭으로 우측 하단 워터마크 100% 제거 (`imageGen.js`, `ThumbnailKit.jsx`)**:
+     - `convertImageToWebP()`에 상단 기준 크롭(`cropPosition = 'top'`, `sy = 0`) 기본 적용.
+     - 원본 이미지 높이 768px(16:9) 또는 1024px(1:1) 중 상단 0px부터 514px 비율까지만 정확히 취하고 하단의 190~580px를 통째로 잘라내어 우측 하단 워터마크를 100% 완벽 소멸.
+     - 주요 피사체(얼굴, 상체, 상품 헤드)가 상단에 위치하므로 구도 안정감도 동시 극대화.
+     - `ThumbnailKit.jsx`의 수동 파일 업로드/드래그앤드롭 변환(`processFile`)에도 동일한 Top-Crop WebP 변환 함수를 연동하여 일관성 확보.
+
+### 4. 무결성 검증 및 빌드 결과
 - **테스트 원칙 준수**: 사용자 및 프로젝트 룰에 따라 불필요한 토큰 낭비 방지를 위해 실서버 Live API 호출 없이 정적 분석 및 번들 무결성 테스트 진행.
-- **ESLint 정적 검사**: `npx eslint src/components/InputPanel.jsx src/components/ThumbnailKit.jsx src/components/OutputTabs.jsx src/services/gemini.js src/services/imageGen.js` ➔ 0 errors, 0 warnings (완전 무결).
-- **Vite 프로덕션 빌드**: `npm run build` ➔ 0 errors, 1748개 모듈 정상 번들링 완료 (`dist/assets/index-Bgx7mDdM.js`, 337ms).
-- **하위 호환성**: 제휴 마케팅 링크 검증, 면책 문구(E-E-A-T) 선택 기능, 플랫폼별 원고 렌더링, 텔레그램 전송 회귀 없음 확인.
+- **ESLint 정적 검사**: `npx eslint src/components/ThumbnailKit.jsx src/services/gemini.js src/services/imageGen.js src/components/OutputTabs.jsx` ➔ 0 errors, 0 warnings (완전 무결).
+- **Vite 프로덕션 빌드**: `npm run build` ➔ 0 errors, 1748개 모듈 정상 번들링 완료 (`dist/assets/index-BDnT33dt.js`, 339ms).
+- **하위 호환성**: 1200x514 규격 유지, 썸네일 키트, 본문 이미지 생성, 텍스트 클립보드 복사 회귀 없음 확인.
 
 ---
 

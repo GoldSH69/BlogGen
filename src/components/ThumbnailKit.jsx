@@ -62,43 +62,21 @@ export default function ThumbnailKit({ prompt }) {
     }
   };
 
-  // Browser-side Canvas Center cover crop to 1200x514 WebP
-  const processFile = (file) => {
+  // Browser-side Canvas Top-aligned cover crop to 1200x514 WebP (cuts off bottom watermark)
+  const processFile = async (file) => {
     if (!file.type.startsWith('image/')) {
       alert('이미지 파일(.jpg, .png 등)만 업로드할 수 있습니다.');
       return;
     }
 
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1200;
-      canvas.height = 514;
-      const ctx = canvas.getContext('2d');
-
-      const imgRatio = img.width / img.height;
-      const targetRatio = 1200 / 514;
-      let sx, sy, sWidth, sHeight;
-
-      if (imgRatio > targetRatio) {
-        sHeight = img.height;
-        sWidth = img.height * targetRatio;
-        sx = (img.width - sWidth) / 2;
-        sy = 0;
-      } else {
-        sWidth = img.width;
-        sHeight = img.width / targetRatio;
-        sx = 0;
-        sy = (img.height - sHeight) / 2;
-      }
-
-      ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, 1200, 514);
-      
-      const webpUrl = canvas.toDataURL('image/webp', 0.88); // 88% quality WebP compression
+    try {
+      const { webpUrl } = await convertImageToWebP(file, 1200, 514, 0.88, 'top');
       setPreviewUrl(webpUrl);
       setSelectedFile(file);
-    };
+    } catch (err) {
+      console.error(err);
+      alert('이미지를 1200x514 WebP로 변환하는 중 오류가 발생했습니다.');
+    }
   };
 
   const handleDownload = () => {
