@@ -494,7 +494,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     },
     "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 구조화하여 1,800자~2,500자 사이의 깊이 있는 정보성 글로 작성하시오. [1단계: 구체적 문제 및 경험 도입] → [2단계: H2/H3 본문 + 1개 이상의 마크다운 비교 표(| 항목 | 내용 |) + 코드/프롬프트 스니펫] → [3단계: 도구/이론의 한계점과 주의사항(Caveats) 필수 섹션] → [4단계: 주제 맞춤형 고유 실천 가이드 소제목] 순서로 전개하십시오. 가상 인물(A씨, B씨, 김 대리 등) 표기를 100% 금지하고 실제 프로젝트 협업 사례로 서술하십시오. 하단 대가성 법적 고지 문구 및 외부 링크는 구글 애드센스 기준 준수를 위해 절대 포함하지 마십시오."
   }` : `null`},
-  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 밀접하게 연관된 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·사진 스타일(사실적 썸네일/광고 이미지)·가로형 전체 비율(wide landscape)·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인('authentic South Korean person', 'natural Korean facial features and styling') 및 한국 일상/아파트 배경('modern South Korean apartment interior')을 명시하고 'no Caucasian, no Western people, no foreign models'을 필수 포함. --ar 나 --no 같은 파라미터 접미사 금지. 벡터/사진 여부는 주제에 맞게 설명으로 표현."` : `null`}
+  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 직결된 고품격 영문 서술형 이미지 프롬프트. 어색한 인물 얼굴(정면 얼굴/부자연스러운 미소 등)을 절대 포함하지 말고, 주제에 부합하는 세련된 감성 정물(Aesthetic Still Life), 미니멀 데스크탑 셋업, 정갈한 소품 배열(Flat Lay), 한국형 모던 인테리어 공간, 또는 동작 중인 1인칭 손 작업 뷰(POV close-up hands typing on keyboard or holding a warm ceramic cup)를 메인 피사체로 삼으시오. 따뜻한 자연광(soft natural sunlight), 감성적인 매거진 에디토리얼 사진 스타일, 얕은 심도(shallow depth of field), 선명한 초점, 가로형 전체 비율(wide landscape), 무텍스트(clean composition, strictly no text, no watermark, no logo, no human faces). --ar 나 --no 같은 파라미터 접미사 금지."` : `null`}
 }
 \`\`\`
 `;

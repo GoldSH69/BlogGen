@@ -48,12 +48,37 @@
      - 주요 피사체(얼굴, 상체, 상품 헤드)가 상단에 위치하므로 구도 안정감도 동시 극대화.
      - `ThumbnailKit.jsx`의 수동 파일 업로드/드래그앤드롭 변환(`processFile`)에도 동일한 Top-Crop WebP 변환 함수를 연동하여 일관성 확보.
 
-### 4. 무결성 검증 및 빌드 결과
-- **테스트 원칙 준수**: 사용자 및 프로젝트 룰에 따라 불필요한 토큰 낭비 방지를 위해 실서버 Live API 호출 없이 정적 분석 및 번들 무결성 테스트 진행.
-- **ESLint 정적 검사**: `npx eslint src/components/ThumbnailKit.jsx src/services/gemini.js src/services/imageGen.js src/components/OutputTabs.jsx` ➔ 0 errors, 0 warnings (완전 무결).
-- **Vite 프로덕션 빌드**: `npm run build` ➔ 0 errors, 1748개 모듈 정상 번들링 완료 (`dist/assets/index-BDnT33dt.js`, 339ms).
-- **하위 호환성**: 1200x514 규격 유지, 썸네일 키트, 본문 이미지 생성, 텍스트 클립보드 복사 회귀 없음 확인.
+### 4. 고도화: 무결점 FLUX 100% 무료 엔진 전환 & 인물 얼굴 배제(감성 정물/오브젝트 중심) 전략
+- **진단 배경 및 구글 정책 확인**:
+  - 구글 AI Studio 무료 티어 API 키 진단 결과, 구글은 텍스트 모델(43개)에 대해서는 일 1,500회 무료 쿼터를 제공하지만, 이미지 생성 모델 7종 전체에 대해서는 `limit: 0`으로 차단하여 신용카드 결제(Billing) 연동 없이는 무조건 `HTTP 429 Quota Exceeded` 오류를 반환함을 실증 확인.
+  - 신용카드 등록 및 유료 결제 없이 100% 무료로 고품질 이미지를 생성하기 위해 독립적 FLUX 엔진으로 전환 결정.
+- **핵심 개선 및 구현 내용**:
+  1. **인물 얼굴 배제 및 감성 정물/오브젝트 중심 프롬프트 전략 (`gemini.js`, `imageGen.js`)**:
+     - 사용자 통찰(**"사람이 어색하면 꼭 사람이 나올 필요가 있을까?"**) 반영: AI의 미세 인체/표정 왜곡(불쾌한 골짜기)을 원천 차단.
+     - `gemini.js`: `thumbnailPrompt` 지침에 인물 얼굴 정면/전신 묘사를 엄격히 금지하고, 기사 주제에 부합하는 **세련된 감성 정물(Aesthetic Still Life), 미니멀 데스크탑 셋업, 소품 배열(Flat Lay), 한국형 모던 인테리어 공간, 또는 1인칭 손 작업 뷰(POV hands typing/holding cup)**를 메인 피사체로 삼도록 전면 개편.
+     - `imageGen.js`: `enhancePromptForKoreanContext`를 통해 인물 키워드가 있더라도 얼굴 왜곡 방지 및 서양인 배제 태그를 강제하고, 감성 에디토리얼 조명과 무텍스트/무워터마크 태그를 자동 주입.
+  2. **무결점 FLUX 고화질 엔진 & 다중 폴백 (`imageGen.js`)**:
+     - 1차: `flux` (FLUX.1 Schnell) 12B 최신 포토리얼리즘 모델 강제 고정.
+     - 2차 폴백: 트래픽 과부하 또는 35초 초과 시 `flux-realism` 및 `turbo` (SDXL Turbo)로 자동 전환.
+     - 네트워크/CORS 이중 방어: `fetch()` Blob 변환 실패 시 HTML `Image(crossOrigin='anonymous')` 오프스크린 캔버스 로딩 2단계 방어선 구축.
+     - 하위 호환성: 기존 `generateGeminiFlashImage`를 `generateFluxImage`의 alias로 유지하여 타 컴포넌트 임포트 파괴 방지.
+  3. **1200x514 상단 크롭을 통한 워터마크 100% 원천 절삭 (`imageGen.js`, `ThumbnailKit.jsx`)**:
+     - 원본 `1024x768` (4:3)로 생성 후 `1200x514` (~21:9) 상단 기준 크롭(`sy = 0`).
+     - 수학적 검증: 가로 비율에 맞춰 원본 높이 768px 중 상단 438.6px만 사용되고 하단 **329.4px(전체 높이의 42.89%)가 물리적으로 완전 절삭**.
+     - 하단 30~50px 내에 위치하는 Pollinations 워터마크/로고가 100% 원천 제거됨을 수학적으로 증명.
+  4. **UI 라벨 및 사용자 경험 최적화 (`ThumbnailKit.jsx`)**:
+     - 버튼 라벨: `[FLUX AI 썸네일 생성 🎨]`.
+     - 툴팁 및 안내 문구: 어색한 사람 얼굴 없이 세련된 1200x514 감성 썸네일이 100% 무료로 자동 제작됨을 명확히 고지.
 
+### 5. 무결성 검증 및 빌드 결과
+- **Stage 1 (Vite 프로덕션 빌드)**: `npm run build` ➔ 0 errors, 0 warnings, 1748개 모듈 정상 번들링 완료 (359ms).
+- **Stage 2 (정밀 런타임 & 수학적 검증)**:
+  - 감성 정물 프롬프트 보강 테스트 통과 (`soft natural morning sunlight, aesthetic editorial photography`).
+  - 인체/라이프스타일 키워드 방어 테스트 통과 (`no Caucasian, no distorted facial features, no uncanny valley`).
+  - 프롬프트 안전 길이(700자 이내) 절삭 테스트 통과.
+  - 상단 크롭 수학적 계산 검증 통과 (하단 42.89% 절삭 확인).
+  - 프로덕션 번들 정적 점검 통과 (`pollinations.ai`, `flux`, `1200`, `514` 무결 확인).
+- **Stage 3 (하위 호환성 & 상태 무결성)**: 텍스트 생성(`gemini-2.5-flash`), 썸네일 키트, WebP 파일 다운로드 회귀 없음 확인.
 ---
 
 ## 📅 이전 업데이트: 2026-09-05

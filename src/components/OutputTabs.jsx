@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, FileText, Sparkles, AlertCircle, Send, Download, Loader2, RotateCw, Wand2 } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
-import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 import ThumbnailKit from './ThumbnailKit';
 
 const PLATFORM_LABELS = {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Sparkles, Copy, Check, Upload, Download, AlertCircle, Loader2, RotateCw, Wand2 } from 'lucide-react';
-import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
+import { generateFluxImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 
 export default function ThumbnailKit({ prompt }) {
   const [copied, setCopied] = useState(false);
@@ -24,8 +24,8 @@ export default function ThumbnailKit({ prompt }) {
     setIsGenerating(true);
     setGenError('');
     try {
-      const rawImage = await generateGeminiFlashImage(prompt);
-      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88);
+      const rawImage = await generateFluxImage(prompt);
+      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88, 'top');
       setPreviewUrl(webpUrl);
       setSelectedFile({ name: `blog_thumbnail_${Date.now()}.webp` });
       setHasGenerated(true);
@@ -112,7 +112,7 @@ export default function ThumbnailKit({ prompt }) {
         <div style={kitColStyle}>
           <div style={sectionLabelStyle}>1. AI 썸네일 생성 프롬프트</div>
           <p style={helpTextStyle}>
-            아래 프롬프트를 확인하고 **[나노바나나 AI 썸네일 생성 🎨]** 버튼을 누르면 구글 공식 Flash Image(나노바나나) 엔진으로 **글자 없는(No Text)** 1200x514 실사 썸네일을 안전하게 무료 제작합니다.
+            아래 프롬프트를 확인하고 **[FLUX AI 썸네일 생성 🎨]** 버튼을 누르면 어색한 인물 얼굴 없이 세련된 감성 정물/데스크 셋업 중심의 **글자 없는(No Text)** 1200x514 실사 썸네일을 100% 무료로 제작합니다 (하단 워터마크 자동 제거).
           </p>
           <div style={promptBoxStyle}>
             <pre style={promptPreStyle}>{prompt || '본문 분석 후 매력적인 썸네일 프롬프트를 자동으로 구성해 드립니다.'}</pre>
@@ -135,12 +135,12 @@ export default function ThumbnailKit({ prompt }) {
                   onClick={handleGenerateAi} 
                   disabled={isGenerating}
                   style={aiGenBtnStyle(isGenerating, hasGenerated)}
-                  title="구글 공식 Flash Image(나노바나나) 무료 엔진으로 1200x514 썸네일을 생성합니다."
+                  title="100% 무료 FLUX 고화질 엔진으로 1200x514 감성 썸네일을 생성합니다 (워터마크 자동 제거)."
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                      나노바나나 생성 중 (약 5~10초)...
+                      FLUX 이미지 생성 중 (약 10~20초)...
                     </>
                   ) : hasGenerated ? (
                     <>
@@ -150,7 +150,7 @@ export default function ThumbnailKit({ prompt }) {
                   ) : (
                     <>
                       <Wand2 size={14} />
-                      나노바나나 AI 썸네일 생성 🎨
+                      FLUX AI 썸네일 생성 🎨
                     </>
                   )}
                 </button>

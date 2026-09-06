@@ -1,21 +1,17 @@
 /**
- * Safe Google Gemini Flash Image (Nano Banana) Generation & WebP Conversion Service
- * Uses Google's official Flash Image models (gemini-2.5-flash-image, gemini-3.1-flash-image)
- * with multi-stage fallback to Imagen 3, utilizing the user's existing Gemini API key.
- * Converts to pixel-perfect 1200x514 WebP format for Naver Blog SEO.
+ * High-Quality FLUX Image Generation & WebP Top-Crop Conversion Service
+ * 100% Free, Zero Google Quota / Billing Dependency.
+ * Generates 1024x768 photorealistic images via FLUX with multi-tier fallbacks,
+ * and crops from the top to pixel-perfect 1200x514 WebP format, completely eliminating
+ * any bottom-right watermarks for professional Naver Blog SEO.
  */
 
-import { getApiKey } from './gemini';
-
-const FLASH_IMAGE_MODELS = [
-  'gemini-2.5-flash-image',
-  'gemini-3.1-flash-image',
-  'gemini-3.1-flash-lite-image'
-];
+// Candidate FLUX models in priority order
+const FLUX_MODELS = ['flux', 'flux-realism', 'turbo'];
 
 /**
- * Automatically enhances image prompts to ensure authentic Korean demographic representation,
- * domestic Korean environment/aesthetic, and strict avoidance of Western/foreigners.
+ * Automatically enhances image prompts to emphasize aesthetic still life,
+ * modern Korean domestic atmosphere, and strictly avoid awkward human faces/watermarks.
  *
  * @param {string} prompt 
  * @returns {string}
@@ -24,139 +20,170 @@ export function enhancePromptForKoreanContext(prompt) {
   if (!prompt || typeof prompt !== 'string') return '';
   let p = prompt.trim();
 
-  // Check if human/person keywords exist
-  const hasHumanKeywords = /(?:person|woman|man|people|girl|boy|model|face|female|male|family|mother|father|parent|doctor|worker|expert|customer|user|blogger|creator|couple|human|portrait)/i.test(p);
+  // Check if human face/person keywords exist
+  const hasHumanKeywords = /(?:person|woman|man|people|girl|boy|model|face|female|male|family|portrait)/i.test(p);
   const alreadyMentionsKorean = /(?:korean|south korea|seoul|east asian)/i.test(p);
 
   const additions = [];
 
   if (hasHumanKeywords) {
     if (!alreadyMentionsKorean) {
-      additions.push('featuring authentic modern South Korean person with natural Korean facial features and hair styling');
+      additions.push('authentic modern South Korean lifestyle aesthetic, East Asian look');
     }
-    additions.push('no Caucasian, no Western people, no foreign models');
+    additions.push('strictly no Caucasian, no Western people, no foreign models, no distorted facial features, no uncanny valley');
   }
 
-  // Ensure Korean domestic living context if setting/interior/lifestyle is mentioned
-  const hasSettingKeywords = /(?:room|kitchen|living|apartment|house|home|interior|office|store|cafe|shop|desk|table|indoor|lifestyle)/i.test(p);
+  // Ensure Korean domestic living / studio aesthetic if setting/interior is mentioned
+  const hasSettingKeywords = /(?:room|kitchen|living|apartment|house|home|interior|office|store|cafe|shop|desk|table|indoor|lifestyle|studio)/i.test(p);
   if (hasSettingKeywords && !alreadyMentionsKorean) {
-    additions.push('contemporary South Korean apartment interior setting, clean Korean modern aesthetic');
+    additions.push('contemporary South Korean interior atmosphere, clean minimalist aesthetic');
   }
 
-  // Ensure no watermark or text
+  // Quality, lighting, and watermark elimination tags
+  additions.push('soft natural morning sunlight, aesthetic editorial photography, 8k uhd, clean composition');
+
   if (!/(?:no watermark|no text)/i.test(p)) {
-    additions.push('clean composition, no text, no watermark, no logo');
+    additions.push('strictly no text, no watermark, no logo');
   }
 
   if (additions.length > 0) {
     p = `${p}, ${additions.join(', ')}`;
   }
 
+  // Safe truncation to avoid URL limit issues in GET requests
+  if (p.length > 700) {
+    p = p.slice(0, 700).replace(/,[^,]*$/, '');
+  }
+
   return p;
 }
 
 /**
- * Generates an image using Google's Flash Image (Nano Banana) models via Gemini API.
- * Employs automatic fallback across models to ensure maximum reliability and free tier safety.
+ * Loads an image from a URL into an HTML Image element with crossOrigin support,
+ * then renders it onto an offscreen canvas and converts it to a Data URL.
+ * Used as a reliable fallback if direct fetch() is blocked by CORS.
  *
- * @param {string} prompt - Image generation prompt (English descriptive prompt)
- * @param {object} options - Options { timeoutMs }
- * @returns {Promise<string>} Data URL of the generated image (data:image/png;base64,...)
+ * @param {string} url 
+ * @param {number} timeoutMs 
+ * @returns {Promise<string>} Data URL
  */
-export async function generateGeminiFlashImage(prompt, options = {}) {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('Gemini API 키가 설정되지 않았습니다. 우측 상단의 [설정] 버튼을 눌러 API 키를 먼저 입력해 주세요.');
-  }
+function loadImageViaElement(url, timeoutMs = 35000) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    let timer = null;
 
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('이미지 로딩 시간 초과 (35초)'));
+    }, timeoutMs);
+
+    img.onload = () => {
+      cleanup();
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context 생성 실패'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        resolve(dataUrl);
+      } catch (err) {
+        // Tainted canvas fallback: return direct URL if CORS tainted
+        resolve(url);
+      }
+    };
+
+    img.onerror = () => {
+      cleanup();
+      reject(new Error('이미지 엘리먼트 로드 실패'));
+    };
+
+    img.src = url;
+  });
+}
+
+/**
+ * Generates an image using FLUX with multi-tier model fallback.
+ * 100% Free, zero billing, zero quota error.
+ *
+ * @param {string} prompt - Image generation prompt
+ * @param {object} options - Options { timeoutMs, width, height }
+ * @returns {Promise<Blob|string>} Raw image Blob or Data URL (1024x768)
+ */
+export async function generateFluxImage(prompt, options = {}) {
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('이미지 생성을 위한 프롬프트가 비어 있습니다.');
   }
 
-  const { timeoutMs = 60000 } = options;
+  const { timeoutMs = 35000, width = 1024, height = 768 } = options;
   const cleanPrompt = prompt.trim();
   const finalPrompt = enhancePromptForKoreanContext(cleanPrompt);
+  const encodedPrompt = encodeURIComponent(finalPrompt);
+  const seed = Math.floor(Math.random() * 1000000);
+
   let lastError = null;
 
-  // 1. Try Google Gemini Flash Image (generateContent with responseModalities: ["TEXT", "IMAGE"])
-  for (const model of FLASH_IMAGE_MODELS) {
+  for (const model of FLUX_MODELS) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true`;
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: finalPrompt }] }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE']
-          }
-        }),
+      // Step 1: Try direct fetch with Blob response
+      const response = await fetch(imageUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'image/*' },
         signal: controller.signal
       });
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error(`[${model}] 서버 응답 오류 (${response.status}): ${errText.slice(0, 120)}`);
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob && blob.size > 2000 && blob.type.startsWith('image/')) {
+          return blob;
+        }
       }
 
-      const data = await response.json();
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
+      // If fetch response was not ok, try Step 2 (Image element loading)
+      const dataUrl = await loadImageViaElement(imageUrl, timeoutMs);
+      if (dataUrl) return dataUrl;
 
-      if (imagePart && imagePart.inlineData) {
-        const { mimeType = 'image/png', data: base64Data } = imagePart.inlineData;
-        return `data:${mimeType};base64,${base64Data}`;
-      }
-
-      throw new Error(`[${model}] 응답에 이미지 데이터가 포함되지 않았습니다.`);
+      throw new Error(`[${model}] 이미지 응답 수신 실패`);
     } catch (err) {
       if (err.name === 'AbortError') {
-        lastError = new Error(`[${model}] 이미지 생성 시간 초과 (60초)`, { cause: err });
+        lastError = new Error(`[${model}] 서버 응답 지연 (35초 초과)`);
       } else {
-        lastError = err;
+        // If fetch failed (e.g. CORS), attempt image element fallback once before giving up this model
+        try {
+          const fallbackDataUrl = await loadImageViaElement(imageUrl, 15000);
+          if (fallbackDataUrl) return fallbackDataUrl;
+        } catch {
+          lastError = err;
+        }
       }
-      console.warn(`Flash image model ${model} failed, trying next fallback:`, err.message);
+      console.warn(`Model [${model}] failed or timed out, trying next fallback...`, err.message);
     } finally {
       clearTimeout(timeoutId);
     }
   }
 
-  // 2. Final Fallback: Imagen 3.0 (:predict endpoint)
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        instances: [{ prompt: finalPrompt }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: '16:9'
-        }
-      }),
-      signal: controller.signal
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const prediction = data.predictions?.[0];
-      if (prediction && prediction.bytesBase64Encoded) {
-        return `data:${prediction.mimeType || 'image/jpeg'};base64,${prediction.bytesBase64Encoded}`;
-      }
-    }
-  } catch (err) {
-    console.warn('Imagen 3 fallback also failed:', err.message);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  throw new Error(`구글 AI 이미지 생성에 실패했습니다: ${lastError ? lastError.message : '알 수 없는 오류'}`);
+  throw new Error(`AI 이미지 생성에 실패했습니다: ${lastError ? lastError.message : '무료 이미지 서버 일시 혼잡'}. 잠시 후 다시 시도해 주세요.`);
 }
+
+/**
+ * Backward compatibility alias for existing callers
+ */
+export const generateGeminiFlashImage = generateFluxImage;
 
 /**
  * Converts an image source (DataURL, Blob, or URL) into an optimized WebP DataURL with top-aligned cropping.
