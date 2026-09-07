@@ -1,6 +1,15 @@
 # 📌 BlogGen (AffiliWrite AI) 프로젝트 상태 및 작업 이력
 
-## 📅 최신 업데이트: 2026-09-06
+## 📅 최신 업데이트: 2026-09-07
+
+### FLUX 고화질 + FLUX 크롭 제외 (100% 무료 유지)
+- **배경**: FLUX 경로에 Gemini용 상단 크롭(top)이 그대로 남아 사진 하단을 버려 구도·체감 화질 저하. 저품질 `turbo` 폴백도 원인.
+- **변경**:
+  1. `src/services/imageGen.js`: 요청 해상도 `1024x768` → `1344x576`(1200:514 동일 비율, 크롭 손실 0), `enhance=true&private=true` 추가, 폴백 `['flux','flux-realism']`으로 축소(turbo 제외), `convertImageToWebP` 기본값 `top` → `center` (top은 Gemini 레거시 전용).
+  2. `src/components/ThumbnailKit.jsx`, `src/components/OutputTabs.jsx`: FLUX·업로드 전부 `center` 명시, 워터마크 문구 제거.
+- **검증**: `npm run build` 0 errors, 번들 내 `1344`/`576`/`center` 정적 확인, 실API 호출 테스트 없음(지침 준수).
+
+## 📅 이전 업데이트: 2026-09-06
 
 ### 1. 신규 기능: 주제 기반 순수 창작 모드 (Topic-Based Deep Creation)
 - **배경 및 요구사항**:

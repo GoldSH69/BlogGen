@@ -1,13 +1,15 @@
 /**
- * High-Quality FLUX Image Generation & WebP Top-Crop Conversion Service
+ * High-Quality FLUX Image Generation & WebP Conversion Service
  * 100% Free, Zero Google Quota / Billing Dependency.
- * Generates 1024x768 photorealistic images via FLUX with multi-tier fallbacks,
- * and crops from the top to pixel-perfect 1200x514 WebP format, completely eliminating
- * any bottom-right watermarks for professional Naver Blog SEO.
+ * Generates 1344x576 photorealistic images via FLUX (exact 1200:514 aspect,
+ * zero crop waste) with multi-tier fallbacks, and converts to pixel-perfect
+ * 1200x514 WebP with center crop for professional Naver Blog SEO.
+ * NOTE: Top-crop watermark removal was for Gemini (SynthID) only.
+ * FLUX path uses center crop (no aggressive cut).
  */
 
-// Candidate FLUX models in priority order
-const FLUX_MODELS = ['flux', 'flux-realism', 'turbo'];
+// Candidate FLUX models in priority order (turbo excluded: SDXL-Turbo draft quality)
+const FLUX_MODELS = ['flux', 'flux-realism'];
 
 /**
  * Automatically enhances image prompts to emphasize aesthetic still life,
@@ -119,14 +121,14 @@ function loadImageViaElement(url, timeoutMs = 35000) {
  *
  * @param {string} prompt - Image generation prompt
  * @param {object} options - Options { timeoutMs, width, height }
- * @returns {Promise<Blob|string>} Raw image Blob or Data URL (1024x768)
+ * @returns {Promise<Blob|string>} Raw image Blob or Data URL (1344x576)
  */
 export async function generateFluxImage(prompt, options = {}) {
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     throw new Error('이미지 생성을 위한 프롬프트가 비어 있습니다.');
   }
 
-  const { timeoutMs = 35000, width = 1024, height = 768 } = options;
+  const { timeoutMs = 35000, width = 1344, height = 576 } = options;
   const cleanPrompt = prompt.trim();
   const finalPrompt = enhancePromptForKoreanContext(cleanPrompt);
   const encodedPrompt = encodeURIComponent(finalPrompt);
@@ -137,7 +139,7 @@ export async function generateFluxImage(prompt, options = {}) {
   for (const model of FLUX_MODELS) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true`;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${width}&height=${height}&seed=${seed}&nologo=true&enhance=true&private=true`;
 
     try {
       // Step 1: Try direct fetch with Blob response
@@ -186,17 +188,18 @@ export async function generateFluxImage(prompt, options = {}) {
 export const generateGeminiFlashImage = generateFluxImage;
 
 /**
- * Converts an image source (DataURL, Blob, or URL) into an optimized WebP DataURL with top-aligned cropping.
- * By default, crops from the top (sy = 0) to completely eliminate bottom-right watermarks.
+ * Converts an image source (DataURL, Blob, or URL) into an optimized WebP DataURL with center cropping.
+ * By default, crops from the center to preserve composition (FLUX path, no watermark).
+ * Pass cropPosition='top' only for Gemini legacy outputs with a bottom watermark.
  *
  * @param {Blob|string} imageSource - Image Blob, DataURL, or image URL
  * @param {number} targetWidth - Target width (default 1200)
  * @param {number} targetHeight - Target height (default 514)
  * @param {number} quality - WebP quality 0.0 - 1.0 (default 0.88)
- * @param {'top'|'center'} cropPosition - Cropping alignment ('top' cuts off bottom watermark, default 'top')
+ * @param {'top'|'center'} cropPosition - Cropping alignment (default 'center'; 'top' = Gemini legacy only)
  * @returns {Promise<{ webpUrl: string, width: number, height: number }>}
  */
-export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight = 514, quality = 0.88, cropPosition = 'top') {
+export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight = 514, quality = 0.88, cropPosition = 'center') {
   return new Promise((resolve, reject) => {
     let objectUrl = null;
     const img = new Image();
@@ -221,14 +224,14 @@ export function convertImageToWebP(imageSource, targetWidth = 1200, targetHeight
         if (imgRatio > targetRatio) {
           sHeight = img.height;
           sWidth = img.height * targetRatio;
-          // When image is wider than target ratio, align left so the right edge (watermark) is sliced off
+          // 'top' = Gemini legacy only (slices bottom watermark). FLUX uses center.
           sx = cropPosition === 'top' ? 0 : (img.width - sWidth) / 2;
           sy = 0;
         } else {
           sWidth = img.width;
           sHeight = img.width / targetRatio;
           sx = 0;
-          // Top-aligned crop: sy = 0 cleanly eliminates the bottom 190~500px containing the watermark
+          // 'top' = Gemini legacy (cuts bottom watermark). FLUX uses center to preserve composition.
           sy = cropPosition === 'top' ? 0 : (img.height - sHeight) / 2;
         }
 

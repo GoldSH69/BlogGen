@@ -545,7 +545,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
 
     try {
       const rawImage = await generateGeminiFlashImage(prompt);
-      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88);
+      const { webpUrl } = await convertImageToWebP(rawImage, 1200, 514, 0.88, 'center');
       setInbodyImages(prev => ({
         ...prev,
         [blockId]: { isGenerating: false, previewUrl: webpUrl, error: null }
