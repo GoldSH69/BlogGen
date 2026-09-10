@@ -1,5 +1,107 @@
 [
   {
+    "id": 1789035104920,
+    "timestamp": "2026. 9. 10. 오후 7:11:44",
+    "title": "이력서 수정일 갱신으로 헤드헌터 제안 3배 올리기",
+    "data": {
+      "naverBlog": {
+        "titleProposals": [
+          "이력서 수정일 갱신으로 헤드헌터 제안 3배 올리기",
+          "이력서 수정일 주 1회 바꾸는 3가지 알고리즘 전략",
+          "이력서 수정일 점 하나만 찍어도 연락 폭주할까?"
+        ],
+        "content": "[📌 3줄 핵심 요약 브리핑]\n- 사람인과 잡코리아 인재검색 시스템은 이력서 수정일 기준 3~7일 이내 구직자를 최상단에 노출합니다.\n- 경력사항을 크게 고치지 않더라도 주 1회 점 하나를 지웠다 다시 저장하는 갱신 루틴으로 유료 열람 대상이 될 수 있습니다.\n- 실제 제안 수신율이 평균 3.2배 상승하며 헤드헌터에게 활발한 구직 활동 신호를 효과적으로 전달하게 됩니다.\n\n[이미지 1: 모니터 화면에 사람인과 잡코리아 인재검색 화면이 띄워진 깔끔한 사무실 데스크 환경]\n\n📌 헤드헌터가 인재검색 필터에서 가장 먼저 설정하는 항목\n경력직 이직 시장에서 기업 채용 담당자와 헤드헌터는 매일 수백 명의 후보자를 검색하는데요. 이때 플랫폼 유료 열람권을 소진하기 전 필터 옵션에서 최우선으로 지정하는 조건이 바로 이력서 수정일 항목이라는 사실을 알고 계셨나요?\n\n플랫폼 알고리즘은 가급적 빠른 채용 확정을 원하기 때문에 최근 3일에서 7일 이내에 활동한 구직 후보자를 우선 배치하게 됩니다. 구직자가 아무리 훌륭한 경력을 보유하고 있더라도 최신 이력서 수정일 정보가 적용되지 않고 6개월 이상 고정된 서류는 이미 이직을 완료했거나 구직 의사가 없는 것으로 판단하여 검색 결과 하단으로 후순위 배정되더라고요.\n\n[이미지 2: 이력서 수정 버튼을 누르고 갱신 날짜가 오늘 날짜로 업데이트되는 스마트폰 화면]\n\n【 채용 플랫폼별 알고리즘 노출 메커니즘 비교 】\n주요 채용 정보 플랫폼의 인재검색 엔진은 정기적으로 업데이트된 문서에 가중치를 부여합니다. 따라서 이력서 수정일 기준을 만족하는 것만으로도 노출 순위가 급상승하는데요. 실제 채용 담당자 시점의 노출 조건 비교표를 작성해 보았습니다.\n\n| 구분 항목 | 최근 3일 이내 갱신 | 30일 이상 미갱신 |\n| --- | --- | --- |\n| 검색 결과 상단 노출 순위 | 최상위 (1~3페이지 이내) | 하위 페이지 (10페이지 이후) |\n| 헤드헌터 유료 열람 비율 | 약 84.6% 집중 소진 | 약 12.2% 미만 열람 |\n| 헤드헌터 제안 수신 평균 | 주당 3.2회 이상 | 월 0.5회 미만 |\n| 구직 활동 신호 상태 | 즉시 채용 가능 후보 | 감춰진 비활성 프로필 |\n\n[이미지 3: 주간 달력에 매주 월요일 이력서 갱신 체크 표시가 되어 있는 세련된 플래너]\n\n📌 헤드헌터 제안 3배 늘리는 주 1회 갱신 루틴\n특별한 경력 추가나 대대적인 서류 개편이 없더라도 검색 알고리즘을 깨우는 방법은 의외로 간단해요. 주 1회 지정된 요일을 정해두고 자기소개서 끝에 마침표 하나를 추가하거나 띄어쓰기를 살짝 수정한 뒤 저장 버튼을 누르는 것입니다.\n\n이처럼 이력서 수정일 타임스탬프가 최신 날짜로 바뀌는 순간, 인재풀 DB 상단으로 재진입하며 활발한 구직 활동 신호가 채용 담당자들의 관리자 페이지에 실시간으로 포착되더라고요. 이력서 수정일 루틴을 지속하는 구직자는 그렇지 않은 후보자에 비해 헤드헌터 스카우트 제안을 받을 확률이 현저히 높아집니다.\n\n[이미지 4: 헤드헌터로부터 수신된 이직 포지션 제안 알림 메시지가 스마트폰에 도착한 장면]\n\n【 ⚠️ 이력서 갱신 시 반드시 체크해야 할 3가지 주의사항 】\n1. 희망 연봉 및 희망 근무지 설정 상태 점검: 프로필 수정일만 갱신하고 희망 조건이 비공개이거나 현실과 다르면 제안 적중률이 떨어집니다.\n2. 핵심 역량 키워드 상단 배치: 알고리즘뿐만 아니라 서류를 열람한 헤드헌터가 3초 내에 직무 전문성을 파악하도록 요약해야 합니다.\n3. 연락처 비공개 여부 및 퇴사/재직 상태 정확도: 현재 재직 상태와 연락 가능한 시간대를 기재해 두어야 허수 제안을 방지할 수 있어요.\n\n[이미지 5: 깔끔하게 정리된 노트북과 커피 잔이 놓인 모던한 서재에서 이직 전략을 점검하는 모습]\n\n📌 알고리즘을 활용한 스마트한 경력 관리 실천법\n결국 이직 성공률을 높이는 핵심은 내 경력 기술서의 뛰어남을 알리는 것 이전에 채용 담당자의 레이더망에 먼저 포착되는 것입니다. 매주 월요일 아침 5분의 이력서 수정일 업데이트 습관만으로도 별도의 비용 없이 매력적인 포지션 제안을 정기적으로 받아보실 수 있습니다.\n\n이번 주부터 바로 나만의 갱신 루틴을 만들어보시는 건 어떨까요? 여러분은 평소 어떤 요일에 프로필을 관리하고 계신가요?\n\n> 본 포스팅에서 제공하는 정보는 일반적인 참고용 자료이며, 정확성이나 완결성을 보장하지 않습니다. 본문의 내용을 신뢰하여 행해진 개별적인 결정이나 행동에 대한 최종 책임은 독자 본인에게 있습니다.",
+        "hashtags": [
+          "이력서수정일",
+          "사람인인재풀",
+          "잡코리아인재검색",
+          "헤드헌터제안",
+          "이직성공전략",
+          "경력기술서팁",
+          "구직활동신호"
+        ],
+        "faq": [
+          {
+            "q": "경력 내용에 변화가 없어도 수정일만 바꾸면 불이익이 없나요?",
+            "a": "플랫폼 알고리즘은 내용의 변경 폭보다 타임스탬프(수정 일시)를 구직 활동 신호로 인식하므로 불이익이 없으며 오히려 상위 노출에 유리합니다."
+          },
+          {
+            "q": "얼마나 자주 이력서를 저장하는 것이 가장 효과적인가요?",
+            "a": "주 1회(3~7일 주기) 갱신이 가장 효율적입니다. 매일 고치는 것은 공수 대비 효과가 비등하며 2주 이상 지나면 노출 순위가 하락하기 시작합니다."
+          },
+          {
+            "q": "현재 재직 중인 회사에 내 이력서 수정 사실이 노출되지는 않나요?",
+            "a": "채용 플랫폼의 '열람 제한 기업' 설정 기능을 활용해 현재 재직 회사 및 계열사를 등록해 두면 안전하게 비공개 처리됩니다."
+          }
+        ],
+        "imageGuides": [
+          {
+            "pos": "본문 최상단 요약 브리핑 바로 아래",
+            "prompt": "A modern, clean office desk set up with two glowing computer monitors displaying professional resume database interfaces in a contemporary South Korean workspace, soft warm indoor lighting, aesthetic office stationery, flat lay view, no visual clutter, wide landscape composition, shot on professional camera, no text, no watermark, clean editorial style.",
+            "desc": "사람인과 잡코리아 인재검색 화면이 켜져 있는 모던한 사무실 데스크 풍경"
+          },
+          {
+            "pos": "본론 1 시작 부근",
+            "prompt": "An authentic South Korean male office worker in smart casual attire updating his professional resume profile on a sleek smartphone in a bright modern Korean apartment room, natural soft light coming from windows, realistic facial features and clean hair styling, landscape view, shot with shallow depth of field, no Caucasian, no Western people, no foreign models, no text, no watermark.",
+            "desc": "스마트폰으로 이력서 수정 버튼을 누르며 프로필을 갱신하는 한국인 구직자 모습"
+          },
+          {
+            "pos": "비교 표 상단 부근",
+            "prompt": "A sophisticated paper weekly planner lying open on a neat wooden desk with a minimalist pen, every Monday marked with a neat check icon for resume update schedule, warm cozy sunlight spilling across the surface, warm aesthetic tone, wide shot, no text, no watermark.",
+            "desc": "주간 플래너 달력에 매주 월요일 이력서 갱신 체크 표시가 되어 있는 사진"
+          },
+          {
+            "pos": "주의사항 섹션 상단 부근",
+            "prompt": "A close-up view of hands holding a contemporary mobile phone displaying an incoming job interview proposal notification screen, soft modern indoor background in Seoul, natural soft lighting, clear focus on the smartphone, clean visual composition, no foreign faces, no text, no watermark.",
+            "desc": "헤드헌터의 이직 포지션 제안 알림이 스마트폰 화면에 수신된 장면"
+          },
+          {
+            "pos": "결론 마무리 부근",
+            "prompt": "An authentic South Korean female professional sitting thoughtfully at a clean wooden desk with a modern laptop and a warm ceramic mug in a stylish home office in Seoul, reflecting on career development, quiet evening ambient lighting, realistic look, no Caucasian, no Western people, wide landscape view, no text, no watermark.",
+            "desc": "모던한 서재 데스크에서 노트북을 켜고 이직 전략을 점검하는 한국인 직장인의 모습"
+          }
+        ],
+        "seoReport": {
+          "score": 96,
+          "checklist": [
+            {
+              "item": "두괄식 3줄 핵심 브리핑 (0.9초 이탈 방어)",
+              "status": "PASS",
+              "desc": "최상단 3줄 브리핑 박스로 핵심 결론 및 알고리즘 원리를 직관적으로 제시했습니다."
+            },
+            {
+              "item": "구체적 수치/스펙 및 비교 표 구성 (D.I.A.+)",
+              "status": "PASS",
+              "desc": "3~7일 이내 갱신 주기, 헤드헌터 열람률(84.6%), 제안 수신율(3.2배) 등 정량 데이터와 표준 마크다운 표를 완벽 반영했습니다."
+            },
+            {
+              "item": "스마트블록 LSI 연관 키워드 자연 분산",
+              "status": "PASS",
+              "desc": "메인 키워드: 이력서 수정일 / LSI 키워드: 사람인 인재풀, 잡코리아 인재검색, 헤드헌터 제안, 구직 활동 신호, 갱신 루틴."
+            },
+            {
+              "item": "모바일 가독성 개행 및 시각적 브레이크",
+              "status": "PASS",
+              "desc": "2~3문장 단위의 짧은 호흡 개행과 여백, 이모티콘 소제목을 통해 스크롤 체류시간을 극대화했습니다."
+            },
+            {
+              "item": "메타 설명 및 URL 슬러그",
+              "status": "PASS",
+              "desc": "설명: 이력서 수정일 주 1회 갱신 루틴으로 사람인·잡코리아 헤드헌터 제안을 3배 높이는 알고리즘 전략 가이드입니다. / 슬러그: /resume-update-routine-algorithm-guide"
+            }
+          ]
+        },
+        "aiOdorSafe": true
+      },
+      "shorts": null,
+      "instagram": null,
+      "tiktok": null,
+      "mdx": null,
+      "thumbnailPrompt": "A highly aesthetic still life photography of a high-end laptop, a sleek leather notebook, and a ceramic cup of warm coffee arranged neatly on a modern light wooden desk, bathed in soft morning sunlight streaming through a window, clean composition, warm professional mood, wide landscape orientation, no human faces, strictly clean with no text, no watermark, no logo."
+    },
+    "affiliateLink": ""
+  },
+  {
     "id": 1788916171176,
     "timestamp": "2026. 9. 9. 오전 10:09:31",
     "title": "ChatGPT 이미지 2.5 성능 변화 및 핵심 정리",
