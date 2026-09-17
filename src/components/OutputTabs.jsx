@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Copy, Check, FileText, Sparkles, AlertCircle, Send, Download, Loader2, RotateCw, Wand2 } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
+import { checkNaverBlogQuality } from '../services/qualityCheck';
 import ThumbnailKit from './ThumbnailKit';
 import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 
@@ -662,6 +663,7 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
     switch (platform) {
       case 'naverBlog': {
         const blocks = parseNaverBlogBlocks(pData);
+        const quality = checkNaverBlogQuality(pData);
         return (
           <div style={contentBlockStyle}>
             <ThumbnailKit prompt={thumbnailPrompt} />
@@ -705,6 +707,31 @@ export default function OutputTabs({ data, onAdjust, isAdjusting, affiliateLink,
                 </div>
               </div>
             )}
+
+            {/* Objective Quality Check (code-measured, not a ranking prediction) */}
+            <div style={seoReportContainerStyle}>
+              <div style={seoReportHeaderStyle}>
+                <span style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🧪 객관 검증 <span style={{ fontWeight: '600', fontSize: '0.68rem', opacity: 0.75 }}>(코드 실측 · 노출 예측 아님)</span>
+                </span>
+                <span style={seoScoreBadgeStyle(quality.score)}>
+                  {quality.score}점
+                </span>
+              </div>
+              <div style={seoChecklistStyle}>
+                {quality.results.map((check, index) => (
+                  <div key={index} style={seoCheckItemStyle}>
+                    <span style={seoCheckStatusStyle(check.status === 'WARN' ? 'FAIL' : check.status)}>
+                      {check.status}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ fontSize: '0.78rem', display: 'block', color: 'var(--text-primary)' }}>{check.item}</strong>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{check.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Title proposals */}
             <div style={titleListStyle}>

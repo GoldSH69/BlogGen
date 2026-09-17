@@ -8,6 +8,7 @@ import TrendDiscoveryFeed from './components/TrendDiscoveryFeed';
 import TrendSettingsPanel from './components/TrendSettingsPanel';
 import { generateContent, getApiKey } from './services/gemini';
 import { getGithubConfig, fetchHistoryFromGithub, saveHistoryToGithub } from './services/github';
+import { applyPerformance } from './services/historyPerformance';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -102,7 +103,8 @@ export default function App() {
         timestamp: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
         title: data.naverBlog?.titleProposals?.[0] || '가공 원고',
         data,
-        affiliateLink: params.affiliateLink
+        affiliateLink: params.affiliateLink,
+        performance: null
       };
       const updatedHistory = [newHistoryItem, ...historyList].slice(0, 10); // Limit to 10 items
       setHistoryList(updatedHistory);
@@ -151,6 +153,35 @@ export default function App() {
   const handleLoadHistory = (item) => {
     setGeneratedData(item.data);
     setAffiliateLink(item.affiliateLink || '');
+  };
+
+  const [perfEditingId, setPerfEditingId] = useState(null);
+  const [perfDraft, setPerfDraft] = useState({ sympathy: '', comments: '', memo: '' });
+
+  const openPerfEditor = (e, item) => {
+    e.stopPropagation();
+    setPerfEditingId(item.id);
+    setPerfDraft({
+      sympathy: item.performance?.sympathy ?? '',
+      comments: item.performance?.comments ?? '',
+      memo: item.performance?.memo ?? ''
+    });
+  };
+
+  const handleSavePerformance = async (e, id) => {
+    e.stopPropagation();
+    const updated = applyPerformance(historyList, id, perfDraft);
+    setHistoryList(updated);
+    localStorage.setItem('affiliwrite_history', JSON.stringify(updated));
+    const ghConfig = getGithubConfig();
+    if (ghConfig.username && ghConfig.repo && ghConfig.pat) {
+      try {
+        await saveHistoryToGithub(updated);
+      } catch (err) {
+        console.error('Failed to save performance to GitHub:', err);
+      }
+    }
+    setPerfEditingId(null);
   };
 
   const handleClearHistory = async () => {
@@ -368,13 +399,39 @@ export default function App() {
                 ) : (
                   <div style={historyListWrapperStyle}>
                     {historyList.map((item) => (
-                      <div 
-                        key={item.id} 
+                      <div
+                        key={item.id}
                         onClick={() => handleLoadHistory(item)}
                         style={historyItemStyle(generatedData === item.data)}
                       >
                         <div style={historyTitleStyle}>{item.title}</div>
                         <div style={historyTimeStyle}>{item.timestamp}</div>
+                        {item.performance && (item.performance.sympathy !== null || item.performance.comments !== null || item.performance.memo) && (
+                          <div style={historyTimeStyle}>
+                            📈 발행 성과: 공감 {item.performance.sympathy ?? '미기록'} · 댓글 {item.performance.comments ?? '미기록'}{item.performance.memo ? ` · ${item.performance.memo}` : ''}
+                          </div>
+                        )}
+                        <button onClick={(e) => openPerfEditor(e, item)} style={perfEditBtnStyle}>
+                          📈 발행 성과 기록
+                        </button>
+                        {perfEditingId === item.id && (
+                          <div onClick={(e) => e.stopPropagation()} style={perfEditorStyle}>
+                            <label style={perfLabelStyle}>공감 수
+                              <input type="number" min="0" value={perfDraft.sympathy} onChange={(e) => setPerfDraft(prev => ({ ...prev, sympathy: e.target.value }))} style={perfInputStyle} placeholder="미기록" />
+                            </label>
+                            <label style={perfLabelStyle}>댓글 수
+                              <input type="number" min="0" value={perfDraft.comments} onChange={(e) => setPerfDraft(prev => ({ ...prev, comments: e.target.value }))} style={perfInputStyle} placeholder="미기록" />
+                            </label>
+                            <label style={perfLabelStyle}>메모
+                              <input value={perfDraft.memo} onChange={(e) => setPerfDraft(prev => ({ ...prev, memo: e.target.value }))} style={perfInputStyle} placeholder="예: 저녁 8시 발행" maxLength={200} />
+                            </label>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={(e) => handleSavePerformance(e, item.id)} style={perfSaveBtnStyle}>저장</button>
+                              <button onClick={(e) => { e.stopPropagation(); setPerfEditingId(null); }} style={perfSaveBtnStyle}>취소</button>
+                            </div>
+                            <div style={historyTimeStyle}>발행 후 직접 입력한 실측값만 저장됩니다.</div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -620,6 +677,57 @@ const historyTimeStyle = {
   fontSize: '0.65rem',
   color: 'var(--text-muted)',
   marginTop: '4px',
+};
+
+const perfEditBtnStyle = {
+  marginTop: '6px',
+  fontSize: '0.68rem',
+  padding: '4px 10px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-color)',
+  background: 'var(--bg-surface)',
+  color: 'var(--color-cyan)',
+  cursor: 'pointer',
+  fontWeight: '700',
+};
+
+const perfEditorStyle = {
+  marginTop: '8px',
+  padding: '10px',
+  borderRadius: '6px',
+  border: '1px solid var(--border-color)',
+  background: 'var(--bg-surface)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px',
+};
+
+const perfLabelStyle = {
+  fontSize: '0.7rem',
+  color: 'var(--text-secondary)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+};
+
+const perfInputStyle = {
+  fontSize: '0.75rem',
+  padding: '6px 8px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-color)',
+  background: 'var(--bg-surface-solid)',
+  color: 'var(--text-primary)',
+};
+
+const perfSaveBtnStyle = {
+  fontSize: '0.7rem',
+  padding: '5px 12px',
+  borderRadius: '4px',
+  border: '1px solid var(--border-color)',
+  background: 'var(--bg-surface-solid)',
+  color: 'var(--text-primary)',
+  cursor: 'pointer',
+  fontWeight: '700',
 };
 
 const infoBannerStyle = {

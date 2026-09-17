@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/services/trendRanking.test.js src/services/trendFeedback.test.js",
+    "test": "node --test src/services/trendRanking.test.js src/services/trendFeedback.test.js src/services/qualityCheck.test.js src/services/historyPerformance.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
