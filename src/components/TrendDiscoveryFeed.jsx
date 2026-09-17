@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Award, Trash2, Flame, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { parseTrendMetadata, rankTrend } from '../services/trendRanking';
+import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Trash2, Flame } from 'lucide-react';
 import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub, closeMultipleTrendIssuesOnGithub } from '../services/github';
 
 export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
@@ -187,16 +188,20 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       }
     }
 
+    const metadata = parseTrendMetadata(body);
+    const materialRanking = metadata ? rankTrend(metadata, metadata.preferences || {}) : null;
     return {
+      materialRanking,
+      collectedAt: metadata?.collectedAt || '',
       type: parsedType,
       blogger: parsedBlogger,
       score: parsedScore,
       link: parsedLink,
       group: parsedGroup,
       pubDate: parsedPubDate,
-      sympathyCnt,
-      commentCnt,
-      engagementScore,
+      sympathyCnt: metadata ? metadata.sympathyCnt : sympathyCnt,
+      commentCnt: metadata ? metadata.commentCnt : commentCnt,
+      engagementScore: materialRanking ? materialRanking.engagement : engagementScore,
       homeBoardScore: parsedHomeBoardScore,
       categoryName,
       isDataLab,
@@ -208,7 +213,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
   const handleSelect = (issue, parsed) => {
     onSelectTrend({
-      content: parsed.content,
+      content: `참고 출처: ${parsed.link}\n원문 제목: ${issue.title}\n수집 시점: ${parsed.collectedAt || '미확인'}\n\n${parsed.content}`,
       title: issue.title.replace(/^\[트렌드\]\s*/, ''),
       link: parsed.link
     });
@@ -242,6 +247,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
 
     trends.forEach(issue => {
       const parsed = parseTrendBody(issue.body, issue.title);
+      if (parsed.materialRanking?.eligible === false) return;
       const isNews = isNewsPost(parsed, issue);
       if (isNews) {
         newsList.push({ issue, parsed });
@@ -273,8 +279,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
       });
     } else if (sortMode === 'home') { // 'home' (🏆 네이버 홈판 적합도순, 홈판용 추천)
       blogList.sort((a, b) => {
-        const aHome = Number(a.parsed.homeBoardScore) || 0;
-        const bHome = Number(b.parsed.homeBoardScore) || 0;
+        const aHome = a.parsed.materialRanking?.score ?? -1;
+        const bHome = b.parsed.materialRanking?.score ?? -1;
         if (aHome !== bHome) return bHome - aHome;
         return b.parsed.engagementScore - a.parsed.engagementScore; // 동점 시 반응도 우선
       });
@@ -379,10 +385,11 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         </div>
 
         {/* Sort Mode Toggle Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface-solid)', padding: '3px 4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div style={{ ...tabContainerStyle, alignItems: 'center', gap: '6px', padding: '3px 4px', marginBottom: 0 }}>
           <button
             onClick={() => setSortMode('home')}
             style={{
+              ...tabItemStyle(sortMode === 'home', 'naver'),
               padding: '4px 12px',
               borderRadius: '6px',
               border: 'none',
@@ -396,9 +403,9 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
               alignItems: 'center',
               gap: '4px'
             }}
-            title="네이버 홈판(큐레이션판) 적합도 점수가 높은 블로그 글 순서대로 정렬합니다."
+            title="공감·댓글·최신성·관심 키워드로 계산한 내부 추천 순서입니다. 네이버 공식 순위가 아닙니다."
           >
-            🏆 홈판점수
+            소재 추천순
           </button>
           <button
             onClick={() => setSortMode('datalab')}
@@ -460,7 +467,7 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
           </button>
         </div>
 
-        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+        <span style={scoreBadgeStyle(false)}>
           총 {filteredTrends.length}개 탐지됨
         </span>
       </div>
@@ -598,9 +605,9 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                             alignItems: 'center',
                             gap: '4px'
                           }}>
-                            🔥 반응도: {displayScore}점
+                            반응도: {displayScore ?? '미확인'}
                           </span>
-                          {parsed.homeBoardScore && (
+                          {parsed.materialRanking && (
                             <span style={{
                               fontSize: '0.73rem',
                               fontWeight: '800',
@@ -613,12 +620,12 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                               alignItems: 'center',
                               gap: '4px'
                             }}>
-                              🏆 홈판 {parsed.homeBoardScore}점
+                              소재 추천 {parsed.materialRanking.score}점 (내부 기준)
                             </span>
                           )}
                         </>
                       )}
-                      <span style={channelBadgeStyle(parsed.type)}>{parsed.type}</span>
+                      <span style={{ ...groupBadgeStyle(parsed.group), ...channelBadgeStyle(parsed.type) }}>{parsed.type}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <button 
@@ -646,15 +653,21 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                     ) : (
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--color-rose)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          ❤️ 공감 {parsed.sympathyCnt}개
+                          ❤️ 공감 {parsed.sympathyCnt ?? '미확인'}
                         </span>
                         <span style={{ color: 'var(--color-violet)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          💬 댓글 {parsed.commentCnt}개
+                          💬 댓글 {parsed.commentCnt ?? '미확인'}
                         </span>
                       </div>
                     )}
                   </div>
 
+                  {parsed.materialRanking ? (
+                    <div style={{ fontSize: '0.75rem', marginBottom: 10 }}>
+                      {parsed.materialRanking.reasons.map(reason => <div key={reason}>{reason}</div>)}
+                      <div>수집 시점: {parsed.collectedAt || '미확인'} · 노출 보장 없음</div>
+                    </div>
+                  ) : <p>이전 수집 데이터: 추천 근거 미확인, 재수집 필요</p>}
                   {/* Snippet Description */}
                   <p style={snippetStyle}>
                     {parsed.content.substring(0, 180)}

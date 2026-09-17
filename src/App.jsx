@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Key, FileText, Settings, History, Trash2, Heart, Award, HelpCircle, RefreshCw, TrendingUp, Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, FileText, Settings, History, Trash2, RefreshCw, TrendingUp, Sun, Moon } from 'lucide-react';
 import InputPanel from './components/InputPanel';
 import OutputTabs from './components/OutputTabs';
 import SNSPreviewPane from './components/SNSPreviewPane';
@@ -16,7 +16,7 @@ export default function App() {
   const [generatedData, setGeneratedData] = useState(null);
   const [activePlatform, setActivePlatform] = useState('naverBlog');
   const [affiliateLink, setAffiliateLink] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(() => !getApiKey());
   const [historyList, setHistoryList] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [currentTab, setCurrentTab] = useState('generator');
@@ -74,10 +74,6 @@ export default function App() {
 
     loadInitialHistory();
 
-    const key = getApiKey();
-    if (!key) {
-      setShowSettings(true);
-    }
   }, [showSettings]);
 
   const handleGenerate = async (params) => {
@@ -440,7 +436,7 @@ export default function App() {
       )}
 
       {/* Settings Modal Layer */}
-      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      {showSettings && <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />}
 
       {/* Trend Settings Modal Layer */}
       <TrendSettingsPanel isOpen={showTrendSettings} onClose={() => setShowTrendSettings(false)} />

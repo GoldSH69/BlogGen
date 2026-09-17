@@ -106,7 +106,7 @@ export async function fetchHistoryFromGithub() {
       return JSON.parse(decodedText);
     } catch (jsonErr) {
       console.error('GitHub history.json parsing failed:', jsonErr);
-      throw new Error(`JSON 포맷 파싱 에러: ${jsonErr.message}. 디코딩된 내용 앞부분: ${decodedText.substring(0, 80)}...`);
+      throw new Error(`JSON 포맷 파싱 에러: ${jsonErr.message}`, { cause: jsonErr });
     }
   } catch (error) {
     console.error('GitHub Fetch Error:', error);

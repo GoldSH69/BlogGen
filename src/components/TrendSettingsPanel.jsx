@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { keywordList } from '../services/trendRanking';
 import { Settings, X, Save, CheckCircle, AlertTriangle } from 'lucide-react';
 import { getGithubConfig, fetchTrendConfigFromGithub, saveTrendConfigToGithub } from '../services/github';
 
@@ -71,10 +72,14 @@ const DATALAB_CATEGORIES = [
   { cid: '50000008', name: '생활/건강' }
 ];
 
-const ALL_DATALAB_CIDS = DATALAB_CATEGORIES.map(c => c.cid);
+
 
 export default function TrendSettingsPanel({ isOpen, onClose }) {
   const [categories, setCategories] = useState(ALL_CAT_SEQS);
+  const [preferredKeywords, setPreferredKeywords] = useState('');
+  const [excludedKeywords, setExcludedKeywords] = useState('');
+  const [maxAgeDays, setMaxAgeDays] = useState(10);
+  const [loadedConfig, setLoadedConfig] = useState({});
   const [sympathyWeight, setSympathyWeight] = useState(1.0);
   const [commentWeight, setCommentWeight] = useState(2.0);
   const [minCleanScore, setMinCleanScore] = useState(80);
@@ -116,6 +121,10 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
       try {
         const cloudConfig = await fetchTrendConfigFromGithub();
         if (cloudConfig) {
+          setLoadedConfig(cloudConfig);
+          setPreferredKeywords(keywordList(cloudConfig.unifiedTrend?.preferences?.preferredKeywords).join(', '));
+          setExcludedKeywords(keywordList(cloudConfig.unifiedTrend?.preferences?.excludedKeywords).join(', '));
+          setMaxAgeDays(cloudConfig.unifiedTrend?.filtering?.maxAgeDays ?? 10);
           if (cloudConfig.unifiedTrend) {
             const ut = cloudConfig.unifiedTrend;
             setCategories(ut.categories || [30, 33, 32, 9, 10, 12, 14, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25]);
@@ -207,12 +216,15 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
     setStatusMsg('');
 
     const configObj = {
+      ...loadedConfig,
       unifiedTrend: {
+        ...loadedConfig.unifiedTrend,
         enableKeywordFreeDump: true,
         categories,
-        sources: { naverBlog: true, googleNews: true },
-        engagementRules: { sympathyWeight, commentWeight, minEngagementScore: 1 },
-        filtering: { minCleanScore, customBlacklist, maxAgeDays: 10 },
+        preferences: { preferredKeywords: keywordList(preferredKeywords), excludedKeywords: keywordList(excludedKeywords) },
+        sources: loadedConfig.unifiedTrend?.sources || { naverBlog: true, googleNews: true },
+        engagementRules: { ...loadedConfig.unifiedTrend?.engagementRules, sympathyWeight, commentWeight, minEngagementScore: loadedConfig.unifiedTrend?.engagementRules?.minEngagementScore ?? 1 },
+        filtering: { minCleanScore, customBlacklist, maxAgeDays },
         homeBoardFilter: { enabled: homeBoardEnabled, minHomeBoardScore }
       },
       dataLabTrend: {
@@ -279,6 +291,19 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
         {/* Body */}
         <div style={modalBodyStyle}>
+          <section style={{ marginBottom: 20 }}>
+            <h4>내가 쓰고 싶은 소재</h4>
+            <label>관심 키워드 (쉼표로 구분)
+              <input className="input-field" value={preferredKeywords} onChange={e => setPreferredKeywords(e.target.value)} placeholder="예: 자취, 국내여행, AI 도구" />
+            </label>
+            <label>제외 키워드 (쉼표로 구분)
+              <input className="input-field" value={excludedKeywords} onChange={e => setExcludedKeywords(e.target.value)} placeholder="원하지 않는 소재" />
+            </label>
+            <label>최근 수집 범위 (일)
+              <input type="number" min="1" max="30" value={maxAgeDays} onChange={e => setMaxAgeDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
+            </label>
+            <p>소재 추천은 내부 편집 기준이며 네이버 순위·노출 확률이 아닙니다. 자동 수집은 현재 비활성 상태이며 수동 수집을 사용합니다.</p>
+          </section>
           {errorMsg && (
             <div style={{
               display: 'flex',
@@ -480,11 +505,11 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
 
               {/* 3. Home Board Filter Option */}
               <div>
-                <h4 style={sectionTitleStyle}>3. 🏆 네이버 홈판 적합도 필터 설정</h4>
+                <h4 style={sectionTitleStyle}>3. 🏆 소재 추천 필터 설정 (내부 기준)</h4>
                 <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <label style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: '600' }}>
-                      네이버 홈판(큐레이션판) 필터링 가동
+                      내부 소재 추천 점수로 필터링
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', cursor: 'pointer', color: 'var(--color-violet)' }}>
                       <input
@@ -493,14 +518,14 @@ export default function TrendSettingsPanel({ isOpen, onClose }) {
                         onChange={(e) => setHomeBoardEnabled(e.target.checked)}
                         style={{ accentColor: 'var(--color-violet)', width: '16px', height: '16px' }}
                       />
-                      <span>{homeBoardEnabled ? '활성화 (홈판 우수글만 선별)' : '비활성화'}</span>
+                      <span>{homeBoardEnabled ? '활성화 (내부 기준 이상만 선별)' : '비활성화'}</span>
                     </label>
                   </div>
 
                   {homeBoardEnabled && (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '6px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>최소 홈판 적합도 점수 기준</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>최소 소재 추천 점수 (노출 예측 아님)</span>
                         <span style={{ fontWeight: '700', color: 'var(--color-cyan)' }}>{minHomeBoardScore}점 이상</span>
                       </div>
                       <input 

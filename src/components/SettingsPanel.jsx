@@ -1,58 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { Key, Eye, EyeOff, Save, Trash2, CheckCircle, AlertTriangle, Send, Cloud } from 'lucide-react';
-import { getApiKey, saveApiKey } from '../services/gemini';
+import { useState } from 'react';
+import { Key, Eye, EyeOff, Save, Trash2, CheckCircle, Cloud } from 'lucide-react';
+import { saveApiKey } from '../services/gemini';
 import { getGithubConfig, saveGithubConfig, clearGithubConfig } from '../services/github';
 
 export default function SettingsPanel({ isOpen, onClose }) {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('affiliwrite_gemini_api_key') || '');
   const [showKey, setShowKey] = useState(false);
-  const [isEnvSet, setIsEnvSet] = useState(false);
+  const isEnvSet = Boolean(import.meta.env.VITE_GEMINI_API_KEY);
   
   // Telegram Bot States
-  const [telegramToken, setTelegramToken] = useState('');
-  const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegramToken, setTelegramToken] = useState(() => localStorage.getItem('affiliwrite_telegram_bot_token') || '');
+  const [telegramChatId, setTelegramChatId] = useState(() => localStorage.getItem('affiliwrite_telegram_chat_id') || '');
   const [showTgToken, setShowTgToken] = useState(false);
-  const [isTgEnvSet, setIsTgEnvSet] = useState(false);
+  const isTgEnvSet = Boolean(import.meta.env.VITE_TELEGRAM_BOT_TOKEN && import.meta.env.VITE_TELEGRAM_CHAT_ID);
 
   // GitHub Cloud Sync States
-  const [ghUsername, setGhUsername] = useState('');
-  const [ghRepo, setGhRepo] = useState('');
-  const [ghPat, setGhPat] = useState('');
-  const [ghPath, setGhPath] = useState('history.json');
+  const [ghUsername, setGhUsername] = useState(() => getGithubConfig().username);
+  const [ghRepo, setGhRepo] = useState(() => getGithubConfig().repo);
+  const [ghPat, setGhPat] = useState(() => getGithubConfig().pat);
+  const [ghPath, setGhPath] = useState(() => getGithubConfig().path);
   const [showGhPat, setShowGhPat] = useState(false);
 
   const [statusMsg, setStatusMsg] = useState('');
 
-  useEffect(() => {
-    // Check Gemini key in env
-    const envKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (envKey) {
-      setIsEnvSet(true);
-    }
-    const localKey = localStorage.getItem('affiliwrite_gemini_api_key');
-    if (localKey) {
-      setApiKey(localKey);
-    }
-
-    // Check Telegram config in env / local storage
-    const envTgToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-    const envTgChatId = import.meta.env.VITE_TELEGRAM_CHAT_ID;
-    if (envTgToken && envTgChatId) {
-      setIsTgEnvSet(true);
-    }
-
-    const localTgToken = localStorage.getItem('affiliwrite_telegram_bot_token');
-    const localTgChatId = localStorage.getItem('affiliwrite_telegram_chat_id');
-    if (localTgToken) setTelegramToken(localTgToken);
-    if (localTgChatId) setTelegramChatId(localTgChatId);
-
-    // Check GitHub config
-    const ghConfig = getGithubConfig();
-    setGhUsername(ghConfig.username);
-    setGhRepo(ghConfig.repo);
-    setGhPat(ghConfig.pat);
-    setGhPath(ghConfig.path || 'history.json');
-  }, [isOpen]);
 
   const handleSave = () => {
     saveApiKey(apiKey.trim());

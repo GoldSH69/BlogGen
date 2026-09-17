@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Copy, Check, FileText, Sparkles, AlertCircle, Send, Download, Loader2, RotateCw, Wand2 } from 'lucide-react';
 import { adjustContent } from '../services/gemini';
 import ThumbnailKit from './ThumbnailKit';
+import { generateGeminiFlashImage, convertImageToWebP, downloadDataUrl } from '../services/imageGen';
 
 const PLATFORM_LABELS = {
   naverBlog: '💚 네이버 블로그',

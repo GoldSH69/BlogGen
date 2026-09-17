@@ -20,6 +20,10 @@
       "naverBlog": true,
       "googleNews": true
     },
+    "preferences": {
+      "preferredKeywords": [],
+      "excludedKeywords": []
+    },
     "engagementRules": {
       "sympathyWeight": 1,
       "commentWeight": 2,

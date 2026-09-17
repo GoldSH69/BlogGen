@@ -60,7 +60,7 @@ function isRecentPost(postdate, maxDays = 5) {
       if (isNaN(postDateObj.getTime())) return true;
     }
     
-    const diffTime = getKSTDate().getTime() - postDateObj.getTime();
+    const diffTime = Date.now() - postDateObj.getTime();
     const diffDays = diffTime < 0 ? 0 : Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays <= maxDays;
@@ -81,12 +81,7 @@ function formatPubDate(pubDateStr) {
   try {
     const d = new Date(pubDateStr);
     if (!isNaN(d.getTime())) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const h = String(d.getHours()).padStart(2, '0');
-      const min = String(d.getMinutes()).padStart(2, '0');
-      return `${y}-${m}-${day} ${h}:${min}`;
+      return d.toISOString();
     }
   } catch (e) {}
   return pubDateStr;
@@ -117,8 +112,8 @@ function convertToMobileBlogUrl(url) {
 
 // Naver Blog Sympathy (Likes) & Comment Count Real-time Scraper (0% Parse Error Guarantee)
 async function fetchNaverBlogReactions(link) {
-  let sympathyCnt = 0;
-  let commentCnt = 0;
+  let sympathyCnt = null;
+  let commentCnt = null;
   if (!link || (!link.includes('blog.naver.com') && !link.includes('m.blog.naver.com'))) {
     return { sympathyCnt, commentCnt };
   }
@@ -205,6 +200,8 @@ async function fetchNaverBlogReactions(link) {
   return { sympathyCnt, commentCnt };
 }
 
+let rankingPreferences = {};
+
 async function enrichCandidatesWithReactions(candidates) {
   if (!candidates || candidates.length === 0) return;
   console.log(`- [반응도 파서] 총 ${candidates.length}개 후보 포스팅의 실시간 공감수 및 댓글수 파싱 중...`);
@@ -212,15 +209,16 @@ async function enrichCandidatesWithReactions(candidates) {
   await Promise.all(candidates.map(async (cand) => {
     if (cand.type === '네이버 블로그' && cand.link) {
       const { sympathyCnt, commentCnt } = await fetchNaverBlogReactions(cand.link);
-      cand.sympathyCnt = Math.max(cand.sympathyCnt || 0, sympathyCnt);
-      cand.commentCnt = Math.max(cand.commentCnt || 0, commentCnt);
+      cand.sympathyCnt = sympathyCnt ?? cand.sympathyCnt ?? null;
+      cand.commentCnt = commentCnt ?? cand.commentCnt ?? null;
     } else {
       cand.sympathyCnt = cand.sympathyCnt || 0;
       cand.commentCnt = cand.commentCnt || 0;
     }
 
-    // engagementScore = (sympathy * 1.0) + (comment * 2.0)
-    cand.engagementScore = (cand.sympathyCnt * 1.0) + (cand.commentCnt * 2.0);
+    const { rankTrend } = await import('../src/services/trendRanking.js');
+    cand.materialRanking = rankTrend(cand, rankingPreferences);
+    cand.engagementScore = cand.materialRanking.engagement;
 
     cand.bloggername = (cand.bloggername || '네이버 블로거').replace(/\s*\(\s*공감[\s\S]*?\)/gi, '').trim();
   }));
@@ -230,34 +228,7 @@ async function enrichCandidatesWithReactions(candidates) {
 // - 반응도(공감/댓글), 실제 본문 충실도, 큐레이션/비교 키워드를 균형 있게 반영
 // - 점수 설계상 임계값(기본 60점)이 의미 있게 동작하도록(우수 블로그글만 통과) 최소 임계를 잡음
 function calculateHomeBoardScore(post) {
-  const eng = post.engagementScore || 0;
-  const titleText = post.title || '';
-  const descText = post.description || '';
-
-  // 1. 기본점수 (모든 후보에 최소 인정)
-  let score = 10;
-
-  // 2. 반응도 지표 가산점 (최대 +40점) — 홈판은 실사용 반응이 높은 글이 유리
-  if (eng >= 20) score += 40;
-  else if (eng >= 12) score += 32;
-  else if (eng >= 5) score += 24;
-  else if (eng >= 1) score += 12;
-
-  // 3. 실제 본문 충실도 가산점 (최대 +25점) — 요약만 있는 뉴스/빈약 글은 배제
-  const len = descText.trim().length;
-  if (len >= 1500) score += 25;
-  else if (len >= 800) score += 20;
-  else if (len >= 300) score += 15;
-  else if (len >= 100) score += 8;
-
-  // 4. 큐레이션/비교 계열 키워드 가산점 (최대 +25점)
-  const textToTest = `${titleText} ${descText}`;
-  const curationRegex = /비교|추천|선택|가이드|장단점|스펙|체크리스트|총정리|종합|차이|순위|베스트|분석|꿀팁|후기/i;
-  if (curationRegex.test(textToTest)) {
-    score += 25;
-  }
-
-  return Math.min(100, Math.max(0, score));
+  return post.materialRanking?.score ?? 0;
 }
 
 // Full Text Scraper Engine (Zero-Dependency)
@@ -280,7 +251,7 @@ async function scrapeFullText(link, type) {
 
     if (!res.ok) return null;
     const html = await res.text();
-    const cleanHtmlDump = cleanHtml(html);
+    const cleanHtmlDump = html;
 
     let bodyText = '';
 
@@ -440,8 +411,8 @@ async function fetchNaverBlogSearchResults(clientId, clientSecret, keyword, limi
           link: convertToMobileBlogUrl(link),
           bloggername: cleanHtml(post.bloggername || '네이버 블로거'),
           pubDate: formatPostdate(post.postdate || ''),
-          sympathyCnt: 0,
-          commentCnt: 0
+          sympathyCnt: null,
+          commentCnt: null
         });
       }
     } else {
@@ -588,6 +559,7 @@ async function run() {
   }
 
   const unified = config.unifiedTrend || {};
+  rankingPreferences = { ...unified.engagementRules, ...unified.preferences };
   const selectedCategories = Array.isArray(unified.categories) && unified.categories.length > 0
     ? unified.categories
     : [30, 33, 32, 9, 10, 12, 21, 6, 5, 28, 27, 29, 26, 15, 18, 20, 25];
@@ -598,7 +570,7 @@ async function run() {
   const homeBoardFilterConfig = unified.homeBoardFilter || { enabled: true, minHomeBoardScore: 60 };
   const isHomeBoardFilterEnabled = homeBoardFilterConfig.enabled !== false;
   const minHomeBoardScore = homeBoardFilterConfig.minHomeBoardScore ?? 60;
-  const MAX_AGE_DAYS = 5; // 오늘 기준 최근 5일 이내 작성글만 허용
+  const MAX_AGE_DAYS = Math.max(1, Math.min(30, Number(unified.filtering?.maxAgeDays) || 10)); // 오늘 기준 최근 5일 이내 작성글만 허용
 
   const categoryMap = {
     5: '문학·책', 6: '영화', 8: '미술·디자인', 7: '공연·전시', 11: '음악', 9: '드라마', 12: '스타·연예인', 13: '만화·애니', 10: '방송',
@@ -619,7 +591,7 @@ async function run() {
   console.log(`수집 날짜 제한: 오늘 기준 최근 ${MAX_AGE_DAYS}일 이내 작성글만 허용`);
   console.log('=======================================');
 
-  for (const seq of selectedCategories) {
+  for (const seq of unified.sources?.naverBlog === false ? [] : selectedCategories) {
     const catName = categoryMap[seq] || `카테고리 ${seq}`;
     console.log(`\n[카테고리: ${catName}] 수집 중 (seq: ${seq})...`);
 
@@ -660,8 +632,8 @@ async function run() {
             continue;
           }
 
-          const sympathy = post.sympathyCount ?? post.sympathyCnt ?? 0;
-          const comment = post.commentCount ?? post.commentCnt ?? 0;
+          const sympathy = post.sympathyCount ?? post.sympathyCnt ?? null;
+          const comment = post.commentCount ?? post.commentCnt ?? null;
           const bloggername = `${post.authorName || post.nickname || '네이버 블로거'}`;
 
           const cleanObj = calculateCleanScore(
@@ -688,8 +660,8 @@ async function run() {
         }
 
         await enrichCandidatesWithReactions(categoryCandidates);
-        const validCategoryCandidates = categoryCandidates.filter(c => (c.engagementScore || 0) >= minEngagementScore);
-        validCategoryCandidates.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+        const validCategoryCandidates = categoryCandidates.filter(c => c.materialRanking.eligible && (c.engagementScore || 0) >= minEngagementScore);
+        validCategoryCandidates.sort((a, b) => (b.materialRanking.score - a.materialRanking.score) || (b.engagementScore - a.engagementScore));
 
         const top3ForCategory = validCategoryCandidates.slice(0, 3);
         console.log(`  => [${catName}] 반응도 컷트라인 통과 ${validCategoryCandidates.length}개 중 상위 ${top3ForCategory.length}개 선발 완료`);
@@ -707,7 +679,7 @@ async function run() {
   console.log('[트랙 2] 구글 실시간 급상승 9개 키워드 핫뉴스 수집 시작...');
   console.log('=======================================');
 
-  const realtimeKeywords = await fetchGoogleTrendingKeywords(9); // 정확히 9개 키워드 수집
+  const realtimeKeywords = unified.sources?.googleNews === false ? [] : await fetchGoogleTrendingKeywords(9); // 정확히 9개 키워드 수집
 
   for (const keyword of realtimeKeywords) {
     try {
@@ -781,7 +753,7 @@ async function run() {
 
       const perKeywordMap = new Map();
       for (const cand of aiBlogCandidates) {
-        if ((cand.engagementScore || 0) < minEngagementScore) continue;
+        if (!cand.materialRanking.eligible || (cand.engagementScore || 0) < minEngagementScore) continue;
         const key = cand.keyword || '기타';
         if (!perKeywordMap.has(key)) perKeywordMap.set(key, []);
         perKeywordMap.get(key).push(cand);
@@ -789,7 +761,7 @@ async function run() {
 
       const selectedAiBlogs = [];
       for (const arr of perKeywordMap.values()) {
-        arr.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+        arr.sort((a, b) => (b.materialRanking.score - a.materialRanking.score) || (b.engagementScore - a.engagementScore));
         selectedAiBlogs.push(...arr.slice(0, aiMaxPerSource));
       }
       console.log(`  => AI 키워드별 반응도 상위 ${aiMaxPerSource}개 이하 선발: ${selectedAiBlogs.length}개`);
@@ -854,7 +826,7 @@ async function run() {
 
         const perKeywordMap = new Map();
         for (const cand of dataLabCandidates) {
-          if ((cand.engagementScore || 0) < minEngagementScore) continue;
+          if (!cand.materialRanking.eligible || (cand.engagementScore || 0) < minEngagementScore) continue;
           const key = cand.dataLabKeyword || cand.keyword;
           if (!perKeywordMap.has(key)) perKeywordMap.set(key, []);
           perKeywordMap.get(key).push(cand);
@@ -862,7 +834,7 @@ async function run() {
 
         const selectedDataLabBlogs = [];
         for (const arr of perKeywordMap.values()) {
-          arr.sort((a, b) => (b.engagementScore - a.engagementScore) || (b.score - a.score));
+          arr.sort((a, b) => (b.materialRanking.score - a.materialRanking.score) || (b.engagementScore - a.engagementScore));
           selectedDataLabBlogs.push(...arr.slice(0, dataLabMaxPerKeyword));
         }
         console.log(`  => 데이터랩 인기 키워드 기반 상위 블로그 선발: 총 ${selectedDataLabBlogs.length}개`);
@@ -879,12 +851,17 @@ async function run() {
   const topTrends = [...selectedBlogs, ...newsCandidates];
   const uniqueTrendsMap = new Map();
   for (const trend of topTrends) {
-    const key = (trend.link || trend.title).trim();
+    const key = convertToMobileBlogUrl(trend.link || trend.title).trim();
     if (!uniqueTrendsMap.has(key)) {
       uniqueTrendsMap.set(key, trend);
     }
   }
-  const finalUniqueTrends = Array.from(uniqueTrendsMap.values());
+  const { rankTrend } = await import('../src/services/trendRanking.js');
+  const rankingTime = Date.now();
+  const finalUniqueTrends = Array.from(uniqueTrendsMap.values()).map(trend => ({
+    ...trend,
+    materialRanking: rankTrend(trend, rankingPreferences, rankingTime)
+  })).filter(trend => trend.materialRanking.eligible).sort((a, b) => b.materialRanking.score - a.materialRanking.score);
 
   console.log(`\n최종 수집 완료: 총 ${finalUniqueTrends.length}개 (블로그 ${selectedBlogs.length}개, 뉴스 ${newsCandidates.length}개)`);
 
@@ -915,7 +892,7 @@ async function run() {
   }
 
   // Existing Issue Check & Github Issue Creation
-  let existingIssueTitles = new Set();
+  const existingIssueTitles = new Set();
   const existingErrorReportIssues = []; // 이미 열려있는 크롤러 오류 리포트 이슈 { number, title }
   try {
     const issuesUrl = `https://api.github.com/repos/${repository}/issues?labels=trend-candidate&state=open&per_page=100`;
@@ -956,8 +933,12 @@ async function run() {
 - **원글 발행 시간**: \`${trend.pubDate || ''}\`
 - **수집처/작성자**: \`${trend.bloggername}\`
 - **원본 연결 링크**: [네이버 상세 본문 링크](${trend.link})
-- **반응도 스코어**: \`${trend.engagementScore || 0}점 (공감 ${trend.sympathyCnt || 0}개 / 댓글 ${trend.commentCnt || 0}개)\`
-- **홈판 적합도 점수**: \`🏆 ${trend.homeBoardScore ?? 0}점 (큐레이션 추천)\`
+- **반응도 스코어**: \`${trend.materialRanking.engagement ?? '미확인'} (공감 ${trend.sympathyCnt ?? '미확인'} / 댓글 ${trend.commentCnt ?? '미확인'})\`
+- **소재 추천 점수**: \`${trend.materialRanking.score}점 (내부 편집 기준, 네이버 순위 아님)\`
+
+<!-- TREND_METADATA_START -->
+${JSON.stringify({ version: 1, title: trend.title, keyword: trend.keyword, pubDate: trend.pubDate, sympathyCnt: trend.sympathyCnt ?? null, commentCnt: trend.commentCnt ?? null, preferences: rankingPreferences, collectedAt: new Date(rankingTime).toISOString() }).replace(/</g, '\\u003c')}
+<!-- TREND_METADATA_END -->
 
 ### 📝 원본 정보 및 원고 소스 텍스트
 <!-- TREND_SOURCE_START -->
@@ -965,7 +946,7 @@ ${trend.description}
 <!-- TREND_SOURCE_END -->
 
 ---
-*집/회사 컴퓨터에서 **[BlogGen 대시보드 ➔ 트렌드 피드]** 탭을 활성화하면 이 소스 텍스트를 원클릭으로 가공하여 고품질 스텔스 원고로 리라이팅할 수 있습니다.*`;
+*출처를 확인하고 새로운 관점의 소재로 활용하세요. 공감·댓글은 수집 시점 관측값이며 홈판 노출을 보장하지 않습니다.*`;
 
     try {
       const createIssueUrl = `https://api.github.com/repos/${repository}/issues`;
@@ -1052,4 +1033,11 @@ ${trend.description}
   console.log('\nTCCG Trend Crawler 작업 완료.');
 }
 
-run();
+module.exports = { fetchNaverBlogReactions, scrapeFullText, formatPubDate, isRecentPost };
+
+if (require.main === module) {
+  run().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}

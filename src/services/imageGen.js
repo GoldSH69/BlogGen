@@ -100,7 +100,7 @@ function loadImageViaElement(url, timeoutMs = 35000) {
         ctx.drawImage(img, 0, 0);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         resolve(dataUrl);
-      } catch (err) {
+      } catch {
         // Tainted canvas fallback: return direct URL if CORS tainted
         resolve(url);
       }
