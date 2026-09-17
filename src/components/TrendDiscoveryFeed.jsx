@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { parseTrendMetadata, rankTrend } from '../services/trendRanking';
+import { useState, useEffect, useMemo } from 'react';
+import { parseTrendMetadata, rankTrend, velocityBonus, suggestAngles } from '../services/trendRanking';
+import { snapshotKey, peekVelocity, recordSnapshot, readFeedbacks, setFeedback } from '../services/trendFeedback';
 import { Sparkles, RefreshCw, AlertTriangle, ExternalLink, Calendar, CheckSquare, Trash2, Flame } from 'lucide-react';
 import { getGithubConfig, fetchTrendIssuesFromGithub, triggerTrendCrawlerWorkflow, closeTrendIssueOnGithub, closeMultipleTrendIssuesOnGithub } from '../services/github';
 
@@ -11,6 +12,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isTriggering, setIsTriggering] = useState(false);
   const [triggerStatus, setTriggerStatus] = useState('');
+  const [feedbacks, setFeedbacks] = useState(() => readFeedbacks(null));
+  const [showDisliked, setShowDisliked] = useState(false);
 
   const handleDeleteIssue = async (e, issueNumber) => {
     e.stopPropagation(); // Card selection click event propagation block
@@ -134,6 +137,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     loadTrends();
   }, [activeTab]);
 
+
+
   // Helper to extract trend info from issue body (Super-Robust Markdown Parsing)
   const parseTrendBody = (body, title = '') => {
     if (!body) return { type: '기타', blogger: '알수없음', score: '80', link: '#', content: '', group: '통합 트렌드', pubDate: '', sympathyCnt: 0, commentCnt: 0, engagementScore: 0, categoryName: '일반' };
@@ -211,12 +216,82 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   };
 
 
-  const handleSelect = (issue, parsed) => {
+  // Derive per-issue reaction velocity from locally stored snapshots (pure read).
+  const velocityMap = useMemo(() => {
+    const next = {};
+    (trends || []).forEach(issue => {
+      try {
+        const parsed = parseTrendBody(issue.body, issue.title);
+        const key = snapshotKey(parsed.link, issue.title);
+        const rec = peekVelocity(null, key, {
+          sympathyCnt: parsed.sympathyCnt,
+          commentCnt: parsed.commentCnt,
+          at: parsed.collectedAt || undefined
+        });
+        next[key] = { delta: rec.delta, elapsedHours: rec.elapsedHours, bonus: velocityBonus(rec.delta, rec.elapsedHours) };
+      } catch {
+        // Leave velocity untracked for unparsable issues.
+      }
+    });
+    return next;
+  }, [trends]);
+
+  // Persist current snapshots for the next load. External sync only, no state writes.
+  useEffect(() => {
+    (trends || []).forEach(issue => {
+      try {
+        const parsed = parseTrendBody(issue.body, issue.title);
+        recordSnapshot(null, snapshotKey(parsed.link, issue.title), {
+          sympathyCnt: parsed.sympathyCnt,
+          commentCnt: parsed.commentCnt,
+          at: parsed.collectedAt || undefined
+        });
+      } catch {
+        // Skip persistence for unparsable issues.
+      }
+    });
+  }, [trends]);
+
+  const handleSelect = (issue, parsed, angles = []) => {
+    const angleLines = angles.length > 0
+      ? `\n기획 각도(관측 근거 기반, 노출 보장 없음):\n${angles.map(a => `- ${a.angle} (근거: ${a.basis})`).join('\n')}\n`
+      : '';
     onSelectTrend({
-      content: `참고 출처: ${parsed.link}\n원문 제목: ${issue.title}\n수집 시점: ${parsed.collectedAt || '미확인'}\n\n${parsed.content}`,
+      content: `참고 출처: ${parsed.link}\n원문 제목: ${issue.title}\n수집 시점: ${parsed.collectedAt || '미확인'}\n${angleLines}\n${parsed.content}`,
       title: issue.title.replace(/^\[트렌드\]\s*/, ''),
       link: parsed.link
     });
+  };
+
+  const handleFeedback = (issue, parsed, value) => {
+    const key = snapshotKey(parsed.link, issue.title);
+    const next = feedbacks[key] === value ? null : value;
+    setFeedback(null, key, next);
+    setFeedbacks(prev => {
+      const copy = { ...prev };
+      if (next) copy[key] = next;
+      else delete copy[key];
+      return copy;
+    });
+  };
+
+  const enrichIssue = (issue) => {
+    const parsed = parseTrendBody(issue.body, issue.title);
+    const key = snapshotKey(parsed.link, issue.title);
+    const velocity = velocityMap[key] || {
+      delta: { sympathyGain: null, commentGain: null, velocityScore: null, confidence: 'unobserved' },
+      elapsedHours: null,
+      bonus: 0
+    };
+    const angles = parsed.materialRanking ? suggestAngles({
+      title: issue.title.replace(/^\[트렌드\]\s*/, ''),
+      sympathyCnt: parsed.sympathyCnt,
+      commentCnt: parsed.commentCnt,
+      dataLabRank: parsed.dataLabRank,
+      ageHours: parsed.materialRanking.ageHours,
+      preferredKeywords: parsed.materialRanking.preferred || []
+    }) : [];
+    return { issue, parsed, key, velocity, angles, feedback: feedbacks[key] || null };
   };
 
   const isNewsPost = (parsed, issue) => {
@@ -244,17 +319,28 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
   const getProcessedTrends = () => {
     const blogList = [];
     const newsList = [];
+    let hiddenDisliked = 0;
 
     trends.forEach(issue => {
-      const parsed = parseTrendBody(issue.body, issue.title);
+      const view = enrichIssue(issue);
+      const { parsed } = view;
       if (parsed.materialRanking?.eligible === false) return;
+      if (view.feedback === 'dislike' && !showDisliked) {
+        hiddenDisliked += 1;
+        return;
+      }
       const isNews = isNewsPost(parsed, issue);
       if (isNews) {
-        newsList.push({ issue, parsed });
+        newsList.push(view);
       } else {
-        blogList.push({ issue, parsed });
+        blogList.push(view);
       }
     });
+
+    const likeFirst = (a, b) => {
+      if ((a.feedback === 'like') !== (b.feedback === 'like')) return a.feedback === 'like' ? -1 : 1;
+      return 0;
+    };
 
     // Sort Blog Posts
     if (sortMode === 'datalab') { // 📊 데이터랩 포스트 우선 + 반응도 점수 높은 순 최상단 정렬
@@ -277,12 +363,14 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         if (catCompare !== 0) return catCompare;
         return (Number(b.parsed.homeBoardScore) || 0) - (Number(a.parsed.homeBoardScore) || 0);
       });
-    } else if (sortMode === 'home') { // 'home' (🏆 네이버 홈판 적합도순, 홈판용 추천)
+    } else if (sortMode === 'home') { // 소재 추천순 (내부 기준: 추천 점수 + 반응 증가 보너스)
       blogList.sort((a, b) => {
-        const aHome = a.parsed.materialRanking?.score ?? -1;
-        const bHome = b.parsed.materialRanking?.score ?? -1;
+        const liked = likeFirst(a, b);
+        if (liked !== 0) return liked;
+        const aHome = (a.parsed.materialRanking?.score ?? -1) + (a.velocity?.bonus || 0);
+        const bHome = (b.parsed.materialRanking?.score ?? -1) + (b.velocity?.bonus || 0);
         if (aHome !== bHome) return bHome - aHome;
-        return b.parsed.engagementScore - a.parsed.engagementScore; // 동점 시 반응도 우선
+        return (b.parsed.engagementScore ?? -1) - (a.parsed.engagementScore ?? -1); // 동점 시 반응도 우선
       });
     } else { // 'engagement' (default)
       blogList.sort((a, b) => b.parsed.engagementScore - a.parsed.engagementScore);
@@ -302,13 +390,23 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
     });
     const uniqueNewsList = Array.from(uniqueNewsMap.values());
 
-    return [
-      ...blogList.map(item => item.issue),
-      ...uniqueNewsList.map(item => item.issue)
-    ];
+    return {
+      issues: [
+        ...blogList.map(item => item.issue),
+        ...uniqueNewsList.map(item => item.issue)
+      ],
+      views: new Map([
+        ...blogList.map(item => [item.issue.id, item]),
+        ...uniqueNewsList.map(item => [item.issue.id, item])
+      ]),
+      hiddenDisliked: hiddenDisliked
+    };
   };
 
-  const filteredTrends = getProcessedTrends();
+  const { issues: filteredTrends, views: trendViews, hiddenDisliked } = useMemo(
+    () => getProcessedTrends(),
+    [trends, velocityMap, feedbacks, showDisliked, sortMode]
+  );
 
   return (
     <div className="glass-card" style={feedPanelStyle}>
@@ -470,6 +568,11 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         <span style={scoreBadgeStyle(false)}>
           총 {filteredTrends.length}개 탐지됨
         </span>
+        {hiddenDisliked > 0 && (
+          <button onClick={() => setShowDisliked(prev => !prev)} style={scoreBadgeStyle(false)}>
+            👎 관심 없음 {hiddenDisliked}개 {showDisliked ? '숨기기' : '보기'}
+          </button>
+        )}
       </div>
 
       <div style={feedBodyStyle}>
@@ -536,7 +639,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
         ) : (
           <div style={cardsGridStyle}>
             {filteredTrends.map((issue) => {
-              const parsed = parseTrendBody(issue.body, issue.title);
+              const view = trendViews.get(issue.id) || enrichIssue(issue);
+              const { parsed } = view;
               const isNews = isNewsPost(parsed, issue);
               const displayScore = parsed.engagementScore;
 
@@ -628,7 +732,21 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                       <span style={{ ...groupBadgeStyle(parsed.group), ...channelBadgeStyle(parsed.type) }}>{parsed.type}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <button 
+                      <button
+                        onClick={() => handleFeedback(issue, parsed, 'like')}
+                        style={feedbackBtnStyle(view.feedback === 'like')}
+                        title="마음에 드는 소재 (추천 상단 고정)"
+                      >
+                        👍
+                      </button>
+                      <button
+                        onClick={() => handleFeedback(issue, parsed, 'dislike')}
+                        style={feedbackBtnStyle(view.feedback === 'dislike')}
+                        title="관심 없는 소재 (목록에서 숨김)"
+                      >
+                        👎
+                      </button>
+                      <button
                         onClick={(e) => handleDeleteIssue(e, issue.number)}
                         style={deleteBtnStyle}
                         title="이 트렌드 수집 제외"
@@ -666,6 +784,17 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                     <div style={{ fontSize: '0.75rem', marginBottom: 10 }}>
                       {parsed.materialRanking.reasons.map(reason => <div key={reason}>{reason}</div>)}
                       <div>수집 시점: {parsed.collectedAt || '미확인'} · 노출 보장 없음</div>
+                      {view.velocity.delta.confidence === 'observed' ? (
+                        <div>반응 증가: 공감 {view.velocity.delta.sympathyGain >= 0 ? '+' : ''}{view.velocity.delta.sympathyGain} · 댓글 {view.velocity.delta.commentGain >= 0 ? '+' : ''}{view.velocity.delta.commentGain}{view.velocity.elapsedHours ? ` (약 ${view.velocity.elapsedHours.toFixed(1)}시간)` : ''} · 🚀 +{view.velocity.bonus}</div>
+                      ) : (
+                        <div>반응 추이: 이전 스냅샷 없음 — 다음 새로고침부터 증가량이 표시됩니다</div>
+                      )}
+                      {view.angles.length > 0 && (
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontWeight: '800' }}>기획 각도 (관측 근거 기반):</div>
+                          {view.angles.map(a => <div key={a.angle}>· {a.angle} — {a.basis}</div>)}
+                        </div>
+                      )}
                     </div>
                   ) : <p>이전 수집 데이터: 추천 근거 미확인, 재수집 필요</p>}
                   {/* Snippet Description */}
@@ -686,8 +815,8 @@ export default function TrendDiscoveryFeed({ onSelectTrend, activeTab }) {
                   </div>
 
                   {/* Button Action */}
-                  <button 
-                    onClick={() => handleSelect(issue, parsed)}
+                  <button
+                    onClick={() => handleSelect(issue, parsed, view.angles)}
                     className="btn-neon"
                     style={{ width: '100%', justifyContent: 'center', padding: '10px', fontSize: '0.8rem', fontWeight: '700' }}
                   >
@@ -997,6 +1126,19 @@ const crawlerErrorContainerStyle = {
   lineHeight: '1.5',
   marginBottom: '20px',
 };
+
+const feedbackBtnStyle = (isActive) => ({
+  background: isActive ? 'rgba(16, 185, 129, 0.16)' : 'var(--bg-surface)',
+  border: `1px solid ${isActive ? 'rgba(16, 185, 129, 0.5)' : 'var(--border-color)'}`,
+  padding: '4px 6px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '0.72rem',
+  transition: 'all var(--transition-fast)',
+});
 
 const deleteBtnStyle = {
   background: 'rgba(244, 63, 94, 0.08)',

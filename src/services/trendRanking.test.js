@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rankTrend, keywordList, parseTrendMetadata } from './trendRanking.js';
+import { rankTrend, keywordList, parseTrendMetadata, reactionDelta, velocityBonus, suggestAngles } from './trendRanking.js';
 import crawler from '../../scripts/trend-crawler.cjs';
 
 const now = Date.parse('2026-09-17T12:00:00Z');
@@ -67,4 +67,41 @@ test('crawler extracts content before stripping markup', async t => {
   t.mock.method(globalThis, 'fetch', async () => ({ ok: true, text: async () => '<div class="se-main-container"><div>실제 본문<br>두 번째 문장</div></div>' }));
   assert.equal(await crawler.scrapeFullText('https://blog.naver.com/example/123', '네이버 블로그'), '실제 본문\n두 번째 문장');
   assert.equal(crawler.formatPubDate('2026-09-17T21:00:00+09:00'), '2026-09-17T12:00:00.000Z');
+});
+
+test('reaction delta measures gain between snapshots', () => {
+  const delta = reactionDelta({ sympathyCnt: 10, commentCnt: 2 }, { sympathyCnt: 15, commentCnt: 4 });
+  assert.deepEqual(delta, { sympathyGain: 5, commentGain: 2, velocityScore: 9, confidence: 'observed' });
+});
+
+test('reaction delta stays unobserved when either snapshot lacks counts', () => {
+  for (const [prev, cur] of [[{}, { sympathyCnt: 3, commentCnt: 1 }], [{ sympathyCnt: null, commentCnt: 1 }, { sympathyCnt: 2, commentCnt: 2 }], [{ sympathyCnt: -1, commentCnt: 0 }, { sympathyCnt: 2, commentCnt: 2 }]]) {
+    const d = reactionDelta(prev, cur);
+    assert.equal(d.velocityScore, null);
+    assert.equal(d.confidence, 'unobserved');
+  }
+});
+
+test('velocity bonus normalizes gain by elapsed hours and caps', () => {
+  assert.equal(velocityBonus({ velocityScore: null, confidence: 'unobserved' }, 5), 0);
+  assert.equal(velocityBonus({ velocityScore: 10, confidence: 'observed' }, 0), 0);
+  assert.equal(velocityBonus({ velocityScore: 10, confidence: 'observed' }, -2), 0);
+  assert.equal(velocityBonus({ velocityScore: -4, confidence: 'observed' }, 2), 0);
+  const small = velocityBonus({ velocityScore: 4, confidence: 'observed' }, 8);
+  const large = velocityBonus({ velocityScore: 400, confidence: 'observed' }, 1);
+  assert.ok(small >= 0 && small < large);
+  assert.equal(velocityBonus({ velocityScore: 100000, confidence: 'observed' }, 0.01), 20);
+});
+
+test('suggest angles cite only observed numbers and stay bounded', () => {
+  const debated = suggestAngles({ title: '무선충전기 비교', sympathyCnt: 10, commentCnt: 8 });
+  assert.equal(debated[0].angle, '댓글 논쟁점 정리형');
+  assert.ok(debated[0].basis.includes('댓글 8개') && debated[0].basis.includes('공감 10개'));
+  const ranked = suggestAngles({ title: '로봇청소기', sympathyCnt: 0, commentCnt: 0, dataLabRank: 2 });
+  assert.ok(ranked.some(a => a.angle === '데이터랩 랭킹 비교형' && a.basis.includes('2위')));
+  const fallback = suggestAngles({ title: '', sympathyCnt: null, commentCnt: null });
+  assert.equal(fallback.length, 1);
+  assert.equal(fallback[0].angle, '기본 비교·체크리스트형');
+  const many = suggestAngles({ title: 't', sympathyCnt: 50, commentCnt: 40, dataLabRank: 1, ageHours: 3, preferredKeywords: ['ai'] });
+  assert.ok(many.length <= 3);
 });
