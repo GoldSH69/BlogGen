@@ -1,5 +1,18 @@
 # Project Rules & Guidelines
 
+## Execution loop prevention
+
+- Never issue empty tool arguments or no-op commands (`true`, `echo alive`, or diagnostic `console.log` letters).
+- Every tool call must read relevant evidence, implement an approved change, or verify a concrete result. State the intended result before non-trivial commands.
+- After two consecutive failures of the same operation, stop tool calls and report the actual error, preserved changes, and blocker to the user. Do not retry indefinitely or substitute a no-op.
+- When the user asks why execution stopped, answer immediately in text before any tool call. Do not resume implementation instead of answering.
+- Do not claim an environment/tool defect without evidence. Invalid or empty arguments are an assistant invocation error, not proof of a broken tool.
+- Use Read/Edit/Write for file operations. Do not bypass them using shell file editing after a failed invocation.
+- Use `npm test` for this project; unrestricted `node --test` discovers legacy network-calling scratch scripts.
+- After completing verification, record results and return a concise status. Do not repeat successful checks without an intervening relevant change.
+- Mark a phase complete only when its planned integration and verification are complete. A standalone helper passing tests is not a completed feature.
+
+
 - **Mandatory Session-Start Git Pull Rule (대화 세션 시작 시 1회 Git Pull 필수 원칙)**:
   - The AI agent **MUST** run `git pull` **only once at the very start of a new conversation session** to synchronize local files with the remote repository.
   - Do NOT repeatedly run `git pull` on every single message turn within an ongoing conversation session.
