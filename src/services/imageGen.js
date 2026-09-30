@@ -23,8 +23,14 @@ export function enhancePromptForKoreanContext(prompt) {
   let p = prompt.trim();
 
   // Check if human face/person keywords exist
-  const hasHumanKeywords = /(?:person|woman|man|people|girl|boy|model|face|female|male|family|portrait)/i.test(p);
+  const hasHumanKeywords = /(?:person|woman|man|people|girl|boy|model|face|female|male|family|portrait|driver|passenger|hands)/i.test(p);
   const alreadyMentionsKorean = /(?:korean|south korea|seoul|east asian)/i.test(p);
+
+  // [주제 보호] 차량/교통/도로/야외 문맥이면 집·거실·소파 분위기를 절대 덧씌우지 않는다.
+  // 기존 버그: 'car interior'의 'interior' 키워드 때문에 한국 집 인테리어가 추가돼
+  // 안전벨트(차량 실내) 프롬프트가 집 소파 이미지로 변질됐음.
+  const isVehicleContext = /(?:car|cabin|vehicle|automobile|driver|passenger|seatbelt|seat belt|buckl|dashboard|steering|windshield|road|traffic|highway|parking|gas station|subway|bus|taxi)/i.test(p);
+  const isOutdoorContext = /(?:street|outdoor|park|mountain|beach|sea|river|camp|tent|garden|farm|market street|playground|stadium)/i.test(p);
 
   const additions = [];
 
@@ -36,8 +42,10 @@ export function enhancePromptForKoreanContext(prompt) {
   }
 
   // Ensure Korean domestic living / studio aesthetic if setting/interior is mentioned
-  const hasSettingKeywords = /(?:room|kitchen|living|apartment|house|home|interior|office|store|cafe|shop|desk|table|indoor|lifestyle|studio)/i.test(p);
-  if (hasSettingKeywords && !alreadyMentionsKorean) {
+  // 단, 차량·야외 문맥에서는 'interior' 단어에 속아 집 인테리어를 추가하지 않는다.
+  const hasSettingKeywords = /(?:room|kitchen|living|apartment|house|home|office|store|cafe|shop|desk|table|indoor|lifestyle|studio|sofa|couch)/i.test(p)
+    || (/(?:interior)/i.test(p) && !isVehicleContext);
+  if (hasSettingKeywords && !alreadyMentionsKorean && !isVehicleContext && !isOutdoorContext) {
     additions.push('contemporary South Korean interior atmosphere, clean minimalist aesthetic');
   }
 

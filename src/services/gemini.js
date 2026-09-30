@@ -15,11 +15,13 @@ const GEMINI_MODELS = [
  *   자연스러운 영문 서술문(구문 형식) 프롬프트가 가장 잘 반응합니다.
  * - 완성도 높은 이미지를 위해 1) 피사체/장면 묘사, 2) 구도/카메라 앵글, 3) 조명, 4) 색감·무드,
  *   5) 사진/일러스트 스타일, 6) 가로형 넓은 화면 비율, 7) 텍스트·워터마크·로고 배제를 한 문장으로 녹여내야 합니다.
+ * - [핵심] 주제 충실도가 최우선입니다. 배경을 무조건 집/소파/거실로 묘사하면 오답입니다.
  */
 const NANO_BANANA_2_PROMPT_GUIDE = `
-- 이미지 생성 프롬프트는 반드시 **영문 자연어 서술문(Dense Description) 한 구절**로 작성하고, 단순 키워드 나열은 금지합니다.
+- 이미지 생성 프롬프트는 반드시 **영문 자연어 서술문(Dense Description) 2~3문장**으로 작성하고, 단순 키워드 나열은 금지합니다.
 - 다음 요소를 자연스럽게 조합하십시오: ① 피사체와 구성(장면에 무엇이 놓여 있는지), ② 구도·카메라 앵글(예: 45도 오버헤드 컷, 클로즈업 등), ③ 조명(예: 부드러운 창가 자연광, 스튜디오 소프트박스), ④ 색감·무드(은은한 따뜻한 톤 등), ⑤ 스타일(사실적 제품/푸드 포토그래피 또는 미니멀 일러스트), ⑥ 가로형 전체 비율(wide/landscape), ⑦ 텍스트·워터마크·로고·자막이 전혀 없이 깔끔하게(no text, no watermark).
-- **[🚨 한국인 및 한국 일상 환경 필수 적용 (서양인 완전 배제)]**: 네이버 블로그 국내 독자에게 최적화된 콘텐츠이므로, 사람이 등장할 때는 반드시 'authentic South Korean person(한국인)', 'natural Korean facial features and hair styling', 'contemporary Korean daily outfit'을 명시하고, 서양인이나 외국인이 절대 나오지 않도록 'no Caucasian, no Western people, no foreign models' 부정 지침을 필수 포함하십시오. 배경 또한 서양 주택이나 거리가 아닌 'modern South Korean apartment interior (한국 아파트 인테리어)', 'contemporary Korean living space' 등 국내 친화적 일상 환경으로 묘사하십시오.
+- **[🚨 주제 충실도 최우선 (Topic Fidelity First) — 소파/거실 기본값 금지]**: 각 프롬프트는 반드시 해당 [이미지 N] 위치의 소제목·문단 핵심 명사/동작을 그대로 시각화해야 합니다. 예: 안전벨트·교통법규 문단이면 'inside a modern car cabin, close-up of a driver fastening a seatbelt'가 핵심 피사체가 되어야 하며, 집 소파·거실·커피컵 같은 무관한 배경으로 대체하면 오답입니다. 배경·소품·장소는 글의 실제 장면(자동차 실내 / 도로 / 사무실 / 주방 / 야외 등)을 그대로 따르고, 주제가 집·육아·요리가 아닐 때는 'living room, sofa, apartment interior, cozy home, desk setup, coffee cup'을 절대 넣지 마십시오. 모든 이미지끼리 같은 거실/소파/책상 구도를 반복하는 것도 금지이며, 각 프롬프트는 서로 다른 핵심 피사체·앵글·장소로 구별되어야 합니다.
+- **[🚨 한국인 및 한국 환경 (조건부 적용)]**: 사람이 등장할 때만 적용하십시오. 등장 시에는 반드시 'authentic South Korean person(한국인)', 'natural Korean facial features and hair styling', 'contemporary Korean daily outfit'을 명시하고 'no Caucasian, no Western people, no foreign models' 부정 지침을 필수 포함하십시오. 배경의 국가색은 주제 장면을 유지한 채로 한국적으로만 조정하십시오(예: 차량이면 'Korean car interior, Seoul street view through window', 거리면 'modern Korean city street'). 주제에 사람이 필요 없으면 인물을 억지로 추가하지 마십시오.
 - Midjourney의 '--ar 1200:514', '--no xxx', 반복 키워드 덤프 같은 파라미터 표기를 절대 추가하지 마십시오(나노바나나2는 이를 무시함).`;
 
 /**
@@ -301,9 +303,11 @@ const disclaimers = {
   } else if (imgCount > 0 && videoCount === 0) {
     mediaInstruction = `
 [미디어(이미지) 배치 지침]:
-- 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])만 본문 중간중간에 적절히 삽입하시고, 동영상 위치 안내 표시는 절대 포함하지 마십시오.
+- 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 자동차 안에서 안전벨트를 매는 모습])만 본문 중간중간에 적절히 삽입하시고, 동영상 위치 안내 표시는 절대 포함하지 마십시오.
 - 첫 번째 이미지([이미지 1])는 반드시 [📌 3줄 핵심 요약 브리핑] 박스 바로 아래 ~ 첫 번째 소제목 사이에 배치하여 초기 스크롤 체류를 붙잡으십시오. 나머지 이미지는 소제목 단위로 균등하게 분산 배치하십시오.
+- [🚨 이미지-본문 일치 강제]: 각 [이미지 N: 한글 설명]은 반드시 그 위치의 소제목·직전/직후 문단의 핵심 피사체·행위를 그대로 적으십시오. 예: 안전벨트 문단이면 '[이미지 2: 자동차 운전석에서 안전벨트를 착용하는 클로즈업]'처럼 쓰고, 엉뚱한 '소파에 앉아 쉬는 모습' 같은 설명을 절대 쓰지 마십시오. 서로 다른 이미지끼리 설명·구도를 복붙/재탕하지 마십시오.
 - JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 나노바나나2(Gemini 이미지 모델)용으로 사실적인 이미지를 만들 수 있도록 정교한 영문 서술형 이미지 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하십시오. imageGuides 배열에는 반드시 빠짐없이 정확히 ${imgCount}개의 요소를 채워 응답하십시오.
+- imageGuides[N]의 prompt·desc는 반드시 본문의 [이미지 N] 설명과 1:1로 일치해야 합니다. 본문이 안전벨트면 프롬프트도 자동차 실내 안전벨트 장면이어야 합니다. 주제와 무관한 거실/소파/커피컵/노트북 기본값은 오답으로 간주하고 절대 생성하지 마십시오.
 - 프롬프트 작성 규칙:${NANO_BANANA_2_PROMPT_GUIDE}
 `;
   } else if (imgCount === 0 && videoCount > 0) {
@@ -315,9 +319,11 @@ const disclaimers = {
   } else {
     mediaInstruction = `
 [미디어(이미지 및 동영상) 배치 지침]:
-- 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 맛집의 정갈한 반찬 구성 사진])와 총 ${videoCount}개의 동영상 위치 안내 표시(예: [동영상 1: 보글보글 끓는 전골 찌개 생생한 영상])를 본문 중간중간에 적절히 삽입하십시오.
+- 본문 전체의 자연스러운 흐름을 고려하여 총 ${imgCount}개의 이미지 위치 안내 표시(예: [이미지 1: 자동차 안에서 안전벨트를 매는 모습])와 총 ${videoCount}개의 동영상 위치 안내 표시(예: [동영상 1: 보글보글 끓는 전골 찌개 생생한 영상])를 본문 중간중간에 적절히 삽입하십시오.
 - 첫 번째 이미지([이미지 1])는 반드시 [📌 3줄 핵심 요약 브리핑] 박스 바로 아래 ~ 첫 번째 소제목 사이에 배치하여 초기 스크롤 체류를 붙잡으십시오. 나머지 이미지는 소제목 단위로 균등하게 분산 배치하십시오.
+- [🚨 이미지-본문 일치 강제]: 각 [이미지 N: 한글 설명]은 반드시 그 위치의 소제목·직전/직후 문단의 핵심 피사체·행위를 그대로 적으십시오. 예: 안전벨트 문단이면 '[이미지 2: 자동차 운전석에서 안전벨트를 착용하는 클로즈업]'처럼 쓰고, 엉뚱한 '소파에 앉아 쉬는 모습' 같은 설명을 절대 쓰지 마십시오. 서로 다른 이미지끼리 설명·구도를 복붙/재탕하지 마십시오.
 - JSON 응답의 "imageGuides" 배열에는 각각의 이미지 위치 안내에 대응하여, 나노바나나2(Gemini 이미지 모델)용으로 사실적인 이미지를 만들 수 있도록 정교한 영문 서술형 이미지 프롬프트(prompt)와 한글 가이드(desc)를 총 ${imgCount}개 생성하십시오. imageGuides 배열에는 반드시 빠짐없이 정확히 ${imgCount}개의 요소를 채워 응답하십시오.
+- imageGuides[N]의 prompt·desc는 반드시 본문의 [이미지 N] 설명과 1:1로 일치해야 합니다. 본문이 안전벨트면 프롬프트도 자동차 실내 안전벨트 장면이어야 합니다. 주제와 무관한 거실/소파/커피컵/노트북 기본값은 오답으로 간주하고 절대 생성하지 마십시오.
 - 프롬프트 작성 규칙:${NANO_BANANA_2_PROMPT_GUIDE}
 `;
   }
@@ -427,9 +433,9 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     ],
     "imageGuides": [
       {
-        "pos": "이미지가 들어갈 본문 문맥 위치 설명 (예: 본론 1 시작 부근)",
-        "prompt": "해당 영역에 생성해 넣을 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트. 피사체·구도·조명·색감·스타일·가로형 비율·무텍스트(no text, no watermark)를 자연스러운 문장으로 조합. 인물 등장 시 반드시 한국인('authentic South Korean person', 'natural Korean facial features and hair styling') 및 한국 아파트/일상 배경을 명시하고 'no Caucasian, no Western people, no foreign models' 부정 지침 포함 (키워드 나열이나 --ar 등 파라미터 금지)",
-        "desc": "어떤 사진을 삽입해야 하는지에 대한 한글 설명"
+        "pos": "이미지가 들어갈 본문 문맥 위치 설명 (예: 안전벨트 착용법 소제목 직후)",
+        "prompt": "본문의 [이미지 N] 설명과 1:1로 일치하는 Nano Banana 2(나노바나나2)용 영문 서술형 이미지 프롬프트 2~3문장. 핵심 피사체·행위·장소를 본문 그대로 시각화할 것(예: 안전벨트 문단이면 inside a modern car cabin, Korean driver fastening seatbelt, close-up). 주제와 무관한 living room/sofa/coffee cup/desk setup 기본값 절대 금지. 피사체·구도·조명·색감·사실적 포토 스타일·가로형 비율(wide/landscape)·무텍스트(no text, no watermark, no logo)를 자연스러운 문장으로 조합. 인물 등장시에만 한국인('authentic South Korean person', 'natural Korean facial features') 명시 + 'no Caucasian, no Western people, no foreign models' 포함. 배경은 주제 장면 그대로(차량 문단이면 car interior/road, 주방이면 kitchen) 묘사하고 거실로 임의 변경 금지. 키워드 나열이나 --ar 등 파라미터 금지",
+        "desc": "해당 위치 문단의 핵심 장면을 그대로 설명하는 한글 설명 (예: 자동차 운전석에서 안전벨트를 매는 클로즈업 사진)"
       }
     ],
     "seoReport": {
@@ -495,7 +501,7 @@ ${customPrompt ? `[추가 요구사항]\n${customPrompt}\n` : ''}
     },
     "content": "MDX 본문 내용. 절대 이모지나 특수문자 구분선(---, ***)을 쓰지 말고, ## 와 ### 로만 문단을 구조화하여 1,800자~2,500자 사이의 깊이 있는 정보성 글로 작성하시오. [1단계: 구체적 문제 및 경험 도입] → [2단계: H2/H3 본문 + 1개 이상의 마크다운 비교 표(| 항목 | 내용 |) + 코드/프롬프트 스니펫] → [3단계: 도구/이론의 한계점과 주의사항(Caveats) 필수 섹션] → [4단계: 주제 맞춤형 고유 실천 가이드 소제목] 순서로 전개하십시오. 가상 인물(A씨, B씨, 김 대리 등) 표기를 100% 금지하고 실제 프로젝트 협업 사례로 서술하십시오. 하단 대가성 법적 고지 문구 및 외부 링크는 구글 애드센스 기준 준수를 위해 절대 포함하지 마십시오."
   }` : `null`},
-  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"기사/상품 주제와 직결된 고품격 영문 서술형 이미지 프롬프트. 어색한 인물 얼굴(정면 얼굴/부자연스러운 미소 등)을 절대 포함하지 말고, 주제에 부합하는 세련된 감성 정물(Aesthetic Still Life), 미니멀 데스크탑 셋업, 정갈한 소품 배열(Flat Lay), 한국형 모던 인테리어 공간, 또는 동작 중인 1인칭 손 작업 뷰(POV close-up hands typing on keyboard or holding a warm ceramic cup)를 메인 피사체로 삼으시오. 따뜻한 자연광(soft natural sunlight), 감성적인 매거진 에디토리얼 사진 스타일, 얕은 심도(shallow depth of field), 선명한 초점, 가로형 전체 비율(wide landscape), 무텍스트(clean composition, strictly no text, no watermark, no logo, no human faces). --ar 나 --no 같은 파라미터 접미사 금지."` : `null`}
+  "thumbnailPrompt": ${selectedPlatforms.includes('naverBlog') || selectedPlatforms.includes('mdx') ? `"글의 핵심 주제를 한 장면으로 압축한 고품격 영문 서술형 이미지 프롬프트 2~3문장. 첫 문장에 글의 핵심 피사체·행위·장소를 구체적으로 명시할 것(예: 교통법규/안전벨트 글이면 inside a modern Korean car cabin, close-up of hands fastening a seatbelt — 절대 living room sofa 장면 금지). 주제가 집·요리·육아가 아닐 때는 living room, sofa, coffee cup, desk setup, keyboard typing 같은 기본값 소품을 절대 넣지 마시오. 어색한 정면 인물 얼굴은 피하고, 필요시 뒷모습·측면·손 클로즈업 위주로 묘사할 것. 그 뒤에 조명(soft natural sunlight 등), 색감·무드, 사실적 에디토리얼 포토 스타일, 얕은 심도(shallow depth of field), 가로형 전체 비율(wide landscape), 무텍스트(clean composition, strictly no text, no watermark, no logo, no distorted faces)를 자연스러운 문장으로 조합할 것. --ar 나 --no 같은 파라미터 접미사 금지."` : `null`}
 }
 \`\`\`
 `;
